@@ -1,10 +1,21 @@
 from typing import Protocol
 
-from app.src.schemas.players import PlayerComparisonQuery, PlayerComparisonResponse, PlayerProfileResponse, PlayerSearchProfileResponse, PlayerStatisticSummaryResponse, PlayerSummaryQuery
+from src.schemas.players import (
+    PlayerComparisonQuery,
+    PlayerComparisonResponse,
+    PlayerProfileResponse,
+    PlayerSearchProfileResponse,
+    PlayerStatisticSummaryResponse,
+    PlayerSummaryQuery,
+)
 
 
 class PlayersService(Protocol):
     async def search(self, username: str) -> PlayerSearchProfileResponse: ...
-    async def compare(self, query: PlayerComparisonQuery) -> PlayerComparisonResponse: ...
+    async def compare(
+        self, query: PlayerComparisonQuery
+    ) -> PlayerComparisonResponse: ...
     async def get_profile(self, username: str) -> PlayerProfileResponse: ...
-    async def get_summary(self, username: str, query: PlayerSummaryQuery) -> PlayerStatisticSummaryResponse: ...
+    async def get_summary(
+        self, username: str, query: PlayerSummaryQuery
+    ) -> PlayerStatisticSummaryResponse: ...
