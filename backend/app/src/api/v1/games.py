@@ -13,6 +13,7 @@ router = APIRouter(prefix="/players/{username}/games", tags=["games"])
 @router.get(
     "/list",
 )
+@limiter.limit("1/second")
 async def get_player_game_history_list(username: str, query: Annotated[PlayerGameHistoryListQuery, Query()], service: GamesServiceDep) -> PaginatedGameListResponse:
     return await service.get_game_history_list(username, query)
 
@@ -20,6 +21,7 @@ async def get_player_game_history_list(username: str, query: Annotated[PlayerGam
 @router.get(
     "/",
 )
+@limiter.limit("1/second")
 async def get_game_board_details(username: str, query: Annotated[PlayerGameSearchQuery, Query()], service: GamesServiceDep) -> GameBoardDetailsResponse:
     return await service.get_game_board_details(username, query)
 
@@ -27,5 +29,6 @@ async def get_game_board_details(username: str, query: Annotated[PlayerGameSearc
 @router.get(
     "/analyze",
 )
+@limiter.limit("1/second")
 async def analyze_game_board(username: str, query: Annotated[PlayerGameSearchQuery, Query()], service: GamesServiceDep) -> GameAnalysisResponse:
     return await service.analyze_game_board(username, query)
