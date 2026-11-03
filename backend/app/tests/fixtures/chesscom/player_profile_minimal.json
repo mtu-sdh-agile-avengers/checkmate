@@ -1,0 +1,13 @@
+{
+  "player_id": 987654321,
+  "@id": "https://api.chess.com/pub/player/new_player_42",
+  "url": "https://www.chess.com/member/new_player_42",
+  "username": "new_player_42",
+  "followers": 0,
+  "country": "https://api.chess.com/pub/country/XX",
+  "last_online": 1793691000,
+  "joined": 1748779200,
+  "status": "basic",
+  "is_streamer": false,
+  "verified": false
+}
