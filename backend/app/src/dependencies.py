@@ -4,6 +4,7 @@ from fastapi import Depends, Request
 
 from src.config import RunMode, get_config
 from src.services.games import GamesService
+from src.services.mocks.players import MockPlayersService
 from src.services.users import PlayersService
 from src.chesscom.client import ExternalChessComAPIClient
 
@@ -20,7 +21,7 @@ ExternalApiChessClientDep = Annotated[
 def get_players_service(chess_client: ExternalApiChessClientDep) -> PlayersService:
     if get_config().run_mode == RunMode.PROD:
         raise NotImplementedError("PlayersService for PROD mode is not implemented yet")
-    raise NotImplementedError("PlayersService for DEV mode is not implemented yet")
+    return MockPlayersService()
 
 
 PlayersServiceDep = Annotated[PlayersService, Depends(get_players_service)]

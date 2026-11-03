@@ -8,10 +8,11 @@ still take priority. This must happen before `src` modules are imported, because
 
 import json
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 
 os.environ.setdefault("RUN_MODE", "dev")
 os.environ.setdefault("API_CHESSCOM_BASE_URL", "https://api.chess.com/pub")
@@ -33,3 +34,22 @@ def chesscom_fixture() -> Callable[[str], object]:
         return json.loads(text) if path.suffix == ".json" else text
 
     return load
+
+
+@pytest.fixture
+def api_client() -> Iterator[TestClient]:
+    """Test client of the whole app with rate limiting disabled.
+
+    Tests can replace dependencies via `api_client.app.dependency_overrides`;
+    overrides are cleared after each test.
+    """
+    from src.main import app  # imported here, after the env defaults above are set
+    from src.rate_limiting import limiter
+
+    limiter.enabled = False  # tests send many requests per second
+    try:
+        with TestClient(app) as client:
+            yield client
+    finally:
+        limiter.enabled = True
+        app.dependency_overrides.clear()

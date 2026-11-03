@@ -10,8 +10,12 @@ from src.schemas.common import BaseSchema, QuerySchema
 
 
 class PlayerSummaryQuery(QuerySchema):
-    period: SummaryPeriod = SummaryPeriod.OVERALL
-    time_class: TimeClass
+    period: SummaryPeriod = Field(
+        default=SummaryPeriod.OVERALL,
+        examples=[SummaryPeriod.DAYS_7],
+        description='Time frame: last 1 / 7 / 15 / 30 days, or "all" for all-time stats',
+    )
+    time_class: TimeClass = Field(examples=[TimeClass.BLITZ])
 
 
 class PlayerComparisonQuery(QuerySchema):
@@ -52,13 +56,28 @@ class PlayerProfileResponse(BaseSchema):
 
 
 class RatingSummaryResponse(BaseSchema):
-    current: int | None = Field(description="Current ELO rating")
-    highest: int | None = Field(description="Highest ever achieved ELO rating")
+    current: int | None = Field(
+        examples=[2318],
+        description="Current ELO rating; null if the player never played this time class",
+    )
+    highest: int | None = Field(
+        examples=[2401], description="Highest ever achieved ELO rating"
+    )
     expected: int | None = Field(
-        default=None, description="Expected (ML-estimated) ELO rating"
+        default=None,
+        examples=[None],
+        description="Expected (ML-estimated) ELO rating; null until the ML model is ready",
+    )
+    change: int | None = Field(
+        default=None,
+        examples=[18],
+        description=(
+            "Rating change over the selected period (+/- Elo); "
+            'null for "all" or when there are no games in the period'
+        ),
     )
 
-    @computed_field
+    @computed_field(description="expected - current; null if any of them is null")
     @property
     def difference(self) -> int | None:
         if self.current is None or self.expected is None:
@@ -67,16 +86,28 @@ class RatingSummaryResponse(BaseSchema):
         return self.expected - self.current
 
 
+class RatingPointResponse(BaseSchema):
+    date: datetime = Field(description="End time of the game (UTC)")
+    rating: int = Field(examples=[2318], description="Player's rating after the game")
+
+
 class PlayerStatisticSummaryResponse(BaseSchema):
     username: str = Field(examples=["hikaru"])
-    day_period: SummaryPeriod
+    day_period: SummaryPeriod = Field(description="Selected time frame")
     time_class: TimeClass
-    wins: int = Field(ge=0)
-    losses: int = Field(ge=0)
-    draws: int = Field(ge=0)
+    wins: int = Field(ge=0, description="Rated standard chess games won in the period")
+    losses: int = Field(ge=0, description="Rated standard chess games lost")
+    draws: int = Field(ge=0, description="Rated standard chess games drawn")
     rating: RatingSummaryResponse
+    rating_history: list[RatingPointResponse] = Field(
+        default_factory=list,
+        description=(
+            "Player's rating after each game in the period, oldest first "
+            '(for the rating trend chart); empty for "all"'
+        ),
+    )
 
-    @computed_field
+    @computed_field(description="wins + losses + draws; 0 means no games in the period")
     @property
     def total_games_played(self) -> int:
         return self.wins + self.losses + self.draws
