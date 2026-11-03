@@ -68,6 +68,15 @@ All errors have the body `{"detail": "<message for the end-user>"}`.
 | `502` | Chess.com returned an unexpected response |
 | `503` | Chess.com is unavailable or rate-limits us – try again later |
 
+## How values are computed (`RUN_MODE=prod`, CMG4-84)
+
+- `period=all`: all-time record and ratings from Chess.com `/player/{username}/stats` (1 request).
+- `period=1..30`: `/stats` + `/games/archives` + the 1–2 monthly archives that overlap the period.
+  Only rated standard chess games (no chess960 / variants) of the selected time class are counted.
+- `rating.change` = rating after the last game of the period − rating after the last game
+  before the period. If no earlier game is in the loaded months, the first game of the period
+  is used as the starting point.
+
 ## Mock (`RUN_MODE=dev`)
 
 In dev mode the endpoint returns deterministic sample data without calling Chess.com:
