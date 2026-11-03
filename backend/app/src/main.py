@@ -11,6 +11,7 @@ from slowapi.errors import RateLimitExceeded
 
 from src.api.v1.routers import api_router as api_v1_router
 from src.chesscom.client import ChessComClient
+from src.exception_handlers import register_exception_handlers
 
 
 @asynccontextmanager
@@ -41,6 +42,9 @@ app = FastAPI(
 # rate limiting set up
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # pyright: ignore[reportArgumentType]
+
+# Chess.com errors -> HTTP error responses (404, 502, 503)
+register_exception_handlers(app)
 
 # CORS configuration
 logger.debug("Configuring CORS...")
