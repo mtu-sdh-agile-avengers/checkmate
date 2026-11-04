@@ -181,7 +181,7 @@ def test_parse_monthly_games_win_as_white(chesscom_fixture):
 
     # Chess.com username case ("Checkmate_Tester") differs from the searched one.
     assert game.color_of(USERNAME) == PlayerColor.WHITE
-    assert game.side_of(USERNAME).rating == 2310
+    assert game.side_of(USERNAME).rating == 2326
     assert game.opponent_of(USERNAME).username == "opponent_one"
     assert game.result_for(USERNAME) == GameResult.WIN
     assert game.result_for("opponent_one") == GameResult.LOSS
@@ -281,7 +281,8 @@ def test_parse_monthly_pgn(chesscom_fixture):
     assert first.pgn.startswith('[Event "Live Chess"]')
     assert first.pgn.endswith("1-0")
     assert "[%clk" not in first.headers  # move comments are not headers
-    assert second.headers["Black"] == "Checkmate_Tester"
+    assert second.headers["White"] == "Checkmate_Tester"
+    assert second.headers["Result"] == "0-1"  # Fool's mate: Black wins
     assert second.headers["Annotator"] == 'Nick "The Quote" Name'  # escaped quotes
     assert "Qh4#" in second.pgn
 
