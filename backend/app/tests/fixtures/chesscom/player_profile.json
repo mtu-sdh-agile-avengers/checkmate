@@ -1,0 +1,25 @@
+{
+  "avatar": "https://images.chesscomfiles.com/uploads/v1/user/123456789.abcdef12.200x200o.0123456789ab.png",
+  "player_id": 123456789,
+  "@id": "https://api.chess.com/pub/player/checkmate_tester",
+  "url": "https://www.chess.com/member/Checkmate_Tester",
+  "name": "Test Player",
+  "username": "checkmate_tester",
+  "title": "FM",
+  "followers": 1520,
+  "country": "https://api.chess.com/pub/country/IE",
+  "location": "Cork",
+  "last_online": 1793697300,
+  "joined": 1426327200,
+  "status": "premium",
+  "is_streamer": true,
+  "twitch_url": "https://twitch.tv/checkmate_tester",
+  "verified": false,
+  "league": "Champion",
+  "streaming_platforms": [
+    {
+      "type": "twitch",
+      "channel_url": "https://twitch.tv/checkmate_tester"
+    }
+  ]
+}

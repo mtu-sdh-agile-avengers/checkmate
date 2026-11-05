@@ -4,6 +4,7 @@ from fastapi import APIRouter, Query, Request
 
 from src.rate_limiting import limiter
 from src.dependencies import PlayersServiceDep
+from src.schemas.common import ErrorResponse
 from src.schemas.players import (
     PlayerComparisonQuery,
     PlayerComparisonResponse,
@@ -59,7 +60,19 @@ async def get_player_profile(
 @router.get(
     "/{username}/summary",
     summary="Get player summary",
-    description="Returns Chess.com player profile statistics summary.",
+    description=(
+        "Returns Chess.com player statistics summary for one time class: overall "
+        "(`period=all`) or recent (last 1 / 7 / 15 / 30 days). Includes wins, losses, "
+        "draws, win rate, current / highest / expected rating, rating change and "
+        "rating history. Only rated standard chess games are counted. If the player "
+        "has no games in the period, `totalGamesPlayed` is 0 (the client shows "
+        '"No games in the last X days").'
+    ),
+    responses={
+        404: {"model": ErrorResponse, "description": "Player does not exist"},
+        502: {"model": ErrorResponse, "description": "Unexpected Chess.com response"},
+        503: {"model": ErrorResponse, "description": "Chess.com is not available"},
+    },
 )
 @limiter.limit("1/second")
 async def get_player_summary(

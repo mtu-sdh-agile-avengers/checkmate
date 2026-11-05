@@ -26,3 +26,14 @@ class ChessAPIUnavailiableError(ChessAPIError):
     """Raised when external chess API is down or encounters server errors (5xx)."""
 
     pass
+
+
+class ChessAPIParseError(ChessAPIError):
+    """Raised when an external chess API response has an unexpected format."""
+
+    def __init__(self, source: str, details: str | None = None) -> None:
+        message = f"Unexpected response format from {source}"
+        if details:
+            message = f"{message}: {details}"
+
+        super().__init__(message)

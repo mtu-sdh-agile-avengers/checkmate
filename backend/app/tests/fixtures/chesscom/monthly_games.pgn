@@ -1,0 +1,30 @@
+[Event "Live Chess"]
+[Site "Chess.com"]
+[Date "2026.11.01"]
+[Round "-"]
+[White "Checkmate_Tester"]
+[Black "opponent_one"]
+[Result "1-0"]
+[WhiteElo "2326"]
+[BlackElo "2295"]
+[TimeControl "180+2"]
+[Termination "Checkmate_Tester won by resignation"]
+[Link "https://www.chess.com/game/live/169586417316"]
+
+1. e4 {[%clk 0:03:01.9]} 1... e5 {[%clk 0:03:01.1]} 2. Nf3 {[%clk 0:03:02.4]} 1-0
+
+[Event "Live Chess"]
+[Site "Chess.com"]
+[Date "2026.11.02"]
+[Round "-"]
+[White "Checkmate_Tester"]
+[Black "opponent_two"]
+[Result "0-1"]
+[WhiteElo "2318"]
+[BlackElo "2402"]
+[TimeControl "180"]
+[Termination "opponent_two won by checkmate"]
+[Annotator "Nick \"The Quote\" Name"]
+[Link "https://www.chess.com/game/live/169586499999"]
+
+1. f3 e5 2. g4 Qh4# 0-1

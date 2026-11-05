@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 
@@ -16,3 +16,12 @@ class QuerySchema(BaseSchema):
     """Base class for all query scheams (i.e., Query Parameter Models). Inherits from BaseSchema."""
 
     model_config = ConfigDict(validate_by_name=False, extra="forbid")
+
+
+class ErrorResponse(BaseSchema):
+    """Error response body (same shape as FastAPI's own errors)."""
+
+    detail: str = Field(
+        examples=["hikaru player data is not available / does not exist"],
+        description="Error message that can be shown to the end-user",
+    )
