@@ -10,6 +10,8 @@ Special usernames for testing frontend states:
 
 from datetime import UTC, datetime, timedelta
 
+import json
+
 from src.chesscom.exceptions import ChessAPINotFoundError
 from src.enums import SummaryPeriod, TimeClass
 from src.schemas.players import (
@@ -72,7 +74,36 @@ class MockPlayersService(PlayersService):
         raise NotImplementedError("Mock player comparison is not implemented yet")
 
     async def get_profile(self, username: str) -> PlayerProfileResponse:
-        raise NotImplementedError("Mock player profile is not implemented yet")
+        if username.casefold() == MOCK_NOT_FOUND_USERNAME:
+            raise ChessAPINotFoundError(f"/player/{username}")
+
+        if username.casefold() != "hikaru":
+            raise ChessAPINotFoundError(f"/player/{username}")
+
+        fixture_path = ("tests/fixtures/chesscom/hikaru_profile.json")
+
+        with open(fixture_path, encoding="utf-8") as file:
+            player = json.load(file)
+
+        return PlayerProfileResponse(
+            username=player["username"],
+            player_id=player["player_id"],
+            url=player["url"],
+            avatar=player["avatar"],
+            name=player["name"],
+            title=player["title"],
+            followers=player["followers"],
+            country_url=player["country"],
+            location=player["location"],
+            last_online=datetime.fromtimestamp(player["last_online"], tz=UTC),
+            joined=datetime.fromtimestamp(player["joined"], tz=UTC),
+            status=player["status"],
+            is_streamer=player["is_streamer"],
+            twitch_url=player["twitch_url"],
+            fide_rating=None,
+            verified=player["verified"],
+            league=player["league"],
+        )
 
     async def get_summary(
         self, username: str, query: PlayerSummaryQuery

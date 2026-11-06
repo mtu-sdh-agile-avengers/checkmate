@@ -6,7 +6,11 @@ the DEV-mode mock lives in `src/services/mocks/players.py`.
 
 import asyncio
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timezone
+
+from fastapi import HTTPException
+import httpx
+from pydantic import ValidationError
 
 from src.chesscom.client import ExternalChessComAPIClient
 from src.chesscom.models import ChessComGame, ChessComRecord, ChessComTimeClassStats
@@ -14,6 +18,7 @@ from src.chesscom.parser import (
     parse_games_archives,
     parse_monthly_games,
     parse_player_stats,
+    parse_player_profile,
 )
 from src.schemas.players import (
     PlayerComparisonQuery,
@@ -54,7 +59,47 @@ class ChessComPlayersService(PlayersService):
         raise NotImplementedError("Player comparison is not implemented yet (CMG4-89)")
 
     async def get_profile(self, username: str) -> PlayerProfileResponse:
-        raise NotImplementedError("Player profile is not implemented yet (CMG4-82)")
+        try:
+            raw_player = await self._client.get_player_profile(username)
+            player = parse_player_profile(raw_player)
+
+        except httpx.TimeoutException:
+            raise HTTPException(
+                status_code=504,
+                detail="Chess.com took too long to respond."
+            )
+
+        except httpx.RequestError:
+            raise HTTPException(
+                status_code=503,
+                detail="Chess.com is currently unavailable."
+            )
+
+        except (ValidationError, ValueError):
+            raise HTTPException(
+                status_code=502,
+                detail="Chess.com returned invalid player data."
+            )
+
+        return PlayerProfileResponse(
+            username=player.username,
+            player_id=player.player_id,
+            url=player.url,
+            avatar=player.avatar,
+            name=player.name,
+            title=player.title,
+            followers=player.followers,
+            country_url=player.country_url,
+            location=player.location,
+            joined=player.joined,
+            last_online=player.last_online,
+            status=player.status,
+            is_streamer=player.is_streamer,
+            twitch_url=player.twitch_url,
+            fide_rating=player.fide,
+            verified=player.verified,
+            league=player.league,
+        )
 
     async def get_summary(
         self, username: str, query: PlayerSummaryQuery
