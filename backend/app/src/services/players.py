@@ -59,46 +59,25 @@ class ChessComPlayersService(PlayersService):
         raise NotImplementedError("Player comparison is not implemented yet (CMG4-89)")
 
     async def get_profile(self, username: str) -> PlayerProfileResponse:
-        try:
-            raw_player = await self._client.get_player_profile(username)
-            player = parse_player_profile(raw_player)
-
-        except httpx.TimeoutException:
-            raise HTTPException(
-                status_code=504,
-                detail="Chess.com took too long to respond."
-            )
-
-        except httpx.RequestError:
-            raise HTTPException(
-                status_code=503,
-                detail="Chess.com is currently unavailable."
-            )
-
-        except (ValidationError, ValueError):
-            raise HTTPException(
-                status_code=502,
-                detail="Chess.com returned invalid player data."
-            )
+        player_profile = parse_player_profile(await self._client.get_player_profile(username))
 
         return PlayerProfileResponse(
-            username=player.username,
-            player_id=player.player_id,
-            url=player.url,
-            avatar=player.avatar,
-            name=player.name,
-            title=player.title,
-            followers=player.followers,
-            country_url=player.country_url,
-            location=player.location,
-            joined=player.joined,
-            last_online=player.last_online,
-            status=player.status,
-            is_streamer=player.is_streamer,
-            twitch_url=player.twitch_url,
-            fide_rating=player.fide,
-            verified=player.verified,
-            league=player.league,
+            username=player_profile.username,
+            player_id=player_profile.player_id,
+            url=player_profile.url,
+            avatar=player_profile.avatar,
+            name=player_profile.name,
+            title=player_profile.title,
+            followers=player_profile.followers,
+            country_url=player_profile.country_url,
+            location=player_profile.location,
+            joined=player_profile.joined,
+            last_online=player_profile.last_online,
+            status=player_profile.status,
+            is_streamer=player_profile.is_streamer,
+            twitch_url=player_profile.twitch_url,
+            verified=player_profile.verified,
+            league=player_profile.league,
         )
 
     async def get_summary(

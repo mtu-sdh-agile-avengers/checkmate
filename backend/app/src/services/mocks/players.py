@@ -48,6 +48,26 @@ _MOCK_RESULTS: dict[SummaryPeriod, tuple[int, int, int, int | None]] = {
 
 _MOCK_HISTORY_POINTS = 10
 
+_MOCK_PROFILE = PlayerProfileResponse(
+    username="mock_player",
+    player_id=15448422,
+    url="https://www.chess.com/member/mock_player",
+    avatar="https://images.chesscomfiles.com/uploads/v1/user/15448422.png",
+    name="Mock Player",
+    title="GM",
+    followers=1000,
+    country_url="https://api.chess.com/pub/country/US",
+    location="Florida",
+    last_online=datetime.now(UTC),
+    joined=datetime(2020, 1, 1, tzinfo=UTC),
+    status="premium",
+    is_streamer=True,
+    twitch_url="https://twitch.tv/mockplayer",
+    fide_rating=2700,
+    verified=True,
+    league="Legend",
+)
+
 
 def _mock_rating_history(
     current: int, change: int, days: int
@@ -77,32 +97,12 @@ class MockPlayersService(PlayersService):
         if username.casefold() == MOCK_NOT_FOUND_USERNAME:
             raise ChessAPINotFoundError(f"/player/{username}")
 
-        if username.casefold() != "hikaru":
-            raise ChessAPINotFoundError(f"/player/{username}")
-
-        fixture_path = ("tests/fixtures/chesscom/hikaru_profile.json")
-
-        with open(fixture_path, encoding="utf-8") as file:
-            player = json.load(file)
-
-        return PlayerProfileResponse(
-            username=player["username"],
-            player_id=player["player_id"],
-            url=player["url"],
-            avatar=player["avatar"],
-            name=player["name"],
-            title=player["title"],
-            followers=player["followers"],
-            country_url=player["country"],
-            location=player["location"],
-            last_online=datetime.fromtimestamp(player["last_online"], tz=UTC),
-            joined=datetime.fromtimestamp(player["joined"], tz=UTC),
-            status=player["status"],
-            is_streamer=player["is_streamer"],
-            twitch_url=player["twitch_url"],
-            fide_rating=None,
-            verified=player["verified"],
-            league=player["league"],
+        return _MOCK_PROFILE.model_copy(
+            update={
+                "username": username,
+                "url": f"https://www.chess.com/member/{username}",
+                "twitch_url": f"https://twitch.tv/{username}",
+            }
         )
 
     async def get_summary(
