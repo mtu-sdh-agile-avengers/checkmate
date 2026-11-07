@@ -1,0 +1,16 @@
+.live-chessboard { width: 100%; min-width: 0; margin: 24px auto; }
+.live-chessboard > svg { width: 100%; height: auto; display: block; overflow: visible; transform: scaleX(-1); }
+.live-chessboard-floating { animation: chess-float 7s ease-in-out infinite; }
+.live-chessboard-ground-shadow { transform-box: fill-box; transform-origin: center; animation: chess-shadow 7s ease-in-out infinite; }
+@keyframes chess-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes chess-shadow { 0%, 100% { opacity: .65; transform: scale(1); } 50% { opacity: .52; transform: scale(1.025); } }
+.live-chessboard-piece { animation-timing-function: cubic-bezier(.45, 0, .2, 1); animation-iteration-count: infinite; }
+.live-chessboard-pieces { animation: chess-loop-fade linear infinite; }
+@keyframes chess-loop-fade { 0%, 88% { opacity: 1; } 92%, 96% { opacity: 0; } 100% { opacity: 1; } }
+/* Reset positions only while the whole piece layer is invisible. */
+.live-chessboard-piece { animation-fill-mode: both; }
+.live-chessboard[data-paused='true'] g, .live-chessboard[data-paused='true'] .live-chessboard-ground-shadow { animation-play-state: paused; }
+.live-chessboard figcaption { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; color: var(--muted); font-size: 10px; letter-spacing: 1.5px; }
+.live-chessboard button { border: 0; background: transparent; color: #575653; padding: 8px 0 8px 8px; font-size: 12px; letter-spacing: 0; text-decoration: underline; text-underline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .live-chessboard g, .live-chessboard-ground-shadow { animation: none !important; } .live-chessboard button { display: none; } }
+@media (max-width: 600px) { .live-chessboard { width: 100%; margin: 0 auto 12px; } }
