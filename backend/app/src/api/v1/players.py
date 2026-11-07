@@ -48,10 +48,18 @@ async def compare_players(
     "/{username}/profile",
     summary="Get player profile",
     description="Returns Chess.com player profile record.",
+    response_model=PlayerProfileResponse,
+    responses={
+            404: {"model": ErrorResponse, "description": "Player does not exist"},
+            502: {"model": ErrorResponse, "description": "Unexpected Chess.com response"},
+            503: {"model": ErrorResponse, "description": "Chess.com is not available"},
+        }
 )
 @limiter.limit("1/second")
 async def get_player_profile(
-    request: Request, username: str, service: PlayersServiceDep
+    request: Request,
+    username: str,
+    service: PlayersServiceDep
 ) -> PlayerProfileResponse:
     return await service.get_profile(username)
 
