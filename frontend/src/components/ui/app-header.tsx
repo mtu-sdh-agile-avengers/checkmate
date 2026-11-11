@@ -14,10 +14,7 @@ export function AppHeader() {
   const links: NavItem[] = [{ label: 'Search', path: ROUTES.search, icon: Search, end: true }];
   if (player) {
     links.push({ label: 'Statistics', path: ROUTES.summary(player), icon: BarChart3, end: false });
-    // The Overall page has no API endpoint yet, so it is only offered with demo data
-    if (!live) {
-      links.push({ label: 'Overall', path: ROUTES.overall(player), icon: TrendingUp, end: false });
-    }
+    links.push({ label: 'Overall', path: ROUTES.overall(player), icon: TrendingUp, end: false });
     links.push({ label: 'Profile', path: ROUTES.profile(player), icon: UserRound, end: true });
   }
   return (

@@ -37,12 +37,13 @@ describe('app-header', () => {
     expect(screen.queryByText('DEMO')).not.toBeInTheDocument();
   });
 
-  it('links to the searched player, without Overall, in live mode', () => {
+  it('links to the searched player in live mode', () => {
     vi.stubEnv('VITE_API_MODE', 'live');
 
     expect(navLinks('/players/magnuscarlsen/summary')).toEqual([
       'Search /',
       'Statistics /players/magnuscarlsen/summary',
+      'Overall /players/magnuscarlsen/overall',
       'Profile /players/magnuscarlsen',
     ]);
   });
