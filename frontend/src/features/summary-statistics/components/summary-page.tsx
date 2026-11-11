@@ -9,7 +9,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { SummaryFilters } from '@/features/summary-statistics/components/summary-filters';
 import { useSummary } from '@/features/summary-statistics/hooks/use-summary';
 import type { TimeClass, TimeFrame } from '@/types/chess';
-import { formatNumber, signedNumber } from '@/utils/format';
+import { formatEloChange, formatNumber, formatRating, signedNumber } from '@/utils/format';
 
 export function SummaryPage() {
   const { username = '' } = useParams<{ username: string }>();
@@ -23,7 +23,9 @@ export function SummaryPage() {
         <div><span className="eyebrow">02 / CHESS PERFORMANCE</span><h1>Summary statistics</h1><p>{data ? `${data.from} – ${data.to}` : 'Select a period to analyse'}</p></div>
         <SummaryFilters frame={frame} timeClass={timeClass} onFrameChange={setFrame} onClassChange={setTimeClass} />
       </div>
-      {isPending ? <PageLoading /> : error ? <PageError message={error.message} onRetry={() => void refetch()} /> : data ? (
+      {isPending ? <PageLoading /> : error ? <PageError message={error.message} onRetry={() => void refetch()} /> : data && data.games === 0 ? (
+        <div className="status-screen" role="status"><p>{noGamesMessage(frame, timeClass)}</p></div>
+      ) : data ? (
         <div className="statistics-layout" aria-busy={isFetching}>
           <div className="board-column"><ChessArtwork variant="midgame" /><p className="illustration-label">Mid-game visualisation · {timeClass} {isFetching ? '· Updating…' : ''}</p></div>
           <div className="analytics-column">
@@ -42,9 +44,9 @@ export function SummaryPage() {
               </div>
             </Panel>
             <div className="metric-grid metric-grid-three rating-summary-grid">
-              <StatCard label="Expected rating" value={formatNumber(data.expectedRating)} />
-              <StatCard label="Actual rating" value={formatNumber(data.actualRating)} note={`Last change ${signedNumber(data.lastChange)} Elo`} />
-              <StatCard label="Rating difference" value={`${signedNumber(data.difference)} Elo`} />
+              <StatCard label="Expected rating" value={formatRating(data.expectedRating)} note={data.expectedRating === null ? 'Not available yet' : undefined} />
+              <StatCard label="Actual rating" value={formatRating(data.actualRating)} note={data.lastChange === null ? undefined : `Change in period ${signedNumber(data.lastChange)} Elo`} />
+              <StatCard label="Rating difference" value={formatEloChange(data.difference)} />
             </div>
             <Panel className="chart-panel"><RatingChart points={data.ratingHistory} subtitle={`Last ${frame === 'all' ? 'available' : `${frame} days`} · ${timeClass}`} /></Panel>
           </div>
@@ -52,4 +54,9 @@ export function SummaryPage() {
       ) : null}
     </div>
   );
+}
+
+// CMG4-13: a period without games shows a message instead of empty statistics
+function noGamesMessage(frame: TimeFrame, timeClass: TimeClass): string {
+  return frame === 'all' ? `No ${timeClass} games played yet.` : `No ${timeClass} games in the last ${frame} days.`;
 }
