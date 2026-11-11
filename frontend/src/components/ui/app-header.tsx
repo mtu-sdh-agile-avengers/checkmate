@@ -1,17 +1,25 @@
-import { BarChart3, Crown, Search, TrendingUp, UserRound } from 'lucide-react';
+import { BarChart3, Crown, Search, TrendingUp, UserRound, type LucideIcon } from 'lucide-react';
 import { NavLink, useParams } from 'react-router-dom';
 import { getApiMode } from '@/config/api';
 import { APP_NAME, DEMO_USERNAME } from '@/config/constants';
 import { ROUTES } from '@/config/routes';
 
+type NavItem = { label: string; path: string; icon: LucideIcon; end: boolean };
+
 export function AppHeader() {
-  const { username = DEMO_USERNAME } = useParams<{ username: string }>();
-  const links = [
-    { label: 'Search', path: ROUTES.search, icon: Search, end: true },
-    { label: 'Statistics', path: ROUTES.summary(username), icon: BarChart3, end: false },
-    { label: 'Overall', path: ROUTES.overall(username), icon: TrendingUp, end: false },
-    { label: 'Profile', path: ROUTES.profile(username), icon: UserRound, end: true },
-  ];
+  const { username } = useParams<{ username: string }>();
+  const live = getApiMode() === 'live';
+  // Demo mode falls back to the demo player; live mode shows player links only after a search
+  const player = username ?? (live ? null : DEMO_USERNAME);
+  const links: NavItem[] = [{ label: 'Search', path: ROUTES.search, icon: Search, end: true }];
+  if (player) {
+    links.push({ label: 'Statistics', path: ROUTES.summary(player), icon: BarChart3, end: false });
+    // The Overall page has no API endpoint yet, so it is only offered with demo data
+    if (!live) {
+      links.push({ label: 'Overall', path: ROUTES.overall(player), icon: TrendingUp, end: false });
+    }
+    links.push({ label: 'Profile', path: ROUTES.profile(player), icon: UserRound, end: true });
+  }
   return (
     <header className="app-header">
       <NavLink to="/" className="brand" aria-label={`${APP_NAME} home`}>

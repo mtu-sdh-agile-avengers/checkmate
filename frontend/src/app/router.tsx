@@ -29,7 +29,8 @@ export function AppRouter() {
           <Route path="players/:username">
             <Route index element={<ProfilePage />} />
             <Route path="summary" element={<SummaryPage />} />
-            <Route path="overall" element={<OverallPage />} />
+            {/* The Overall page has no API endpoint yet: live mode opens the statistics page instead */}
+            <Route path="overall" element={getApiMode() === 'live' ? <Navigate to="../summary" relative="path" replace /> : <OverallPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
