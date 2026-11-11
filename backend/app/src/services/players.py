@@ -59,7 +59,13 @@ class ChessComPlayersService(PlayersService):
         raise NotImplementedError("Player comparison is not implemented yet (CMG4-89)")
 
     async def get_profile(self, username: str) -> PlayerProfileResponse:
-        player_profile = parse_player_profile(await self._client.get_player_profile(username))
+        # FIDE rating is not part of the Chess.com profile, only of /stats (CMG4-65 AC)
+        raw_profile, raw_stats = await asyncio.gather(
+            self._client.get_player_profile(username),
+            self._client.get_player_stats(username),
+        )
+        player_profile = parse_player_profile(raw_profile)
+        stats = parse_player_stats(raw_stats)
 
         return PlayerProfileResponse(
             username=player_profile.username,
@@ -78,6 +84,7 @@ class ChessComPlayersService(PlayersService):
             twitch_url=player_profile.twitch_url,
             verified=player_profile.verified,
             league=player_profile.league,
+            fide_rating=stats.fide,
         )
 
     async def get_summary(

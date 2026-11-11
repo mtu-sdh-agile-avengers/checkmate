@@ -1,5 +1,6 @@
 import { BarChart3, Crown, Search, TrendingUp, UserRound } from 'lucide-react';
 import { NavLink, useParams } from 'react-router-dom';
+import { getApiMode } from '@/config/api';
 import { APP_NAME, DEMO_USERNAME } from '@/config/constants';
 import { ROUTES } from '@/config/routes';
 
@@ -30,11 +31,13 @@ export function AppHeader() {
           </NavLink>
         ))}
       </nav>
-      <div className="header-demo" title="Example data, not a live account">
-        <span className="demo-dot" />
-        <span className="demo-caption">DEMO</span>
-        <span className="avatar-monogram">JD</span>
-      </div>
+      {getApiMode() === 'mock' && (
+        <div className="header-demo" title="Example data, not a live account">
+          <span className="demo-dot" />
+          <span className="demo-caption">DEMO</span>
+          <span className="avatar-monogram">JD</span>
+        </div>
+      )}
     </header>
   );
 }
