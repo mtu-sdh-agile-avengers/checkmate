@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { ArrowRight, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getApiMode } from '@/config/api';
 import { ROUTES } from '@/config/routes';
 import { usePlayerSearch } from '@/features/player-search/hooks/use-player-search';
 
@@ -42,7 +43,11 @@ export function SearchForm() {
         </button>
       </div>
       {validationError ? <p id="search-error" className="form-error" role="alert">{validationError}</p> :
-        <p id="search-help" className="form-help">Try <button type="button" className="inline-demo" onClick={() => setQuery('hikaru')}>hikaru</button> for the demo. No live account lookup is performed.</p>}
+        getApiMode() === 'live' ? (
+          <p id="search-help" className="form-help">Type a Chess.com username or paste a profile link (https://www.chess.com/member/…).</p>
+        ) : (
+          <p id="search-help" className="form-help">Try <button type="button" className="inline-demo" onClick={() => setQuery('hikaru')}>hikaru</button> for the demo. No live account lookup is performed.</p>
+        )}
     </form>
   );
 }

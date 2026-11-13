@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { AppHeader } from '@/components/ui/app-header';
+import { getApiMode } from '@/config/api';
 import { PageLoading } from '@/components/ui/page-status';
 
 const SearchPage = lazy(() => import('@/features/player-search/components/search-page').then((m) => ({ default: m.SearchPage })));
@@ -14,7 +15,7 @@ function AppLayout() {
       <a className="skip-link" href="#main-content">Skip to main content</a>
       <AppHeader />
       <main id="main-content" className="main-content"><Outlet /></main>
-      <footer className="app-footer"><span>CHECKMATE · SCHOLAR EDITION</span><span>Illustrative demo data — not live Chess.com records</span></footer>
+      <footer className="app-footer"><span>CHECKMATE · SCHOLAR EDITION</span><span>{getApiMode() === 'live' ? 'Profile and statistics from the Chess.com Public API' : 'Illustrative demo data — not live Chess.com records'}</span></footer>
     </div>
   );
 }

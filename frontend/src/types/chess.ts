@@ -29,10 +29,10 @@ export type SummaryStats = {
   draws: number;
   losses: number;
   winRate: number;
-  expectedRating: number;
-  actualRating: number;
-  difference: number;
-  lastChange: number;
+  expectedRating: number | null; // null until the ML rating model exists (CMG4-11)
+  actualRating: number | null; // null if the player never played this time class
+  difference: number | null;
+  lastChange: number | null; // rating change over the period; null for 'all' or no games
   ratingHistory: RatingPoint[];
 };
 

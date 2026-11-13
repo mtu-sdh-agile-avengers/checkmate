@@ -1,8 +1,8 @@
-# CHECKMATE — Scholar
+# CHECKMATE
 
 A functional **React + TypeScript + Vite** implementation of the CHECKMATE chess analytics Scholar mockups. Uses a simplified ivory/charcoal design system, feature-based architecture, angled chessboard artwork, accessible forms, responsive layouts, lazy routes, React Query and automated tests.
 
-> **Demo only.** Statistics and profile fields are intentionally fictional illustrative fixtures. This app does **not** call Chess.com or determine actual ratings. The `hikaru` username is used as a visual placeholder because it appeared in the supplied mockup; no displayed numbers are verified player records.
+> **Two data modes.** With `VITE_API_MODE=live` the profile and summary statistics pages show real Chess.com data through our backend API. Without it (the default), every page uses fictional demo data from `src/lib/mock-api.ts`. Search and the Overall page still use demo data in both modes.
 
 ## Setup
 
@@ -47,11 +47,25 @@ src/utils          URL validation and display formatting
 src/testing        Vitest setup and render helpers
 ```
 
-## Changing the backend
+## Running with the backend (live data)
 
-Replace the functions in `src/features/*/api/` to call your backend (or a backend proxy to the Chess.com API) while preserving the shared `Player`, `SummaryStats` and `OverallStats` types. The mock repository lives in `src/lib/mock-api.ts` and adds an artificial delay to demonstrate loading states. A request for `notfound` or `error` is useful for testing the error screen.
+1. Start the backend: `cd backend/app` and `uv run fastapi dev` (API on <http://localhost:8000>).
+   With `RUN_MODE=prod` in `backend/app/.env` it reads real Chess.com data; with `RUN_MODE=dev` it returns its own sample data.
+2. In `frontend`, copy `.env.example` to `.env` (it sets `VITE_API_MODE=live`), then run `npm run dev`.
+3. Open a player page, e.g. <http://localhost:5173/players/hikaru> or `/players/hikaru/summary`.
 
-`expectedRating`, `actualRating`, and `difference` in this demo represent a placeholder comparison, **not an official Chess.com prediction or performance rating**. A real implementation needs an explicit rating model and interpretation.
+The Vite dev server forwards every `/api` request to `http://localhost:8000` (`vite.config.ts`), so no CORS setup is needed.
+
+| Page | Endpoint | Fetcher |
+|---|---|---|
+| Profile | `GET /api/v1/players/{username}/profile` | `src/features/player-profile/api/get-player.ts` |
+| Summary statistics | `GET /api/v1/players/{username}/summary?period=&timeClass=` | `src/features/summary-statistics/api/get-summary.ts` |
+
+Each fetcher converts the API response into the page's own type (`Player`, `SummaryStats`), so components do not depend on the API format. Error messages from the API (for example an unknown player) are shown on the page as they are; `src/lib/api-client.ts` handles requests and errors.
+
+In mock mode, `src/lib/mock-api.ts` adds an artificial delay to demonstrate loading states. A request for `notfound` or `error` is useful for testing the error screen.
+
+`expectedRating` and `difference` come from the ML rating model (CMG4-11), which does not exist yet: in live mode they are empty and shown as "N/A".
 
 ## Mockup fidelity and assumptions
 
