@@ -1,4 +1,4 @@
-# CHECKMATE — Scholar
+# CHECKMATE
 
 A functional **React + TypeScript + Vite** implementation of the CHECKMATE chess analytics Scholar mockups. Uses a simplified ivory/charcoal design system, feature-based architecture, angled chessboard artwork, accessible forms, responsive layouts, lazy routes, React Query and automated tests.
 
