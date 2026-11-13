@@ -1,13 +1,11 @@
 import { Suspense, lazy } from 'react';
-import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom';
 import { AppHeader } from '@/components/ui/app-header';
 import { getApiMode } from '@/config/api';
+import { ROUTES } from '@/config/routes';
 import { PageLoading } from '@/components/ui/page-status';
 
-const SearchPage = lazy(() => import('@/features/player-search/components/search-page').then((m) => ({ default: m.SearchPage })));
-const SummaryPage = lazy(() => import('@/features/summary-statistics/components/summary-page').then((m) => ({ default: m.SummaryPage })));
-const OverallPage = lazy(() => import('@/features/overall-statistics/components/overall-page').then((m) => ({ default: m.OverallPage })));
-const ProfilePage = lazy(() => import('@/features/player-profile/components/profile-page').then((m) => ({ default: m.ProfilePage })));
+const StageLayout = lazy(() => import('@/app/stage-layout').then((m) => ({ default: m.StageLayout })));
 
 function AppLayout() {
   return (
@@ -20,17 +18,24 @@ function AppLayout() {
   );
 }
 
+/** The statistics pages were merged into the player view; old links land on its television. */
+function ToPlayerView({ stats }: { stats?: 'overall' }) {
+  const { username = '' } = useParams<{ username: string }>();
+  return <Navigate to={`${ROUTES.profile(username)}${stats ? `?stats=${stats}` : ''}`} replace />;
+}
+
 export function AppRouter() {
   return (
     <Suspense fallback={<PageLoading label="Loading page…" />}>
       <Routes>
         <Route element={<AppLayout />}>
-          <Route index element={<SearchPage />} />
-          <Route path="players/:username">
-            <Route index element={<ProfilePage />} />
-            <Route path="summary" element={<SummaryPage />} />
-            <Route path="overall" element={<OverallPage />} />
+          {/* One layout for search and player view, so the stage stays mounted and the camera can move between them. */}
+          <Route element={<StageLayout />}>
+            <Route index element={null} />
+            <Route path="players/:username" element={null} />
           </Route>
+          <Route path="players/:username/summary" element={<ToPlayerView />} />
+          <Route path="players/:username/overall" element={<ToPlayerView stats="overall" />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

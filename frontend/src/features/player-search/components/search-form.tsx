@@ -17,7 +17,7 @@ export function SearchForm() {
     setValidationError('');
     try {
       const player = await search.mutateAsync(query);
-      navigate(ROUTES.summary(player.username));
+      navigate(ROUTES.profile(player.username));
     } catch (error: unknown) {
       setValidationError(error instanceof Error ? error.message : 'Unable to search. Please try again.');
     }
@@ -25,7 +25,7 @@ export function SearchForm() {
 
   return (
     <form className="search-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
-      <label htmlFor="player-query" className="sr-only">Chess.com username or member profile URL</label>
+      <label htmlFor="player-query" className="search-field-label">Chess.com username or member profile URL</label>
       <div className="search-combo">
         <Search size={22} aria-hidden="true" />
         <input
@@ -33,7 +33,7 @@ export function SearchForm() {
           type="search"
           value={query}
           onChange={(event) => { setQuery(event.target.value); setValidationError(''); search.reset(); }}
-          placeholder="Enter a Chess.com username or profile URL"
+          placeholder="Search a player or paste a profile URL..."
           autoComplete="off"
           aria-invalid={Boolean(validationError)}
           aria-describedby={validationError ? 'search-error' : 'search-help'}
