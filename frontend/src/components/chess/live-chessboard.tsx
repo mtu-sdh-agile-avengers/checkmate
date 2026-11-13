@@ -37,9 +37,9 @@ function PieceShape({ kind, white, prefix }: { kind: Kind; white: boolean; prefi
   const material = `${prefix}-${white ? 'ivory' : 'ebony'}`;
   const body = `url(#${material})`;
   const crown = `url(#${material}-top)`;
-  const edge = white ? '#8d8371' : '#121619';
+  const edge = white ? '#111111' : '#eee8df';
   const highlight = white ? '#fffef4' : '#b7c0c3';
-  return <g strokeWidth=".65" strokeLinejoin="round" strokeLinecap="round">
+  return <g strokeWidth="1.15" strokeLinejoin="round" strokeLinecap="round">
     <ellipse cx="28" cy="40" rx="17" ry="6" fill={`url(#${prefix}-shadow)`} stroke="none" />
     <g fill={body} stroke={edge}>
       {/* Turned, layered plinths give every piece a physical footprint. */}
@@ -72,6 +72,7 @@ export function LiveChessboard() {
   }).join('');
   return <figure className="live-chessboard" data-paused={paused}>
     <style>{keyframes}</style>
+    <div className="live-chessboard-kicker" aria-hidden="true"><span>MAKE YOUR</span><strong>MOVE.</strong></div>
     <svg viewBox="-8 -14 700 480" role="img" aria-label="Horizontally mirrored angled chessboard with upright sculpted ivory and ebony pieces playing a repeating Scotch opening." >
       <defs>
         {(['ivory', 'ebony'] as const).map(material => {
@@ -79,8 +80,8 @@ export function LiveChessboard() {
           return <g key={material}>
             <linearGradient id={`${prefix}-${material}`} x1="0" y1="0" x2="1" y2=".2">
               <stop offset="0" stopColor={light ? '#a79b85' : '#14191c'} />
-              <stop offset=".24" stopColor={light ? '#fff9e7' : '#687278'} />
-              <stop offset=".43" stopColor={light ? '#f3ead5' : '#3d464b'} />
+              <stop offset=".24" stopColor={light ? '#ffffff' : '#414141'} />
+              <stop offset=".43" stopColor={light ? '#fffaf2' : '#191919'} />
               <stop offset=".78" stopColor={light ? '#c7b99e' : '#1c2327'} />
               <stop offset="1" stopColor={light ? '#96876e' : '#0e1215'} />
             </linearGradient>
@@ -93,21 +94,21 @@ export function LiveChessboard() {
           </g>;
         })}
         <radialGradient id={`${prefix}-shadow`}><stop stopColor="#101414" stopOpacity=".48" /><stop offset="1" stopColor="#101414" stopOpacity="0" /></radialGradient>
-        <linearGradient id={`${prefix}-frame`} x2=".8" y2="1"><stop stopColor="#dbd7cc" /><stop offset=".45" stopColor="#a5a195" /><stop offset="1" stopColor="#77796f" /></linearGradient>
+        <linearGradient id={`${prefix}-frame`} x2=".8" y2="1"><stop stopColor="#a7a5a0" /><stop offset=".45" stopColor="#80796d" /><stop offset="1" stopColor="#55514a" /></linearGradient>
         <linearGradient id={`${prefix}-light`} x2="1" y2="1"><stop stopColor="#ffffff" stopOpacity=".14" /><stop offset="1" stopColor="#111715" stopOpacity=".08" /></linearGradient>
       </defs>
       <ellipse className="live-chessboard-ground-shadow" cx="338" cy="312" rx="320" ry="152" fill={`url(#${prefix}-shadow)`} opacity=".65" />
       <g className="live-chessboard-floating">
       <g transform="matrix(.85 .38 .7 -.55 28 272)">
-        <rect x="-18" y="-18" width="436" height="436" rx="10" fill="#55594f" />
+        <rect x="-18" y="-18" width="436" height="436" rx="1" fill="#080808" />
       </g>
       <g transform="matrix(.85 .38 .7 -.55 28 266)">
-        <rect x="-18" y="-18" width="436" height="436" rx="10" fill="#84877b" />
+        <rect x="-18" y="-18" width="436" height="436" rx="1" fill="#fffaf2" />
       </g>
       <g transform="matrix(.85 .38 .7 -.55 28 260)">
-      <rect x="-18" y="-18" width="436" height="436" rx="10" fill={`url(#${prefix}-frame)`} stroke="#dedbd2" />
+      <rect x="-18" y="-18" width="436" height="436" rx="1" fill={`url(#${prefix}-frame)`} stroke="#151515" />
       <rect x="-2" y="-2" width="404" height="404" fill="#4b4e48" />
-      {Array.from({ length: 64 }, (_, i) => <rect key={i} x={(i % 8) * 50} y={Math.floor(i / 8) * 50} width="50" height="50" fill={(i + Math.floor(i / 8)) % 2 ? '#686b68' : '#eeece5'} />)}
+      {Array.from({ length: 64 }, (_, i) => <rect key={i} x={(i % 8) * 50} y={Math.floor(i / 8) * 50} width="50" height="50" fill={(i + Math.floor(i / 8)) % 2 ? '#161616' : '#fffaf2'} />)}
       <rect width="400" height="400" fill={`url(#${prefix}-light)`} />
       </g>
       <g className="live-chessboard-pieces" style={{ animationDuration: `${duration}s` }}>

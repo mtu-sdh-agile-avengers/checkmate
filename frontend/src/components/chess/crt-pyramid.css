@@ -1,0 +1,84 @@
+﻿/* 3D TV wall. A perspective viewport holds a preserve-3d rig; each TV is a box whose
+   front is a small SVG and whose sides are CSS planes. Every length is a container-query
+   unit (cqh = 1% of the viewport height), so the whole wall scales with the hero.
+   The only bitmap is a shared 128px noise tile (generated once, not per frame). */
+.crt-pyramid { position: relative; width: 100%; height: 100%; min-width: 0; margin: 0; }
+.crt-wall__viewport {
+  position: absolute; inset: 0; overflow: hidden; container-type: size;
+  perspective: 150cqh; perspective-origin: 60% 44%;
+  --box-w: 26.5cqh; --box-h: calc(var(--box-w) * .8); --gap: 1.1cqh;
+  --cell-w: calc(var(--box-w) + var(--gap)); --cell-h: calc(var(--box-h) + var(--gap));
+  --depth: calc(var(--box-w) * .62); --pop: 1.4cqh; --rack-z: calc(var(--depth) * -.55);
+  --stage-d: 60cqh;
+}
+/* The wall is hinged at its right end (nearest the viewer) and swung back into the page. */
+.crt-wall__rig {
+  position: absolute; right: -3cqw; top: 47%;
+  width: calc(var(--cols) * var(--cell-w)); height: calc(var(--rows) * var(--cell-h));
+  transform-style: preserve-3d; transform-origin: 100% 50%;
+  transform: translateY(-50%) translateZ(10cqh) rotateY(-34deg);
+}
+.crt-wall__rig > * { position: absolute; display: block; }
+/* Black rack behind the sets; the mullion gaps reveal it and the cabinet sides. */
+.crt-wall__rack {
+  inset: calc(var(--gap) * -1.2); transform: translateZ(var(--rack-z));
+  background: linear-gradient(180deg, #1c1b19, #0b0a09);
+}
+/* Stage: a graphite deck running toward the viewer, with a faint diamond tread
+   and the glow the screens throw onto it. */
+.crt-wall__stage {
+  left: -4cqh; right: -20cqh; top: calc(100% + var(--gap)); height: var(--stage-d);
+  transform-origin: 50% 0; transform: translateZ(var(--rack-z)) rotateX(90deg);
+  background:
+    radial-gradient(ellipse 70% 38% at 55% 0, rgb(247 246 243 / .14), transparent 70%),
+    repeating-linear-gradient(45deg, rgb(255 255 255 / .035) 0 .25cqh, transparent .25cqh 1.6cqh),
+    repeating-linear-gradient(-45deg, rgb(255 255 255 / .035) 0 .25cqh, transparent .25cqh 1.6cqh),
+    linear-gradient(180deg, #2e2d2a, #1b1a18 70%);
+}
+.crt-wall__stage i { position: absolute; inset: 0 0 auto; height: .35cqh; background: #8a8884; opacity: .5; }
+.crt-wall__stage-front {
+  left: -4cqh; right: -20cqh; top: calc(100% + var(--gap)); height: 5cqh;
+  transform: translateZ(calc(var(--rack-z) + var(--stage-d)));
+  background: linear-gradient(180deg, #8a8884 0 .3cqh, #26251f .3cqh, #121110);
+}
+/* One TV: front face at z = 0 of its box, pushed out by its own --p. */
+.crt-box {
+  left: calc(var(--c) * var(--cell-w) + var(--gap) / 2); top: calc(var(--r) * var(--cell-h) + var(--gap) / 2);
+  width: var(--box-w); height: var(--box-h); transform-style: preserve-3d;
+  transform: translateZ(calc(var(--p) * var(--pop)));
+  --side: calc(var(--p) * var(--pop) - var(--rack-z) + 1px);
+  --side-a: #3b3a37; --side-b: #141311;
+}
+.crt-unit--silver { --side-a: #4f4d49; --side-b: #1c1b19; }
+/* Side planes hinge back from each edge (x/y of the plane = depth into the wall). */
+.crt-box__side { position: absolute; display: block; }
+.crt-box__side--left, .crt-box__side--right {
+  top: 0; width: var(--side); height: 100%; transform-origin: 0 50%; transform: rotateY(90deg);
+  background:
+    repeating-linear-gradient(180deg, transparent 0 1.1cqh, rgb(0 0 0 / .32) 1.1cqh 1.5cqh) 55% 50% / 46% 58% no-repeat,
+    linear-gradient(90deg, var(--side-a), var(--side-b));
+}
+.crt-box__side--left { left: 0; }
+.crt-box__side--right { left: 100%; }
+.crt-box__side--top, .crt-box__side--bottom {
+  left: 0; width: 100%; height: var(--side); transform-origin: 50% 0; transform: rotateX(-90deg);
+}
+.crt-box__side--top { top: 0; background: linear-gradient(180deg, #5a5854, #1f1e1c); }
+.crt-box__side--bottom { top: 100%; background: linear-gradient(180deg, #121110, #060505); }
+/* Paper-coloured fog: the far end dissolves behind the copy, keeping text legible. */
+.crt-wall__fog {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, var(--paper, #f7f6f3) 0 26%, rgb(247 246 243 / .9) 36%, rgb(247 246 243 / .4) 47%, rgb(247 246 243 / 0) 60%);
+}
+.crt-pyramid figcaption { position: absolute; z-index: 3; right: clamp(16px, 2.4vw, 40px); bottom: 18px; display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 0; color: #54524d; font: 9px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 1px; }
+.crt-pyramid button { flex-shrink: 0; border: 1px solid #1b1c1d; border-radius: 0; background: #fffefa; color: #1b1c1d; padding: 8px 10px; min-height: 40px; font-family: inherit; font-size: 10px; line-height: 1.3; letter-spacing: 0; cursor: pointer; }
+.crt-pyramid button:hover { color: #1c1d1e; border-color: #80796d; }
+.crt-pyramid button:focus-visible { outline: 2px solid #80796d; outline-offset: 4px; }
+
+/* Screen colours, signal states and the noise animation live in crt-set.css. */
+.crt-pyramid[data-paused='true'] * { animation-play-state: paused !important; }
+@media (max-width: 600px) {
+  .crt-pyramid figcaption { padding-inline: 4%; font-size: 7px; letter-spacing: .6px; }
+  .crt-pyramid button { font-size: 10px; min-height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) { .crt-pyramid button { display: none; } }

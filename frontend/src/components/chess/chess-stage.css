@@ -1,0 +1,167 @@
+/* The chess stage. Layers, back to front (z-index):
+     0 back wall   lighting rig, hanging neon sign
+     1 floor view  3D world holding only the chessboard floor, plus its flat key light
+     1 back view   the same 3D world again: television piles, standing pieces
+     2 haze        spotlight beams, drifting smoke, horizon fog
+     3 (page copy and the table sit here; see search-page.css)
+     4 front view  the same 3D world again, holding only the footlight props
+     5 vignette    6 pause control
+   The figure itself creates no stacking context, so the page copy can slot in at 3.
+   Only transforms and opacity animate, and the parallax is a single transform per layer.
+   Nothing inside the floor plane moves or clips: a moving or clipped child would make the
+   browser redraw the whole oversized plane every frame. */
+/* Parallax inputs (see use-stage-parallax.ts). Not inherited: they are set on the few
+   layers that move, and changing them must not restyle everything inside those layers. */
+@property --px { syntax: '<number>'; inherits: false; initial-value: 0; }
+@property --py { syntax: '<number>'; inherits: false; initial-value: 0; }
+@property --ps { syntax: '<number>'; inherits: false; initial-value: 0; }
+.chess-stage { position: absolute; inset: 0; margin: 0; pointer-events: none; }
+.chess-stage__art > div { position: absolute; inset: 0; overflow: hidden; }
+.stage-backwall { z-index: 0; background: radial-gradient(ellipse 62% 48% at 50% 40%, #202023 0, #121214 52%, #09090a 100%); }
+.stage-view { container-type: size; }
+.stage-view--floor, .stage-view--back { z-index: 1; }
+.stage-haze { z-index: 2; }
+.stage-view--front { z-index: 4; }
+.stage-vignette { z-index: 5; background: radial-gradient(ellipse 82% 78% at 50% 58%, transparent 48%, rgb(4 4 5 / .8) 100%); }
+
+/* --- Back wall ----------------------------------------------------------- */
+.stage-rig, .stage-beams {
+  position: absolute; left: -3%; top: 0; width: 106%; height: 100%;
+  transform: translate3d(calc(var(--px, 0) * 10px), calc(var(--py, 0) * 4px), 0);
+  translate: calc(var(--cam-shift, 0px) * .22) 0;
+  transition: transform .6s cubic-bezier(.2, .8, .2, 1), translate var(--cam-time, 1.1s) var(--cam-ease, cubic-bezier(.65, 0, .2, 1));
+}
+.stage-sign {
+  position: absolute; top: 14.5%; right: 4%; padding: .42em .5em .42em .78em; border: 2px solid #f7f6f3; border-radius: 6px;
+  color: #fffefa; font-size: clamp(12px, 1.45vw, 21px); line-height: 1; font-weight: 900; letter-spacing: .28em; text-transform: uppercase; white-space: nowrap;
+  text-shadow: 0 0 6px rgb(255 254 250 / .85), 0 0 20px rgb(247 246 243 / .5);
+  box-shadow: 0 0 10px rgb(247 246 243 / .5), 0 0 34px rgb(247 246 243 / .2), inset 0 0 12px rgb(247 246 243 / .28);
+  transform: translate3d(calc(var(--px, 0) * 10px), calc(var(--py, 0) * 4px), 0) rotate(4deg);
+  translate: calc(var(--cam-shift, 0px) * .22) 0;
+  transition: transform .6s cubic-bezier(.2, .8, .2, 1), translate var(--cam-time, 1.1s) var(--cam-ease, cubic-bezier(.65, 0, .2, 1));
+  animation: stage-neon 7s steps(1, end) infinite;
+}
+.stage-sign::before, .stage-sign::after { content: ''; position: absolute; bottom: 100%; width: 1px; height: 3.4vh; background: #343437; }
+.stage-sign::before { left: 16%; }
+.stage-sign::after { right: 16%; }
+@keyframes stage-neon { 0%, 100% { opacity: 1; } 41% { opacity: .35; } 42.5% { opacity: 1; } 44% { opacity: .5; } 45% { opacity: 1; } 83% { opacity: .6; } 84% { opacity: 1; } }
+
+/* --- 3D world ------------------------------------------------------------
+   --u is the stage unit: 1% of the hero height, capped by its width so the set
+   still fits a phone. The world's origin is the centre of the footlights (bottom
+   centre of the hero, on the floor); the camera looks from 60% of the hero
+   height above the floor, which puts the horizon at 40%. */
+.stage-camera {
+  position: absolute; inset: 0; --u: min(1cqh, .9cqw);
+  perspective: calc(110 * var(--u)); perspective-origin: 50% 40%;
+}
+.stage-world {
+  position: absolute; left: 50%; top: 100%; width: 0; height: 0; transform-style: preserve-3d;
+  /* Parallax pivots about the table, so the floor under it stays put while near and far props swing. */
+  transform-origin: 0 0 calc(-22 * var(--u));
+  transform: translate3d(calc(var(--px, 0) * -1.5 * var(--u)), calc(var(--ps, 0) * 5 * var(--u)), 0) rotateY(calc(var(--px, 0) * -1.8deg)) rotateX(calc(var(--py, 0) * .6deg));
+  /* The camera: --cam-shift is how far the table set slides on screen (set by the page);
+     dividing by the table's perspective scale (110 / 132) moves the floor under it by the
+     same amount, so feet stay planted while the shot tracks sideways. */
+  translate: calc(var(--cam-shift, 0px) / .833) 0; rotate: y var(--cam-yaw, 0deg);
+  transition: transform .6s cubic-bezier(.2, .8, .2, 1), translate var(--cam-time, 1.1s) var(--cam-ease, cubic-bezier(.65, 0, .2, 1)), rotate var(--cam-time, 1.1s) var(--cam-ease, cubic-bezier(.65, 0, .2, 1)); will-change: transform;
+}
+/* Floor: one flat, static plane laid back from the footlights. Its shadows and cables
+   are ordinary children, painted once into the plane.
+   Size is what makes a perspective plane expensive, so it only covers what the key light
+   can reach: 130 units left of the table (search view) to 270 right of it (where the
+   camera tracks to for a player), and 110 units deep. Its far end and sides fade to
+   black, so there is no visible edge where it stops. */
+.stage-floor {
+  --floor-left: calc(130 * var(--u)); --floor-w: calc(400 * var(--u)); --floor-d: calc(140 * var(--u)); --floor-front: calc(30 * var(--u));
+  position: absolute; left: calc(var(--floor-left) * -1); top: calc(var(--floor-d) * -1); width: var(--floor-w); height: var(--floor-d);
+  transform-origin: var(--floor-left) 100%; transform: translateZ(var(--floor-front)) rotateX(90deg);
+  background:
+    linear-gradient(180deg, #09090a 0, transparent 34%),
+    linear-gradient(90deg, #09090a 0, transparent 14%, transparent 86%, #09090a 100%),
+    repeating-conic-gradient(#dedbd3 0 25%, #1c1c1d 0 50%) var(--floor-left) 100% / calc(32 * var(--u)) calc(32 * var(--u));
+}
+/* Key light: darkness everywhere the spotlight does not reach. It is a flat overlay on the
+   floor's part of the screen (below the horizon), not part of the floor plane, so the pool
+   of light stays in the middle of the shot for free while the camera tracks. */
+.stage-floor-light {
+  position: absolute; inset: 40% 0 0; --u: min(1cqh, .9cqw);
+  background: radial-gradient(ellipse calc(146 * var(--u)) calc(30 * var(--u)) at 50% 82%, rgb(8 8 9 / .26) 0, rgb(8 8 9 / .8) 52%, rgb(8 8 9 / .97) 100%);
+}
+/* Glow on the floor in front of a television pile: a small plane lying just above it. */
+.stage-glow {
+  position: absolute; left: calc(-60 * var(--u)); top: calc(-90 * var(--u)); width: calc(120 * var(--u)); height: calc(90 * var(--u));
+  transform-origin: 50% 100%; transform: translate3d(var(--x), calc(-.3 * var(--u)), calc(var(--z) + 45 * var(--u))) rotateX(90deg);
+  background: radial-gradient(closest-side, rgb(214 219 214 / .2), transparent);
+}
+.stage-cables { position: absolute; inset: 0; width: 100%; height: 100%; }
+.stage-cables path { fill: none; stroke: #070708; stroke-width: 1.7; stroke-linecap: round; }
+.stage-shadow {
+  position: absolute; left: calc(var(--floor-left) + var(--x) - var(--r)); bottom: calc(var(--floor-front) - var(--z) - var(--r) * .6);
+  width: calc(var(--r) * 2); height: calc(var(--r) * 1.2); border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(0 0 0 / .82), rgb(0 0 0 / .45) 55%, transparent);
+}
+.stage-shadow--table { --x: 0px; --z: calc(-22 * var(--u)); --r: calc(84 * var(--u)); height: calc(34 * var(--u)); bottom: calc(var(--floor-front) + 5 * var(--u)); }
+
+/* One television: a real box. The front is the shared CRT face, pushed nowhere;
+   the sides and top hinge back from its edges. */
+.stage-tv {
+  --w: calc(26 * var(--u)); --h: calc(20.8 * var(--u)); --d: calc(17 * var(--u));
+  position: absolute; left: calc(var(--w) / -2); top: calc(var(--h) * -1); width: var(--w); height: var(--h);
+  transform-style: preserve-3d; transform-origin: 50% 100%;
+  transform: translate3d(var(--x), calc(var(--y) * -1), var(--z)) rotateY(var(--turn)) rotateZ(var(--tilt));
+}
+.stage-tv__side { position: absolute; display: block; }
+.stage-tv__side--left, .stage-tv__side--right {
+  top: 0; width: var(--d); height: 100%; transform-origin: 0 50%; transform: rotateY(90deg);
+  background:
+    repeating-linear-gradient(180deg, transparent 0 calc(1.1 * var(--u)), rgb(0 0 0 / .34) calc(1.1 * var(--u)) calc(1.5 * var(--u))) 55% 50% / 46% 58% no-repeat,
+    linear-gradient(90deg, #3e3d3a, #141311);
+}
+.stage-tv__side--left { left: 0; }
+.stage-tv__side--right { left: 100%; }
+.stage-tv__side--top { left: 0; top: 0; width: 100%; height: var(--d); transform-origin: 50% 0; transform: rotateX(-90deg); background: linear-gradient(180deg, #5a5854, #1f1e1c); }
+
+/* A chess piece standee: a flat cut-out standing (or lying) on the floor. */
+.stage-piece {
+  position: absolute; left: calc(var(--h) * -.362); top: calc(var(--h) * -1); width: calc(var(--h) * .724); height: var(--h);
+  transform-origin: 50% 100%;
+  transform: translate3d(var(--x), calc(var(--y) * -1), var(--z)) rotateY(var(--turn)) rotateZ(var(--tilt));
+}
+.piece-art { display: block; width: 100%; height: 100%; overflow: visible; }
+
+/* --- Haze ---------------------------------------------------------------- */
+.stage-beams { filter: blur(9px); }
+.stage-haze::before { content: ''; position: absolute; inset: 38% 0 auto; height: 28%; background: linear-gradient(180deg, transparent, rgb(12 12 13 / .5) 45%, transparent); }
+.stage-smoke {
+  position: absolute; width: 70%; height: 46%; border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(247 246 243 / .075), transparent);
+  animation: stage-smoke 38s ease-in-out infinite alternate;
+}
+.stage-smoke--a { left: -12%; top: 28%; }
+.stage-smoke--b { right: -16%; top: 40%; animation-duration: 52s; animation-direction: alternate-reverse; }
+@keyframes stage-smoke { from { transform: translate3d(-6%, 0, 0) scale(1); } to { transform: translate3d(14%, -8%, 0) scale(1.2); } }
+
+/* --- Pause control ------------------------------------------------------- */
+.chess-stage figcaption { position: absolute; z-index: 6; right: clamp(12px, 2vw, 32px); bottom: 12px; pointer-events: auto; }
+.chess-stage button {
+  border: 1px solid #77746e; border-radius: 0; background: rgb(12 12 13 / .86); color: #ece9e2;
+  padding: 8px 12px; min-height: 40px; font: 11px/1.3 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .5px; cursor: pointer;
+}
+.chess-stage button:hover { border-color: #f7f6f3; color: #fff; }
+.chess-stage button:focus-visible { outline: 3px solid #f7f6f3; outline-offset: 3px; }
+.chess-stage[data-paused='true'] * { animation-play-state: paused !important; }
+
+/* Small screens keep the floor, the lights and the two footlight sets; the piles go. */
+@media (max-width: 700px) {
+  .chess-stage [data-extra='true'], .stage-sign { display: none; }
+  /* Icon-only pause button; its label stays available to assistive technology. */
+  .chess-stage button { min-width: 44px; min-height: 44px; font-size: 14px; }
+  .chess-stage__pause-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+}
+/* Reduced motion: a still scene. No smoke drift, no neon flicker, no parallax glide;
+   the hooks also stop the television clock and ignore the pointer. */
+@media (prefers-reduced-motion: reduce) {
+  .chess-stage * { animation: none !important; transition: none !important; }
+  .chess-stage figcaption { display: none; }
+}
