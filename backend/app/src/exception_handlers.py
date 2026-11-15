@@ -26,6 +26,9 @@ def _not_found_message(request: Request) -> str:
     username = request.path_params.get("username")
     if username:
         return f"{username} player data is not available / does not exist"
+    search = request.query_params.get("search")
+    if search:  # GET /players/?search=...
+        return f'No Chess.com player found for "{search.strip()}"'
     return "Requested Chess.com data is not available / does not exist"
 
 
