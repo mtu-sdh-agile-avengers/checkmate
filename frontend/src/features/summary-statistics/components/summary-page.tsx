@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BarChart3, Crown, Equal, X } from 'lucide-react';
 import { useParams } from 'react-router-dom';
+import { AnimatedNumber } from '@/components/ui/animated-number';
 import { PageError, PageLoading } from '@/components/ui/page-status';
 import { Panel } from '@/components/ui/panel';
 import { RatingChart } from '@/components/ui/rating-chart';
@@ -8,7 +9,11 @@ import { StatCard } from '@/components/ui/stat-card';
 import { SummaryFilters } from '@/features/summary-statistics/components/summary-filters';
 import { useSummary } from '@/features/summary-statistics/hooks/use-summary';
 import type { TimeClass, TimeFrame } from '@/types/chess';
-import { formatEloChange, formatNumber, formatRating, signedNumber } from '@/utils/format';
+import { formatEloChange, formatRating, signedNumber } from '@/utils/format';
+
+const percent = (value: number) => `${value}%`;
+/** A rating that counts up, or "N/A" when there is none. */
+const rating = (value: number | null) => (value === null ? formatRating(null) : <AnimatedNumber value={value} />);
 
 /** Recent-form panel of the single player view: filters, results and rating for a period. */
 export function SummaryPage() {
@@ -28,13 +33,13 @@ export function SummaryPage() {
       ) : data ? (
         <div className="analytics-column" aria-busy={isFetching}>
           <div className="metric-grid metric-grid-four">
-            <StatCard icon={BarChart3} label="Games played" value={formatNumber(data.games)} />
-            <StatCard icon={Crown} label="Wins" value={formatNumber(data.wins)} />
-            <StatCard icon={Equal} label="Draws" value={formatNumber(data.draws)} />
-            <StatCard icon={X} label="Losses" value={formatNumber(data.losses)} />
+            <StatCard icon={BarChart3} label="Games played" value={<AnimatedNumber value={data.games} />} />
+            <StatCard icon={Crown} label="Wins" value={<AnimatedNumber value={data.wins} />} />
+            <StatCard icon={Equal} label="Draws" value={<AnimatedNumber value={data.draws} />} />
+            <StatCard icon={X} label="Losses" value={<AnimatedNumber value={data.losses} />} />
           </div>
           <Panel className="summary-rate-panel">
-            <div className="result-rate"><strong>Win rate</strong><strong>{data.winRate}%</strong></div>
+            <div className="result-rate"><strong>Win rate</strong><strong><AnimatedNumber value={data.winRate} format={percent} /></strong></div>
             <div className="outcome-bar" aria-label={`${data.wins} wins, ${data.draws} draws, ${data.losses} losses`}>
               <span style={{ width: `${(data.wins / data.games) * 100}%` }} />
               <span style={{ width: `${(data.draws / data.games) * 100}%` }} />
@@ -42,9 +47,9 @@ export function SummaryPage() {
             </div>
           </Panel>
           <div className="metric-grid metric-grid-three rating-summary-grid">
-            <StatCard label="Expected rating" value={formatRating(data.expectedRating)} note={data.expectedRating === null ? 'Not available yet' : undefined} />
-            <StatCard label="Actual rating" value={formatRating(data.actualRating)} note={data.lastChange === null ? undefined : `Change in period ${signedNumber(data.lastChange)} Elo`} />
-            <StatCard label="Rating difference" value={formatEloChange(data.difference)} />
+            <StatCard label="Expected rating" value={rating(data.expectedRating)} note={data.expectedRating === null ? 'Not available yet' : undefined} />
+            <StatCard label="Actual rating" value={rating(data.actualRating)} note={data.lastChange === null ? undefined : `Change in period ${signedNumber(data.lastChange)} Elo`} />
+            <StatCard label="Rating difference" value={data.difference === null ? formatEloChange(null) : <AnimatedNumber value={data.difference} format={formatEloChange} />} />
           </div>
           <Panel className="chart-panel"><RatingChart points={data.ratingHistory} subtitle={`Last ${frame === 'all' ? 'available' : `${frame} days`} · ${timeClass}${isFetching ? ' · Updating…' : ''}`} /></Panel>
         </div>

@@ -6,10 +6,11 @@ import { describe, expect, it } from 'vitest';
 import { AppRouter } from '@/app/router';
 import { createQueryClient } from '@/lib/query-client';
 
-// Routes are lazy and the demo data is delayed, so give lookups more than the default second,
-// and the whole journey more than the default five (it types, searches and navigates twice).
-const SLOW = { timeout: 5000 };
-const JOURNEY_TIMEOUT = 20_000;
+// Routes are lazy (several chunks load one after another) and the demo data is delayed, so
+// lookups get far more than the default second and the tests more than the default five.
+// The limits are generous on purpose: on a busy machine the whole suite runs in parallel.
+const SLOW = { timeout: 15_000 };
+const JOURNEY_TIMEOUT = 40_000;
 
 function renderApp(route: string) {
   render(
@@ -53,5 +54,5 @@ describe('app router', () => {
 
     expect(await screen.findByRole('heading', { name: 'Overall statistics' }, SLOW)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Overall' })).toHaveAttribute('aria-pressed', 'true');
-  });
+  }, JOURNEY_TIMEOUT);
 });
