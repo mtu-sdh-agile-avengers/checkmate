@@ -79,3 +79,21 @@ Every game id returns the same sample game (the "Opera game", 17 moves): the req
 player is white and wins by checkmate, the opponent is `mock_opponent`, ratings 1512 / 1488.
 `endTime` is in the requested `year` / `month` (3 Nov 2026 without them).
 Special values: username `notfound` -> `404` (player), `search=0` -> `404` (game).
+
+## Frontend (CMG4-64)
+
+`frontend/src/features/game-details/` has the client for the game page (CMG4-63):
+
+```tsx
+import { useGame } from '@/features/game-details/hooks/use-game';
+
+// archive (year / month) comes with every game of the history list (CMG4-14);
+// without it the backend looks in the latest month
+const { data: game, isPending, error } = useGame('hikaru', '186299800014', { year: 2026, month: 10 });
+```
+
+`game` is `GameDetails` (`src/types/chess.ts`): `player` / `opponent` with `username`, `rating`
+and `color`, `result` of the player, `timeClass`, `timeControl` in words ("3 min + 2 s"),
+`date` ("Oct 31, 2026"), `averageRating`, and `pgn` / `initialFen` / `finalFen` for the replay.
+`error.message` is ready to show (e.g. the 404 message above). In mock mode (`VITE_API_MODE`
+unset) it returns the demo "Opera game"; game id `0` simulates "not found".
