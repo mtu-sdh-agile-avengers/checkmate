@@ -1,7 +1,9 @@
 from datetime import datetime
 
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, field_validator, model_validator
+from pydantic_core import PydanticCustomError
 
+from src.chesscom.links import InvalidChessComInputError, parse_game_query
 from src.enums import (
     GameResult,
     MoveCategory,
@@ -12,7 +14,6 @@ from src.enums import (
     TimeClass,
 )
 from src.schemas.common import BaseSchema, QuerySchema
-
 
 # Query Models ---------------------------------------------------------------
 
@@ -34,16 +35,47 @@ class PlayerGameHistoryListQuery(QuerySchema):
 
 
 class PlayerGameSearchQuery(QuerySchema):
+    """Finds one game of the player: GET .../games/?year=&month=&search={game_id|url}."""
+
     year: int | None = Field(
-        default=None, description="Archive year; last accessible if none"
+        default=None,
+        ge=2007,
+        examples=[2026],
+        description="Archive year of the game; the latest archive month if omitted",
     )
     month: int | None = Field(
-        default=None, description="Archive moth; last accessible if none"
+        default=None,
+        ge=1,
+        le=12,
+        examples=[10],
+        description="Archive month (1-12) of the game; required together with `year`",
     )
-    game_id: str = Field(
-        examples=["169586417316"],
-        description="Chess.com game id: trailing number in URL",
+    search: str = Field(
+        examples=["169586417316", "https://www.chess.com/game/live/169586417316"],
+        description="Chess.com game id or game URL",
     )
+
+    @field_validator("search")
+    @classmethod
+    def _to_game_id(cls, value: str) -> str:
+        try:
+            return parse_game_query(value)
+        except InvalidChessComInputError as e:
+            # custom error type: the message is returned to the client without a prefix
+            raise PydanticCustomError("invalid_game_search", str(e)) from e
+
+    @model_validator(mode="after")
+    def _year_and_month_together(self) -> PlayerGameSearchQuery:
+        if (self.year is None) != (self.month is None):
+            raise PydanticCustomError(
+                "year_month_together", "Send both year and month, or neither of them."
+            )
+        return self
+
+    @property
+    def game_id(self) -> str:
+        """Game id parsed from `search`."""
+        return self.search
 
 
 # Response Models ------------------------------------------------------------
@@ -88,6 +120,8 @@ class PaginatedGameListResponse(BaseSchema):
 
 
 class GameBoardDetailsResponse(GameResponse):
+    """One game for the game page: players, result, and the moves to replay it."""
+
     pgn: str = Field(description="list of moves in Portable Game Notation (PGN)")
     initial_setup: str = Field(
         examples=["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"],

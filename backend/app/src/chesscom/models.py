@@ -33,6 +33,9 @@ DRAW_RESULT_CODES: frozenset[str] = frozenset(
 )
 WIN_RESULT_CODE = "win"
 
+# Starting position of standard chess in Forsyth-Edwards Notation (FEN).
+STANDARD_START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
 
 def result_code_to_game_result(code: str) -> GameResult:
     """Maps a raw Chess.com result code (e.g. "checkmated") to our `GameResult`."""
