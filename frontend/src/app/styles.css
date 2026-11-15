@@ -13,7 +13,7 @@
   --radius: 17px;
 }
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; }
+body { margin: 0; min-width: 320px; background: #0b0b0c; }
 a { color: inherit; }
 button, input, select { font: inherit; }
 button { cursor: pointer; }
@@ -24,12 +24,18 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 .skip-link { position: absolute; z-index: 90; top: -100px; left: 15px; padding: 10px; background: white; color: black; }
 .skip-link:focus { top: 10px; }
-.site-frame { min-height: 100vh; display: flex; flex-direction: column; }
+.site-frame { position: relative; min-height: 100vh; display: flex; flex-direction: column; background: #0b0b0c; }
+/* Top bar: not a bar. Only the Search control floats over the stage, and the page fades in under it. */
 .app-header {
-  background: #1d1e1f; min-height: 82px; padding: 0 clamp(20px, 4vw, 70px); color: #fff;
-  display: flex; align-items: center; justify-content: space-between; gap: 20px;
-  box-shadow: 0 2px 7px rgb(0 0 0 / 6%);
+  position: absolute; z-index: 30; top: 0; right: 0; padding: 14px clamp(14px, 2.2vw, 30px); color: #fff;
+  display: flex; align-items: center; animation: content-fade-in .8s .15s ease-out both;
 }
+.app-header .nav-link { border: 1px solid rgb(247 246 243 / .4); }
+.app-header .nav-link:not(.nav-link-active) { background: rgb(12 12 13 / .7); }
+.app-header .nav-link:not(.nav-link-active):hover { background: #353638; }
+.app-header .nav-link:focus-visible { outline-color: #f7f6f3; }
+.main-content { animation: content-fade-in .8s ease-out both; }
+@keyframes content-fade-in { from { opacity: 0; } to { opacity: 1; } }
 .brand { display: flex; align-items: center; gap: 13px; font-size: 25px; letter-spacing: -1.2px; font-weight: 830; text-decoration: none; white-space: nowrap; }
 .primary-nav { display: flex; align-items: center; gap: 8px; }
 .nav-link {
@@ -43,7 +49,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .demo-dot { width: 7px; height: 7px; background: #d6d2ca; border-radius: 50%; }
 .avatar-monogram { width: 37px; height: 37px; display: grid; place-items: center; border-radius: 50%; background: #e8e8e5; color: #1c1c1c; font-weight: 900; letter-spacing: 0; font-size: 13px; }
 .main-content { flex: 1; width: min(1600px, 100%); margin: 0 auto; padding: clamp(28px, 3vw, 54px) clamp(20px, 3.2vw, 58px) 20px; }
-.app-footer { display: flex; justify-content: space-between; gap: 20px; border-top: 1px solid var(--line); color: #817e78; font-size: 11px; letter-spacing: 1px; padding: 18px clamp(20px, 4vw, 70px); }
+.app-footer { display: flex; justify-content: space-between; gap: 20px; border-top: 1px solid #2a2a2c; background: #0b0b0c; color: #a3a099; font-size: 11px; letter-spacing: 1px; padding: 18px clamp(20px, 4vw, 70px); }
 .eyebrow { display: inline-block; font-size: 12px; letter-spacing: 2.2px; font-weight: 800; color: #87847e; margin-bottom: 13px; }
 h1, h2, h3, p { margin-top: 0; }
 .page-title-row { display: flex; align-items: start; justify-content: space-between; gap: 30px; margin-bottom: 31px; }
@@ -159,7 +165,6 @@ h1, h2, h3, p { margin-top: 0; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 
 @media (max-width: 1200px) {
-  .app-header { padding-inline: 25px; }
   .header-demo .demo-caption, .header-demo .demo-dot { display: none; }
   .statistics-layout { grid-template-columns: minmax(250px, .75fr) minmax(510px, 1.25fr); gap: 22px; }
   .profile-layout { grid-template-columns: minmax(0, 1fr) 260px; }
@@ -169,9 +174,6 @@ h1, h2, h3, p { margin-top: 0; }
   .segment-control button { padding: 10px; }
 }
 @media (max-width: 900px) {
-  .app-header { flex-wrap: wrap; padding: 15px 20px; justify-content: center; }
-  .primary-nav { order: 3; width: 100%; justify-content: center; }
-  .header-demo { margin-left: auto; }
   .main-content { padding: 30px 20px; }
   .search-page { grid-template-columns: 1fr 1fr; min-height: 490px; }
   .search-copy h1 { font-size: 65px; letter-spacing: -3px; }
@@ -186,8 +188,7 @@ h1, h2, h3, p { margin-top: 0; }
 @media (max-width: 600px) {
   .brand { font-size: 20px; }
   .header-demo { display: none; }
-  .nav-link { padding: 9px; gap: 5px; font-size: 11px; min-height: 40px; flex: 1; }
-  .nav-link svg { width: 15px; }
+  .nav-link { padding: 9px 13px; min-height: 44px; }
   .main-content { padding: 25px 15px; }
   .search-page { grid-template-columns: 1fr; min-height: 0; gap: 16px; }
   .search-copy { padding: 12px 0 16px; }

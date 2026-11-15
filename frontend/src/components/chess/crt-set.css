@@ -1,0 +1,100 @@
+/* One CRT face and its signal states. The only bitmap is a shared 128px noise tile
+   (generated once by scripts/generate-crt-noise.mjs, never computed per frame). */
+.crt-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.crt-face { position: absolute; inset: 0; display: block; width: 100%; height: 100%; --screen-color: #c7cac6; }
+.crt-face--silver { --screen-color: #dbd5c9; }
+.crt-screen-rim { stroke: var(--screen-color); opacity: .45; }
+.crt-screen-tint { fill: var(--screen-color); opacity: .12; }
+.crt-glitch { fill: none; stroke: #fffefa; stroke-width: 1.1; opacity: .38; }
+
+/* ---------------------------------------------------------------------------
+   Signal states (set by useTvSignals):
+     static   data-active=false  -> live noise, 30 frames a second
+     picture  data-active=true   -> held picture, noise frozen underneath
+   A channel change is a hard cut, never a fade. Every keyframe below holds
+   until the next one (steps), so the picture jumps sideways, tears into bands
+   and collapses to a scan line like a set being switched. The two directions
+   use different animation names, which is what restarts the animation each
+   time the attribute flips; `both` keeps the last frame afterwards.
+   ------------------------------------------------------------------------- */
+.crt-static { opacity: 1; }
+.crt-transmission { opacity: 0; transform-box: fill-box; transform-origin: center; }
+.crt-tear { opacity: 0; }
+/* The roll bar is a faint still band: animating it would redraw every set on every frame. */
+.crt-roll { opacity: .06; transform: translateY(96px); }
+
+/* Live static: eight texture offsets per 266.67ms cycle = 30 static frames/sec.
+   Contrast is baked into the PNG, so no filter runs per frame. */
+.crt-noise { animation: crt-static 266.666667ms steps(1, end) var(--crt-delay) infinite; }
+
+/* static -> picture */
+.crt-screen[data-active='true'] .crt-transmission { opacity: 1; animation: crt-cut-in 260ms steps(1, end) both; }
+.crt-screen[data-active='true'] .crt-static { opacity: .16; }
+.crt-screen[data-active='true'] .crt-noise { animation: none; }
+.crt-screen[data-active='true'] .crt-roll { opacity: 0; }
+.crt-screen[data-active='true'] .crt-tear { animation: crt-tear-in 260ms steps(1, end) both; }
+
+/* picture -> static (only sets that have shown a picture have anything to cut from) */
+.crt-screen[data-active='false'][data-revealed='true'] .crt-transmission { animation: crt-cut-out 200ms steps(1, end) both; }
+.crt-screen[data-active='false'][data-revealed='true'] .crt-tear { animation: crt-tear-out 200ms steps(1, end) both; }
+
+@keyframes crt-cut-in {
+  0%   { opacity: 0; transform: none; clip-path: none; }
+  10%  { opacity: 1; transform: translateX(-16px) skewX(-9deg); clip-path: inset(6% 0 58%); }
+  26%  { opacity: 0; }
+  38%  { opacity: 1; transform: translateX(11px); clip-path: inset(50% 0 8%); }
+  54%  { opacity: .55; transform: translateY(-24px) scaleY(.5); clip-path: none; }
+  70%  { opacity: 1; transform: translateX(-5px); clip-path: inset(0 0 28%); }
+  84%  { opacity: 1; transform: translateX(3px); clip-path: none; }
+  100% { opacity: 1; transform: none; clip-path: none; }
+}
+@keyframes crt-cut-out {
+  0%   { opacity: 1; transform: translateX(12px) skewX(7deg); clip-path: inset(0 0 40%); }
+  22%  { opacity: 0; }
+  40%  { opacity: 1; transform: translateX(-14px); clip-path: inset(46% 0 12%); }
+  62%  { opacity: .8; transform: scaleY(.07); clip-path: none; }
+  82%  { opacity: 0; }
+  100% { opacity: 0; transform: none; clip-path: none; }
+}
+@keyframes crt-tear-in {
+  0%   { opacity: .9; transform: translateY(58px); }
+  26%  { opacity: .5; transform: translateY(142px); }
+  54%  { opacity: .85; transform: translateY(34px); }
+  78%  { opacity: .4; transform: translateY(118px); }
+  100% { opacity: 0; transform: translateY(190px); }
+}
+@keyframes crt-tear-out {
+  0%   { opacity: .9; transform: translateY(96px); }
+  40%  { opacity: .6; transform: translateY(40px); }
+  70%  { opacity: .9; transform: translateY(92px); }
+  100% { opacity: 0; transform: translateY(190px); }
+}
+@keyframes crt-static {
+  0%, 100% { transform: translate(0, 0); }
+  12.5% { transform: translate(-21px, 32px); }
+  25% { transform: translate(47px, -19px); }
+  37.5% { transform: translate(-38px, -41px); }
+  50% { transform: translate(22px, 53px); }
+  62.5% { transform: translate(-51px, 12px); }
+  75% { transform: translate(35px, -55px); }
+  87.5% { transform: translate(-13px, -27px); }
+}
+
+/* Broadcast artwork only moves while its picture is on air. */
+.signal-glint { transform-origin: 108px 31px; animation: signal-spark 1.5s ease-in-out infinite; }
+.signal-steam { animation: signal-drift 1.5s ease-out infinite; }
+.signal-rook .signal-body { animation: signal-shudder 1.5s ease-in-out infinite; }
+.signal-pawn .signal-body { animation: signal-hop 1.5s ease-in-out infinite; }
+.signal-piece * { animation-play-state: paused; }
+.crt-screen[data-active='true'] .signal-piece * { animation-play-state: running; }
+@keyframes signal-spark { 0%,100% { opacity: 0; transform: scale(.7); } 35% { opacity: 1; transform: scale(1.1); } 65% { opacity: .2; } }
+@keyframes signal-drift { from { opacity: 0; transform: translateY(5px); } 30% { opacity: .8; } to { opacity: 0; transform: translate(-5px,-10px); } }
+@keyframes signal-shudder { 0%,30%,100% { transform: translateX(0); } 10%,22% { transform: translateX(-2px); } 16%,26% { transform: translateX(2px); } }
+@keyframes signal-hop { 0%,70%,100% { transform: translateY(0); } 35% { transform: translateY(-6px); } }
+
+/* Reduced motion: still noise and still pictures, no flicker, no cuts.
+   useTvSignals also stops its clock and publishes one fixed frame. */
+@media (prefers-reduced-motion: reduce) {
+  .crt-face * { animation: none !important; transition: none !important; }
+  .crt-face .crt-roll, .crt-face .crt-tear { opacity: 0 !important; }
+}

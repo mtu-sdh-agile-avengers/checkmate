@@ -20,31 +20,22 @@ function navLinks(route: string): string[] {
 }
 
 describe('app-header', () => {
-  it('links to the demo player in mock mode', () => {
-    expect(navLinks('/')).toEqual([
-      'Search /',
-      'Statistics /players/hikaru/summary',
-      'Overall /players/hikaru/overall',
-      'Profile /players/hikaru',
-    ]);
-    expect(screen.getByText('DEMO')).toBeInTheDocument();
-  });
-
-  it('shows only Search before a player is chosen in live mode', () => {
-    vi.stubEnv('VITE_API_MODE', 'live');
-
+  it('contains only the Search control in mock mode', () => {
     expect(navLinks('/')).toEqual(['Search /']);
+    expect(screen.getByRole('link', { name: 'Search' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByText('DEMO')).not.toBeInTheDocument();
   });
 
-  it('links to the searched player in live mode', () => {
+  it('contains only the Search control in live mode', () => {
     vi.stubEnv('VITE_API_MODE', 'live');
 
-    expect(navLinks('/players/magnuscarlsen/summary')).toEqual([
-      'Search /',
-      'Statistics /players/magnuscarlsen/summary',
-      'Overall /players/magnuscarlsen/overall',
-      'Profile /players/magnuscarlsen',
-    ]);
+    expect(navLinks('/')).toEqual(['Search /']);
+  });
+
+  it('still shows only Search once a player is selected', () => {
+    vi.stubEnv('VITE_API_MODE', 'live');
+
+    expect(navLinks('/players/magnuscarlsen')).toEqual(['Search /']);
+    expect(screen.getByRole('link', { name: 'Search' })).not.toHaveAttribute('aria-current');
   });
 });

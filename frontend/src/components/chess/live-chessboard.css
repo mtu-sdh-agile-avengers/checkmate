@@ -14,3 +14,19 @@
 .live-chessboard button { border: 0; background: transparent; color: #575653; padding: 8px 0 8px 8px; font-size: 12px; letter-spacing: 0; text-decoration: underline; text-underline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .live-chessboard g, .live-chessboard-ground-shadow { animation: none !important; } .live-chessboard button { display: none; } }
 @media (max-width: 600px) { .live-chessboard { width: 100%; margin: 0 auto 12px; } }
+
+/* Cut-paper poster styling for the landing illustration. */
+.live-chessboard { position: relative; isolation: isolate; padding-top: 28px; }
+.live-chessboard::before { content: ''; position: absolute; z-index: -2; inset: 10% -2% 12%; background: #80796d; clip-path: polygon(8% 15%,41% 8%,38% 0,94% 9%,87% 31%,100% 39%,90% 79%,62% 88%,66% 100%,8% 90%,13% 68%,0 60%); transform: rotate(-4deg); }
+.live-chessboard::after { content: ''; position: absolute; z-index: -1; inset: 17% 2% 18%; background-image: radial-gradient(#17070b 1px,transparent 1.5px); background-size: 7px 7px; opacity: .24; clip-path: polygon(4% 25%,100% 0,88% 83%,0 100%); }
+.live-chessboard > svg { position: relative; filter: drop-shadow(-7px 9px 0 #090909); }
+.live-chessboard-kicker { position: absolute; z-index: 1; top: -4px; left: 4%; display: grid; justify-items: start; transform: rotate(-9deg); pointer-events: none; }
+.live-chessboard-kicker span { padding: 4px 10px; background: #fffaf2; color: #111; font-size: clamp(10px,1.1vw,14px); font-weight: 900; letter-spacing: 3px; }
+.live-chessboard-kicker strong { padding: 0 12px 3px; background: #111; color: #fffaf2; font-size: clamp(27px,4vw,50px); line-height: 1; font-weight: 950; font-style: italic; letter-spacing: -2px; box-shadow: 5px 5px 0 #80796d; }
+.live-chessboard figcaption { position: relative; margin-top: 10px; gap: 8px; letter-spacing: 1px; }
+.live-chessboard figcaption > span { padding: 10px 12px; background: #111; color: #fffaf2; font-weight: 800; transform: rotate(-2deg); }
+.live-chessboard button { padding: 9px 12px; background: #fffaf2; color: #111; border: 2px solid #111; box-shadow: 3px 3px 0 #80796d; font-weight: 700; text-decoration: none; cursor: pointer; }
+.live-chessboard button:hover { background: #80796d; color: #fff; }
+.live-chessboard button:focus-visible { outline: 3px solid #80796d; outline-offset: 4px; }
+@keyframes chess-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@media (max-width: 600px) { .live-chessboard { margin-top: 22px; } .live-chessboard figcaption { font-size: 8px; letter-spacing: .5px; } .live-chessboard button { font-size: 10px; } }
