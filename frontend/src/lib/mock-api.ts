@@ -5,6 +5,9 @@ import type { OverallStats, Player, RatingPoint, SummaryStats, TimeClass, TimeFr
 const currentUtc = 1793743200; // 2026-11-03 UTC; fixed for reproducible screenshots.
 const historyOffsets = [0, 4, 6, 5, 10, 13, 11, 16, 19, 17, 21, 24, 27, 25, 31, 34, 33, 38, 41, 44, 42, 48, 52, 50, 56];
 
+// A drawn stand-in for a profile picture, so the demo player shows how an avatar is used.
+const DEMO_AVATAR = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><rect width="96" height="96" fill="#2c2b29"/><circle cx="48" cy="48" r="40" fill="#80796d"/><path d="M30 80 C26 56 33 40 50 30 L46 16 L60 26 C76 32 82 50 78 64 L68 70 L56 58 C52 64 56 72 66 80 Z" fill="#f7f6f3" stroke="#121213" stroke-width="3" stroke-linejoin="round"/><circle cx="62" cy="42" r="3.4" fill="#121213"/></svg>')}`;
+
 async function mockDelay(): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, MOCK_DELAY_MS));
 }
@@ -38,7 +41,7 @@ export async function mockFindPlayer(username: string): Promise<Player> {
     id: '1029387',
     username,
     url: `https://www.chess.com/member/${encodeURIComponent(username)}`,
-    avatar: null,
+    avatar: username === 'hikaru' ? DEMO_AVATAR : null,
     title: username === 'hikaru' ? 'GM' : null,
     location: username === 'hikaru' ? 'Los Angeles, CA' : null,
     country: username === 'hikaru' ? 'United States (US)' : null,

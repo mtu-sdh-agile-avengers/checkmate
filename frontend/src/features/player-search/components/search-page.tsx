@@ -8,10 +8,11 @@ import './search-page.css';
  * and the opponent's chair on the right. It is the focal point of the stage (app/stage-layout).
  *
  * `guest` is the username of the player who has been found. While it is set the camera is
- * on the opponent's seat: an anonymous guest sits in the chair, the tag above it carries
- * the name, and the search itself is inert until the visitor comes back.
+ * on the opponent's seat: a guest sits in the chair, the tag above it carries the name,
+ * and the search itself is inert until the visitor comes back. `guestAvatar` is that
+ * player's profile picture, if they have one: it becomes the guest's head.
  */
-export function SearchPage({ guest }: { guest?: string }) {
+export function SearchPage({ guest, guestAvatar }: { guest?: string; guestAvatar?: string | null }) {
   const away = Boolean(guest);
   const table = useRef<HTMLDivElement>(null);
   const wasAway = useRef(away);
@@ -30,7 +31,7 @@ export function SearchPage({ guest }: { guest?: string }) {
       </div>
       <div className="stage-table">
         <SeatedPlayer />
-        <OpponentChair occupied={away} />
+        <OpponentChair occupied={away} avatar={guestAvatar} />
         <span className="seat-tag" aria-hidden="true">
           <b>{guest ?? 'Open seat'}</b>
           <svg viewBox="0 0 60 70" focusable="false"><path d="M42 4 C56 22 47 45 20 59 M20 59 L25 42 M20 59 L37 62" /></svg>
