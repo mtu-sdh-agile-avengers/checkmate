@@ -53,6 +53,11 @@ class PlayerProfileResponse(BaseSchema):
     )
     verified: bool = Field(default=False, examples=[False])
     league: str | None = Field(default=None, examples=["Legend"])
+    fide_rating: int | None = Field(
+        default=None,
+        examples=[2814],
+        description="FIDE rating from the player's Chess.com stats; null if not set",
+    )
 
 
 class RatingSummaryResponse(BaseSchema):

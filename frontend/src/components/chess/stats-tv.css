@@ -1,0 +1,151 @@
+/* The statistics television: a graphite cabinet with an ivory, paper-white screen, so the
+   shared light-themed statistics components read on it unchanged. Sizes are compacted for
+   the screen further down; nothing here uses a colour outside the ivory/charcoal theme. */
+.stats-tv { display: flex; flex-direction: column; min-height: 0; width: 100%; height: 100%; filter: drop-shadow(0 22px 26px rgb(0 0 0 / .6)); }
+.stats-tv__cabinet {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 14px 14px 0;
+  border: 2px solid #0b0a08; border-radius: 14px;
+  background: linear-gradient(155deg, #4a4947 0, #2c2b29 14%, #1f1e1c 60%, #121110 100%);
+  box-shadow: inset 1px 1px 0 rgb(154 152 149 / .35);
+}
+.stats-tv__screen {
+  position: relative; flex: 1; min-height: 0; overflow: hidden; display: grid; grid-template-columns: minmax(210px, 27%) minmax(0, 1fr);
+  border: 3px solid #0d0c0a; border-radius: 26px / 22px; background: #f4f2ec; color: var(--ink, #1b1c1d);
+  box-shadow: 0 0 0 5px #1a1917, 0 0 0 6px #5f5e5c;
+}
+.stats-tv__side, .stats-tv__picture { min-width: 0; min-height: 0; overflow: auto; padding: 18px 18px 16px; scrollbar-width: thin; scrollbar-color: #a7a5a0 transparent; }
+.stats-tv__side { border-right: 1px solid #d9d6cf; background: #ece9e2; }
+/* Glass: scan lines and a soft vignette over the picture; it never takes a click. */
+.stats-tv__glass, .stats-tv__static { position: absolute; inset: 0; pointer-events: none; }
+.stats-tv__glass {
+  background:
+    radial-gradient(ellipse at center, transparent 62%, rgb(10 9 7 / .2) 100%),
+    repeating-linear-gradient(180deg, transparent 0 2px, rgb(10 9 7 / .035) 2px 3px);
+}
+
+/* Channel change: static flashes over the screen while the new picture tears in.
+   Every keyframe holds until the next (steps), like the sets on the stage. */
+.stats-tv__picture { animation: tv-switch 420ms steps(1, end) both; }
+.stats-tv__static { opacity: 0; background: #8f8d89 url('../../assets/crt-noise.png') 0 0 / 128px 128px; animation: tv-snow 420ms steps(1, end) both; }
+@keyframes tv-switch {
+  0%   { opacity: 0; transform: none; clip-path: none; }
+  12%  { opacity: 1; transform: translateX(-14px) skewX(-4deg); clip-path: inset(8% 0 52%); }
+  28%  { opacity: 0; }
+  40%  { opacity: 1; transform: translateX(9px); clip-path: inset(46% 0 6%); }
+  58%  { opacity: .5; transform: translateY(-10px) scaleY(.94); clip-path: none; }
+  74%  { opacity: 1; transform: translateX(-3px); }
+  100% { opacity: 1; transform: none; clip-path: none; }
+}
+/* The same two animations under second names, for every other channel change. */
+[data-flip='1'] > .stats-tv__cabinet .stats-tv__picture { animation-name: tv-switch-again; }
+[data-flip='1'] > .stats-tv__cabinet .stats-tv__static { animation-name: tv-snow-again; }
+@keyframes tv-snow {
+  0%   { opacity: .95; background-position: 0 0; }
+  14%  { opacity: .5; background-position: 40px 71px; }
+  28%  { opacity: .9; background-position: -33px 20px; }
+  44%  { opacity: .35; background-position: 80px -12px; }
+  60%  { opacity: .6; background-position: -51px 47px; }
+  76%  { opacity: .15; background-position: 22px 90px; }
+  100% { opacity: 0; background-position: 0 0; }
+}
+@keyframes tv-switch-again {
+  0%   { opacity: 0; transform: none; clip-path: none; }
+  12%  { opacity: 1; transform: translateX(-14px) skewX(-4deg); clip-path: inset(8% 0 52%); }
+  28%  { opacity: 0; }
+  40%  { opacity: 1; transform: translateX(9px); clip-path: inset(46% 0 6%); }
+  58%  { opacity: .5; transform: translateY(-10px) scaleY(.94); clip-path: none; }
+  74%  { opacity: 1; transform: translateX(-3px); }
+  100% { opacity: 1; transform: none; clip-path: none; }
+}
+@keyframes tv-snow-again {
+  0%   { opacity: .95; background-position: 0 0; }
+  14%  { opacity: .5; background-position: 40px 71px; }
+  28%  { opacity: .9; background-position: -33px 20px; }
+  44%  { opacity: .35; background-position: 80px -12px; }
+  60%  { opacity: .6; background-position: -51px 47px; }
+  76%  { opacity: .15; background-position: 22px 90px; }
+  100% { opacity: 0; background-position: 0 0; }
+}
+
+/* Cabinet controls: speaker grille, the two channel keys, two knobs. */
+.stats-tv__controls { flex: 0 0 auto; display: flex; align-items: center; gap: 16px; padding: 11px 6px 12px; }
+.stats-tv__grille { flex: 1; min-width: 20px; max-width: 150px; height: 14px; background: repeating-linear-gradient(180deg, #0e0d0b 0 2px, transparent 2px 5px); opacity: .9; }
+.stats-tv__channels { display: flex; gap: 8px; margin-left: auto; }
+.stats-tv__channels button {
+  min-width: 96px; min-height: 40px; padding: 8px 16px; border: 2px solid #0b0a08; border-radius: 4px;
+  background: #2c2b29; color: #ece9e2; font-size: 13px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase;
+  box-shadow: 0 3px 0 #0b0a08, inset 0 1px 0 rgb(255 255 255 / .12); transition: transform .08s, box-shadow .08s, background .12s;
+}
+.stats-tv__channels button:hover { background: #3b3a37; }
+.stats-tv__channels button[aria-pressed='true'] { background: var(--paper, #f7f6f3); color: var(--ink, #1b1c1d); transform: translateY(3px); box-shadow: 0 0 0 #0b0a08, inset 0 2px 3px rgb(0 0 0 / .25); }
+.stats-tv__channels button:focus-visible { outline: 3px solid #f7f6f3; outline-offset: 3px; }
+.stats-tv__knobs { display: flex; gap: 10px; }
+.stats-tv__knobs i { width: 22px; height: 22px; border-radius: 50%; background: #151412; border: 2px solid #757472; }
+.stats-tv__feet { flex: 0 0 auto; display: flex; justify-content: space-between; padding: 0 9%; }
+.stats-tv__feet i { width: 54px; height: 12px; background: linear-gradient(180deg, #2c2b29, #0b0a08); border-radius: 0 0 4px 4px; }
+
+/* --- Compact statistics for the screen ----------------------------------- */
+.stats-tv .eyebrow { font-size: 10px; letter-spacing: 1.8px; margin-bottom: 4px; }
+.stats-tv .page-title-row { align-items: flex-end; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 12px; }
+.stats-tv .page-title-row h2 { margin: 0 0 2px; font-size: 22px; line-height: 1.1; letter-spacing: -.7px; font-weight: 830; }
+.stats-tv .page-title-row p { margin: 0; font-size: 12px; color: #676663; }
+.stats-tv .page-title-row .empty-copy { margin-top: 4px; color: #5f5c56; font-weight: 650; }
+.stats-tv .label-pill { padding: 7px 12px; font-size: 10px; }
+.stats-tv .summary-filters { gap: 10px; }
+/* Never squeeze the time-frame buttons under the time-class select: wrap instead. */
+.stats-tv .summary-filters .filter-unit:first-child { flex: 0 0 auto; }
+.stats-tv .filter-label { margin-bottom: 4px; font-size: 9px; }
+.stats-tv .segment-control button { padding: 6px 9px; font-size: 12px; }
+.stats-tv .select-wrap { min-height: 36px; }
+.stats-tv .analytics-column { gap: 10px; }
+.stats-tv .metric-grid { gap: 8px; }
+.stats-tv .stat-card { min-height: 0; padding: 10px 6px; gap: 3px; border-radius: 8px; }
+.stats-tv .stat-card svg { width: 16px; height: 16px; }
+.stats-tv .stat-label { font-size: 11px; }
+.stats-tv .stat-value, .stats-tv .rating-summary-grid .stat-card .stat-value { font-size: clamp(18px, 1.7vw, 23px); }
+.stats-tv .stat-note { font-size: 10px; }
+.stats-tv .rating-summary-grid .stat-card { min-height: 0; }
+.stats-tv .panel { border-radius: 8px; box-shadow: none; }
+.stats-tv .summary-rate-panel { padding: 8px 14px 10px; }
+.stats-tv .result-rate { margin-bottom: 6px; }
+.stats-tv .result-rate strong:last-child { font-size: 17px; }
+.stats-tv .chart-panel { padding: 10px 14px 6px; }
+.stats-tv .chart-heading { margin-bottom: 2px; }
+.stats-tv .chart-heading h2 { font-size: 15px; margin: 0 0 2px; }
+.stats-tv .chart-current { font-size: 17px; }
+.stats-tv .rating-svg { height: clamp(92px, 15vh, 150px); }
+.stats-tv .overall-chart .rating-svg { height: clamp(120px, 22vh, 210px); }
+.stats-tv .status-screen { margin: 8px 0; min-height: 150px; padding: 16px; border-radius: 8px; background: #fffefa; }
+/* Profile column */
+.stats-tv .profile-identity { display: flex; align-items: flex-start; gap: 12px; padding: 0; }
+.stats-tv .profile-avatar { width: 62px; height: 62px; border-radius: 10px; }
+.stats-tv .avatar-silhouette { transform: scale(.5); transform-origin: bottom; }
+.stats-tv .identity-copy h2 { margin: 0 0 2px; font-size: 20px; letter-spacing: -.5px; overflow-wrap: anywhere; }
+.stats-tv .identity-copy a { font-size: 11px; }
+.stats-tv .title-tag { margin-top: 8px; padding: 5px 9px; font-size: 11px; }
+.stats-tv .copy-profile { display: inline-flex; margin: 10px 0 0; padding: 6px 9px; gap: 6px; align-items: center; font-size: 11px; font-weight: 700; border-radius: 6px; }
+.stats-tv .profile-fields { grid-template-columns: 1fr; column-gap: 0; margin-top: 10px; border-top: 1px solid #d9d6cf; }
+.stats-tv .profile-field { min-height: 0; padding: 5px 0; gap: 10px; border-bottom-color: #d9d6cf; }
+.stats-tv .profile-field svg { width: 15px; height: 15px; }
+.stats-tv .profile-field .field-label { margin-bottom: 1px; font-size: 10px; color: #6f6c66; }
+.stats-tv .profile-field strong { font-size: 12px; line-height: 1.35; }
+
+/* Narrow sets: profile above the statistics, one scrolling column. */
+@media (max-width: 900px) {
+  .stats-tv { height: auto; }
+  .stats-tv__cabinet { padding: 9px 9px 0; }
+  .stats-tv__screen { display: block; overflow: visible; border-radius: 16px; }
+  .stats-tv__side, .stats-tv__picture { overflow: visible; padding: 14px; }
+  .stats-tv__side { border-right: 0; border-bottom: 1px solid #d9d6cf; border-radius: 13px 13px 0 0; }
+  .stats-tv .profile-fields { grid-template-columns: 1fr 1fr; column-gap: 16px; }
+  .stats-tv__glass { background: repeating-linear-gradient(180deg, transparent 0 2px, rgb(10 9 7 / .035) 2px 3px); }
+  .stats-tv__grille, .stats-tv__knobs { display: none; }
+  .stats-tv__channels { margin: 0; width: 100%; }
+  .stats-tv__channels button { flex: 1; }
+}
+@media (max-width: 520px) { .stats-tv .profile-fields { grid-template-columns: 1fr; } }
+/* Reduced motion: channels change with a plain cut. */
+@media (prefers-reduced-motion: reduce) {
+  .stats-tv__picture, .stats-tv__static { animation: none; }
+  .stats-tv__channels button { transition: none; }
+}

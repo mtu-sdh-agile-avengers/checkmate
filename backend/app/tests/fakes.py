@@ -68,11 +68,13 @@ class FakeChessComClient:
     def __init__(
         self,
         stats: dict | None = None,
+        profile: dict | None = None,
         archive_months: list[tuple[int, int]] | None = None,
         monthly_games: dict[tuple[int, int], list[dict]] | None = None,
         not_found: bool = False,
     ) -> None:
         self.stats = stats or {}
+        self.profile = profile or {}
         self.archive_months = archive_months or []
         self.monthly_games = monthly_games or {}
         self.not_found = not_found  # simulate a player that does not exist
@@ -84,7 +86,8 @@ class FakeChessComClient:
             raise ChessAPINotFoundError(path)
 
     async def get_player_profile(self, username: str) -> dict:
-        raise NotImplementedError
+        self._request(f"/player/{username}")
+        return self.profile
 
     async def get_player_stats(self, username: str) -> dict:
         self._request(f"/player/{username}/stats")
