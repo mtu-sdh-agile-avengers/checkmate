@@ -1,18 +1,16 @@
 import { useId, useState } from 'react';
+import {
+  ASH, EDGE, GUEST, GUEST_FACE, GUEST_MIRROR_X, HAT_BAND, INK, IVORY, OPPONENT_CHAIR, OPPONENT_SEAT, PLAYER, PLAYER_CHAIR, STONE, dot,
+} from './stage-shapes';
 
 /* Cut-paper artwork for the chess stage: flat silhouettes in the ivory/charcoal palette
    with a die-cut edge, like stickers. Everything here is decorative and aria-hidden;
-   the scene that uses it carries the text description. */
-const IVORY = '#efece5';
-const INK = '#121213';
-// Offset 'sticker' shadows and small accents use the theme's warm greys.
-const STONE = '#80796d';
-const ASH = '#a7a5a0';
+   the scene that uses it carries the text description. The outlines and palette live in
+   stage-shapes.ts, shared with the 3D set. */
+export { INK, IVORY } from './stage-shapes';
 
 export type PieceKind = 'king' | 'queen' | 'rook' | 'bishop' | 'knight' | 'pawn';
 export type PieceTone = 'ivory' | 'ebony';
-
-const dot = (cx: number, cy: number, r: number) => `M${cx} ${cy - r} A${r} ${r} 0 1 1 ${cx - 0.01} ${cy - r} Z`;
 // Plinth, stem and collar shared by every piece, in a 60 x 100 box with the base on y = 97.
 const BODY = 'M7 97 V91 Q7 86 13 85 L18 85 Q26 68 24.5 47 H18 V41 H42 V47 H35.5 Q34 68 42 85 L47 85 Q53 86 53 91 V97 Z';
 const PIECES: Record<PieceKind, string[]> = {
@@ -24,8 +22,9 @@ const PIECES: Record<PieceKind, string[]> = {
   knight: [BODY, 'M18 41 C15 27 20 17 31 11 L29 3 L37 9 C48 13 53 24 51 34 L45 38 L37 30 C34 34 37 38 42 41 Z'],
 };
 
-/** Two passes give one clean outline around the union of the shapes, with no inner seams. */
-function Cutout({ shapes, fill, edge, width, shadow }: { shapes: string[]; fill: string; edge: string; width: number; shadow?: boolean }) {
+/** Two passes give one clean outline around the union of the shapes, with no inner seams.
+ *  Shared with the top-down figures (top-down-figure.tsx). */
+export function Cutout({ shapes, fill, edge, width, shadow }: { shapes: string[]; fill: string; edge: string; width: number; shadow?: boolean }) {
   return <>
     {shadow && <g transform="translate(6 6)" fill={STONE} stroke={STONE} strokeWidth={width} strokeLinejoin="round">{shapes.map((d, i) => <path key={i} d={d} />)}</g>}
     <g fill={edge} stroke={edge} strokeWidth={width} strokeLinejoin="round">{shapes.map((d, i) => <path key={i} d={d} />)}</g>
@@ -65,50 +64,15 @@ export function TableBoard() {
   </svg>;
 }
 
-const PLAYER_CHAIR = [
-  'M24 118 Q30 110 38 116 L47 238 H31 Z',
-  'M28 228 H122 Q126 228 126 233 V240 H28 Z',
-  'M31 240 L25 338 H36 L44 240 Z',
-  'M106 240 L111 338 H121 L118 240 Z',
-];
-// A seated figure in profile, facing right. Floor y = 340, table top y = 156.
-const SEATED = {
-  coat: 'M50 230 C44 176 54 118 82 88 Q102 74 120 90 L128 116 C116 152 108 192 108 230 Z',
-  coatTail: 'M50 226 L43 270 L66 263 L70 228 Z',
-  thigh: 'M56 206 H150 Q162 206 162 218 V230 H56 Z',
-  shin: 'M138 224 H162 L158 322 H136 Z',
-  shoe: 'M132 318 H168 Q186 322 186 334 V338 H132 Z',
-  collar: 'M92 94 L104 62 L117 88 Z',
-  neck: 'M102 82 L116 60 L134 72 L122 94 Z',
-  head: dot(134, 52, 24),
-  hatBrim: 'M98 42 Q134 26 180 44 L177 51 Q134 36 100 50 Z',
-  hatCrown: 'M111 37 Q110 9 134 8 Q158 9 161 35 Q136 29 111 37 Z',
-  upperArm: 'M94 102 L107 88 L167 140 L153 154 Z',
-  forearm: 'M149 152 L167 146 L158 82 L141 86 Z', // hand to chin
-  fist: dot(150, 82, 10),
-  restingArm: 'M120 140 H198 Q206 140 206 147.5 Q206 155 198 155 H120 Z', // on the table
-};
-const PLAYER = Object.values(SEATED);
-const GUEST = [SEATED.coat, SEATED.thigh, SEATED.shin, SEATED.shoe, SEATED.neck, SEATED.head, SEATED.restingArm];
-
 /** The player: seated in profile on the left, hat low, chin on fist, studying the board.
  *  In this 230 x 340 box the floor is y = 340 and the table top is y = 156. */
 export function SeatedPlayer() {
   return <svg className="seated-player" viewBox="0 0 230 340" aria-hidden="true" focusable="false">
     <Cutout shapes={PLAYER_CHAIR} fill="#2c2c2e" edge={IVORY} width={3.5} />
     <Cutout shapes={PLAYER} fill={INK} edge={IVORY} width={5} />
-    <path d="M112 32.5 Q136 24.5 161 30.5 L161 35 Q136 29 111 37 Z" fill={ASH} />
+    <path d={HAT_BAND} fill={ASH} />
   </svg>;
 }
-
-const OPPONENT_CHAIR = [
-  'M116 100 Q123 90 130 100 L120 238 H106 Z',
-  'M107 100 Q121 85 135 100 L130 152 Q119 158 107 152 Z',
-  'M30 228 Q26 228 26 233 V240 H122 V228 Z',
-  'M33 240 L30 338 H41 L46 240 Z',
-  'M106 240 L113 338 H124 L120 240 Z',
-  'M40 286 H112 V292 H40 Z',
-];
 
 /** The opponent's chair: lit, empty and waiting on the search view. Once a player has been
  *  found, a guest takes the seat: the same seated figure mirrored to face the table,
@@ -120,16 +84,17 @@ export function OpponentChair({ occupied = false, avatar }: { occupied?: boolean
   const [broken, setBroken] = useState<string | null>(null);
   const picture = avatar && avatar !== broken ? avatar : null;
   return <svg className="opponent-chair" data-occupied={occupied} viewBox="0 0 150 340" aria-hidden="true" focusable="false">
-    <Cutout shapes={OPPONENT_CHAIR} fill={IVORY} edge="#0b0b0c" width={5} shadow />
-    <path d="M32 218 H114 Q121 218 121 224 V229 H27 V224 Q27 218 32 218 Z" fill={STONE} stroke="#0b0b0c" strokeWidth="2.5" strokeLinejoin="round" />
+    <Cutout shapes={OPPONENT_CHAIR} fill={IVORY} edge={EDGE} width={5} shadow />
+    <path d={OPPONENT_SEAT} fill={STONE} stroke={EDGE} strokeWidth="2.5" strokeLinejoin="round" />
     {occupied && <g className="opponent-guest">
-      <g transform="translate(154 0) scale(-1 1)"><Cutout shapes={GUEST} fill={IVORY} edge="#0b0b0c" width={5} /></g>
+      <g transform={`translate(${GUEST_MIRROR_X} 0) scale(-1 1)`}><Cutout shapes={GUEST} fill={IVORY} edge={EDGE} width={5} /></g>
       {picture ? <g className="opponent-guest__face">
         {/* The picture sits over the drawn head, a little larger, like a cut-out photo on a stick figure. */}
-        <clipPath id={clip}><circle cx="20" cy="49" r="28" /></clipPath>
-        <circle cx="20" cy="49" r="28" fill={IVORY} />
-        <image href={picture} x="-8" y="21" width="56" height="56" preserveAspectRatio="xMidYMid slice" clipPath={`url(#${clip})`} onError={() => setBroken(picture)} />
-        <circle cx="20" cy="49" r="28" fill="none" stroke="#0b0b0c" strokeWidth="3" />
+        <clipPath id={clip}><circle cx={GUEST_FACE.cx} cy={GUEST_FACE.cy} r={GUEST_FACE.r} /></clipPath>
+        <circle cx={GUEST_FACE.cx} cy={GUEST_FACE.cy} r={GUEST_FACE.r} fill={IVORY} />
+        <image href={picture} x={GUEST_FACE.cx - GUEST_FACE.r} y={GUEST_FACE.cy - GUEST_FACE.r} width={GUEST_FACE.r * 2} height={GUEST_FACE.r * 2}
+          preserveAspectRatio="xMidYMid slice" clipPath={`url(#${clip})`} onError={() => setBroken(picture)} />
+        <circle cx={GUEST_FACE.cx} cy={GUEST_FACE.cy} r={GUEST_FACE.r} fill="none" stroke={EDGE} strokeWidth="3" />
       </g> : <text x="20" y="63" textAnchor="middle" fontSize="30" fontWeight="900" fill={INK}>?</text>}
     </g>}
   </svg>;

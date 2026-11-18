@@ -1,0 +1,57 @@
+/* The flat top-down table: what the chess set (chess-set.tsx) shows where 3D cannot be drawn.
+   It fills the view; the camera looks straight down at the middle of the board, which is
+   centred on the stage. The view itself arrives and leaves with the camera move
+   (chess-set.css).
+
+   --board is the playing area of the board. It is the largest that fits under the header
+   and above the footer with the table around it, and narrow enough that the side panel
+   (--panel-w, on the right) never covers it. Everything on the table scales from it. */
+.tabletop {
+  position: absolute; inset: 0; overflow: clip;
+  --seat-w: calc(var(--board) * .56);
+}
+.tabletop[data-mode='computer'] { --board: clamp(240px, min((100svh - 150px) / 1.22, 100vw - 2 * (var(--panel-w) + 96px)), 640px); }
+/* Deliberation leaves room above and below the table for the two seated players. Its table is wider (players at both ends), so the width limit keeps the whole table clear of the panel. */
+.tabletop[data-mode='deliberation'] { --board: clamp(220px, min((100svh - 150px) / 1.85, (100vw - 2 * (var(--panel-w) + 54px)) / 1.46), 520px); }
+.tabletop__camera { position: absolute; inset: 0; display: grid; place-items: center; }
+
+/* The chessboard floor seen from above, lit only around the table. */
+.tabletop__floor {
+  position: absolute; inset: -45%;
+  background:
+    radial-gradient(ellipse calc(var(--board) * 1.3) calc(var(--board) * 1.05) at 50% 50%, rgb(9 9 10 / .2), rgb(9 9 10 / .78) 58%, rgb(9 9 10 / .97)),
+    repeating-conic-gradient(#d7d3ca 0 25%, #1c1c1d 0 50%) 50% 50% / calc(var(--board) / 2) calc(var(--board) / 2);
+}
+
+/* The table top: paper with an ink edge and the stone offset shadow, like the table's front
+   in the side view. */
+.tabletop__table { position: relative; }
+.tabletop__surface {
+  position: relative; z-index: 1; padding: calc(var(--board) * .075);
+  background: #fffefa; border: 3px solid #0b0b0c;
+  outline: 1px solid rgb(27 28 29 / .14); outline-offset: calc(var(--board) * -.03);
+  box-shadow: 10px 10px 0 #80796d, 0 30px 70px rgb(0 0 0 / .6);
+}
+.tabletop[data-mode='deliberation'] .tabletop__surface { padding: calc(var(--board) * .085) calc(var(--board) * .2); }
+
+/* Seats: the near player's hands rest just inside the bottom edge, the far player is the
+   same figure turned round at the top edge. */
+.tabletop__seat { position: absolute; z-index: 2; left: 50%; width: var(--seat-w); translate: -50% 0; pointer-events: none; }
+.tabletop__seat--near { top: calc(100% - var(--seat-w) * .1333); }
+.tabletop__seat--far { bottom: calc(100% - var(--seat-w) * .1333); rotate: 180deg; }
+.td-figure { display: block; width: 100%; height: auto; overflow: visible; }
+/* The far player is turned round, but the letter on their head still reads upright. */
+.tabletop__seat--far .td-figure__face { transform: rotate(180deg); transform-box: fill-box; transform-origin: center; }
+/* Both players lean in towards the board as the camera settles. */
+.tabletop__seat .td-figure { animation: td-lean .6s cubic-bezier(.2, .8, .2, 1) var(--lean-at, .55s) both; }
+.tabletop__seat--far .td-figure { animation-delay: calc(var(--lean-at, .55s) + .12s); }
+@keyframes td-lean { from { transform: translateY(14%) scale(.96); } to { transform: none; } }
+
+@media (max-width: 1099px) {
+  .tabletop { position: relative; inset: auto; width: 100%; height: var(--scene-h); flex: 0 0 auto; }
+  .tabletop[data-mode='computer'] { --board: clamp(200px, min(100vw - 72px, 100svh - 330px), 560px); --scene-h: calc(var(--board) * 1.3 + 24px); }
+  .tabletop[data-mode='deliberation'] { --board: clamp(160px, min((100vw - 40px) / 1.5, (100svh - 240px) / 1.85), 440px); --scene-h: calc(var(--board) * 1.9 + 24px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tabletop__seat .td-figure { animation: none; }
+}
