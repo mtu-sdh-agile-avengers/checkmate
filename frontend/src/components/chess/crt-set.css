@@ -1,11 +1,27 @@
 /* One CRT face and its signal states. The only bitmap is a shared 128px noise tile
    (generated once by scripts/generate-crt-noise.mjs, never computed per frame). */
 .crt-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
-.crt-face { position: absolute; inset: 0; display: block; width: 100%; height: 100%; --screen-color: #c7cac6; }
+.crt-face, .crt-face__front { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.crt-face { --screen-color: #c7cac6; }
 .crt-face--silver { --screen-color: #dbd5c9; }
 .crt-screen-rim { stroke: var(--screen-color); opacity: .45; }
 .crt-screen-tint { fill: var(--screen-color); opacity: .12; }
-.crt-glitch { fill: none; stroke: #fffefa; stroke-width: 1.1; opacity: .38; }
+.crt-cover { fill: #636260; opacity: 0; }
+
+/* Static: an HTML layer behind the cabinet, seen through the hole cut for the glass.
+   The box reaches 3 units past the glass on every side (the bezel hides the excess);
+   the noise inside it overscans far enough to cover all eight offsets below. Moving it
+   with a transform keeps it on the GPU, so no television repaints for its static.
+   Geometry is in the face's 250 x 200 units: the box spans x -3..223, y -3..163 of the
+   screen, the noise 54 units beyond it sideways and 56 above and below. */
+.crt-snow { position: absolute; left: 4.8%; top: 5.5%; width: 90.4%; height: 83%; overflow: hidden; background: #636260; }
+.crt-snow__noise {
+  position: absolute; inset: -34% -24%; will-change: transform;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-57.24 -59.44 334.48 278.88' preserveAspectRatio='none'%3E%3Cpath d='M-18 -56 L-6 216 M46 -56 L58 216 M150 -56 L134 216 M214 -56 L238 216 M76 -56 L198 216 M262 -56 L170 216' fill='none' stroke='%23fffefa' stroke-width='1.1' stroke-opacity='.38'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat,
+    url('../../assets/crt-noise.png') 0 0 / 38.27% auto;
+  animation: crt-static 266.666667ms steps(1, end) var(--crt-delay) infinite;
+}
 
 /* ---------------------------------------------------------------------------
    Signal states (set by useTvSignals):
@@ -17,26 +33,22 @@
    use different animation names, which is what restarts the animation each
    time the attribute flips; `both` keeps the last frame afterwards.
    ------------------------------------------------------------------------- */
-.crt-static { opacity: 1; }
 .crt-transmission { opacity: 0; transform-box: fill-box; transform-origin: center; }
 .crt-tear { opacity: 0; }
 /* The roll bar is a faint still band: animating it would redraw every set on every frame. */
 .crt-roll { opacity: .06; transform: translateY(96px); }
 
-/* Live static: eight texture offsets per 266.67ms cycle = 30 static frames/sec.
-   Contrast is baked into the PNG, so no filter runs per frame. */
-.crt-noise { animation: crt-static 266.666667ms steps(1, end) var(--crt-delay) infinite; }
-
 /* static -> picture */
-.crt-screen[data-active='true'] .crt-transmission { opacity: 1; animation: crt-cut-in 260ms steps(1, end) both; }
-.crt-screen[data-active='true'] .crt-static { opacity: .16; }
-.crt-screen[data-active='true'] .crt-noise { animation: none; }
-.crt-screen[data-active='true'] .crt-roll { opacity: 0; }
-.crt-screen[data-active='true'] .crt-tear { animation: crt-tear-in 260ms steps(1, end) both; }
+.crt-face[data-active='true'] .crt-transmission { opacity: 1; animation: crt-cut-in 260ms steps(1, end) both; }
+/* The picture covers most of the static, which holds still underneath it. */
+.crt-face[data-active='true'] .crt-cover { opacity: .84; }
+.crt-face[data-active='true'] .crt-snow__noise { animation: none; }
+.crt-face[data-active='true'] .crt-roll { opacity: 0; }
+.crt-face[data-active='true'] .crt-tear { animation: crt-tear-in 260ms steps(1, end) both; }
 
 /* picture -> static (only sets that have shown a picture have anything to cut from) */
-.crt-screen[data-active='false'][data-revealed='true'] .crt-transmission { animation: crt-cut-out 200ms steps(1, end) both; }
-.crt-screen[data-active='false'][data-revealed='true'] .crt-tear { animation: crt-tear-out 200ms steps(1, end) both; }
+.crt-face[data-active='false'][data-revealed='true'] .crt-transmission { animation: crt-cut-out 200ms steps(1, end) both; }
+.crt-face[data-active='false'][data-revealed='true'] .crt-tear { animation: crt-tear-out 200ms steps(1, end) both; }
 
 @keyframes crt-cut-in {
   0%   { opacity: 0; transform: none; clip-path: none; }
@@ -69,15 +81,18 @@
   70%  { opacity: .9; transform: translateY(92px); }
   100% { opacity: 0; transform: translateY(190px); }
 }
+/* Live static: eight texture offsets per 266.67ms cycle = 30 static frames/sec. The offsets
+   are the original (-21, 32), (47, -19)... face units as shares of the noise layer's size.
+   Contrast is baked into the PNG, so no filter runs per frame. */
 @keyframes crt-static {
   0%, 100% { transform: translate(0, 0); }
-  12.5% { transform: translate(-21px, 32px); }
-  25% { transform: translate(47px, -19px); }
-  37.5% { transform: translate(-38px, -41px); }
-  50% { transform: translate(22px, 53px); }
-  62.5% { transform: translate(-51px, 12px); }
-  75% { transform: translate(35px, -55px); }
-  87.5% { transform: translate(-13px, -27px); }
+  12.5% { transform: translate(-6.28%, 11.47%); }
+  25% { transform: translate(14.05%, -6.81%); }
+  37.5% { transform: translate(-11.36%, -14.7%); }
+  50% { transform: translate(6.58%, 19%); }
+  62.5% { transform: translate(-15.25%, 4.3%); }
+  75% { transform: translate(10.46%, -19.72%); }
+  87.5% { transform: translate(-3.89%, -9.68%); }
 }
 
 /* Broadcast artwork only moves while its picture is on air. */
@@ -86,7 +101,7 @@
 .signal-rook .signal-body { animation: signal-shudder 1.5s ease-in-out infinite; }
 .signal-pawn .signal-body { animation: signal-hop 1.5s ease-in-out infinite; }
 .signal-piece * { animation-play-state: paused; }
-.crt-screen[data-active='true'] .signal-piece * { animation-play-state: running; }
+.crt-face[data-active='true'] .signal-piece * { animation-play-state: running; }
 @keyframes signal-spark { 0%,100% { opacity: 0; transform: scale(.7); } 35% { opacity: 1; transform: scale(1.1); } 65% { opacity: .2; } }
 @keyframes signal-drift { from { opacity: 0; transform: translateY(5px); } 30% { opacity: .8; } to { opacity: 0; transform: translate(-5px,-10px); } }
 @keyframes signal-shudder { 0%,30%,100% { transform: translateX(0); } 10%,22% { transform: translateX(-2px); } 16%,26% { transform: translateX(2px); } }
