@@ -21,7 +21,18 @@ export function MatchPanel({ eyebrow, title, seats, note, actions, leaving = fal
   const titleId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    heading.current?.focus({ preventScroll: true });
+    // The panel stays hidden until it slides in, and a hidden heading cannot take focus:
+    // keep trying, a frame at a time, until it can (or give up after a couple of seconds).
+    const started = performance.now();
+    let frame = 0;
+    const focus = () => {
+      const element = heading.current;
+      if (!element) return;
+      element.focus({ preventScroll: true });
+      if (document.activeElement !== element && performance.now() - started < 2500) frame = requestAnimationFrame(focus);
+    };
+    focus();
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   return (
