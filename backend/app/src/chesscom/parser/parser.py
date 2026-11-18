@@ -13,6 +13,8 @@ logged, so one odd game does not break a whole statistics page or game list.
 
 import re
 
+import io
+import chess.pgn
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
@@ -20,6 +22,8 @@ from src.chesscom.client.exceptions import ChessAPIParseError
 from src.chesscom.parser.models import (
     ChessComDailyGame,
     ChessComGame,
+    ChessComGameMoves,
+    ChessComMove,
     ChessComGamesArchives,
     ChessComPgnGame,
     ChessComPlayerProfile,
@@ -133,3 +137,43 @@ def parse_monthly_pgn(text: str) -> list[ChessComPgnGame]:
         for chunk in _PGN_GAME_SEPARATOR_RE.split(normalized)
         if chunk.strip()
     ]
+
+
+def parse_pgn_moves(pgn: str) -> ChessComGameMoves:
+    """Replays a single game's PGN and returns the board position (FEN) after every move.
+
+    Raises:
+        ChessAPIParseError: if the PGN is empty or not a game, or contains an
+            illegal move.
+    """
+    source = "game PGN"
+    game = chess.pgn.read_game(io.StringIO(pgn))
+
+    if game is None:
+        logger.error(f"Failed to parse Chess.com {source}: no game found")
+        raise ChessAPIParseError(source, "no game found")
+
+    if game.errors:
+        # python-chess stops reading moves at the first illegal / unreadable one
+        details = "; ".join(str(error) for error in game.errors[:_MAX_REPORTED_ERRORS])
+        logger.error(f"Failed to parse Chess.com {source}: {details}")
+        raise ChessAPIParseError(source, details)
+
+    board = game.board()
+    initial_fen = board.fen()
+    moves = []
+
+    for ply, node in enumerate(game.mainline(), start=1):
+        san = board.san(node.move)  # SAN depends on the position BEFORE the move
+        board.push(node.move)
+        moves.append(
+            ChessComMove(
+                ply=ply,
+                san=san,
+                uci=node.move.uci(),
+                fen=board.fen(),
+                clock=node.clock(),
+            )
+        )
+
+    return ChessComGameMoves(initial_fen=initial_fen, moves=moves)

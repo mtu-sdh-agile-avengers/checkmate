@@ -15,6 +15,7 @@ from src.chesscom.parser.parser import (
     parse_games_archives,
     parse_monthly_games,
     parse_monthly_pgn,
+    parse_pgn_moves,
     parse_player_profile,
     parse_player_stats,
 )
@@ -129,6 +130,41 @@ def test_real_pgn(chesscom_fixture, games):
     first = pgn_games[0]
     assert first.headers["Termination"] == "jumpingknight20 won by checkmate"
     assert first.pgn.endswith("54. Qb4# {[%clk 0:00:01.2]} 1-0")
+
+
+def test_real_pgn_moves_replay_to_the_final_position(games):
+    # Replaying every move must end exactly in the position Chess.com reports.
+    for game in games:
+        result = parse_pgn_moves(game.pgn)
+
+        assert result.initial_fen == game.initial_setup
+        assert result.final_fen == game.fen, game.url
+
+
+def test_real_pgn_moves_first_game(games):
+    game = next(g for g in games if g.game_id == "185359591189")
+
+    moves = parse_pgn_moves(game.pgn).moves
+
+    assert len(moves) == 107  # white mated on move 54: 54 white + 53 black half-moves
+    assert moves[0].san == "e4"
+    assert moves[0].clock == 59.6
+    assert moves[8].san == "Nxf6+"  # ply 9 = 5. Nxf6+
+    assert moves[8].uci == "e4f6"
+    assert moves[-1].san == "Qb4#"
+    assert moves[-1].move_number == 54
+    assert moves[-1].clock == 1.2
+
+
+def test_real_pgn_moves_from_pgn_file_match_json(chesscom_fixture, games):
+    # The same game from the monthly PGN file gives the same positions as from the JSON.
+    json_by_url = {game.url: game for game in games}
+
+    for pgn_game in parse_monthly_pgn(chesscom_fixture("hikaru_games_2026_10.pgn")):
+        from_file = parse_pgn_moves(pgn_game.pgn)
+        from_json = parse_pgn_moves(json_by_url[pgn_game.url].pgn)
+
+        assert from_file == from_json
 
 
 @pytest.mark.anyio
