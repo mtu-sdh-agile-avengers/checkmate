@@ -12,6 +12,7 @@ from src.chesscom.parser import (
     parse_monthly_games,
     parse_monthly_pgn,
     parse_pgn_headers,
+    parse_pgn_moves,
     parse_player_profile,
     parse_player_stats,
 )
@@ -305,3 +306,74 @@ def test_parse_pgn_headers_ignores_moves():
     pgn = '[White "a"]\n[Black "b"]\n\n1. e4 {[%clk 0:03:00]} e5 *'
 
     assert parse_pgn_headers(pgn) == {"White": "a", "Black": "b"}
+
+
+# PGN moves -> FEN positions (CMG4-72, CMG4-63) --------------------------------------
+
+START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+FOOLS_MATE_PGN = (
+    '[White "a"]\n[Black "b"]\n[Result "0-1"]\n\n'
+    "1. f3 {[%clk 0:03:00]} 1... e5 {[%clk 0:02:59.5]} "
+    "2. g4 {[%clk 0:02:58]} 2... Qh4# {[%clk 0:02:57.1]} 0-1"
+)
+
+
+def test_parse_pgn_moves_positions_after_every_move():
+    result = parse_pgn_moves(FOOLS_MATE_PGN)
+
+    assert result.initial_fen == START_FEN
+    assert [move.ply for move in result.moves] == [1, 2, 3, 4]
+    assert [move.san for move in result.moves] == ["f3", "e5", "g4", "Qh4#"]
+    assert [move.uci for move in result.moves] == ["f2f3", "e7e5", "g2g4", "d8h4"]
+    assert result.moves[0].fen == (
+        "rnbqkbnr/pppppppp/8/8/8/5P2/PPPPP1PP/RNBQKBNR b KQkq - 0 1"
+    )
+    assert result.final_fen == (
+        "rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3"
+    )
+    assert result.fens == [START_FEN, *(move.fen for move in result.moves)]
+
+
+def test_parse_pgn_moves_clocks_and_move_numbers():
+    moves = parse_pgn_moves(FOOLS_MATE_PGN).moves
+
+    assert [move.clock for move in moves] == [180.0, 179.5, 178.0, 177.1]
+    assert [move.move_number for move in moves] == [1, 1, 2, 2]
+    assert [move.is_white_move for move in moves] == [True, False, True, False]
+
+
+def test_parse_pgn_moves_without_clocks():
+    moves = parse_pgn_moves("1. e4 e5 *").moves
+
+    assert [move.clock for move in moves] == [None, None]
+
+
+def test_parse_pgn_moves_custom_start_position_and_promotion():
+    pgn = '[SetUp "1"]\n[FEN "8/4P3/8/8/8/8/k7/4K3 w - - 0 1"]\n\n1. e8=Q 1... Kb2 *'
+
+    result = parse_pgn_moves(pgn)
+
+    assert result.initial_fen == "8/4P3/8/8/8/8/k7/4K3 w - - 0 1"
+    assert result.moves[0].san == "e8=Q"
+    assert result.moves[0].uci == "e7e8q"  # promotion piece is part of the UCI move
+    assert result.final_fen == "4Q3/8/8/8/8/8/1k6/4K3 w - - 1 2"
+
+
+def test_parse_pgn_moves_game_without_moves():
+    result = parse_pgn_moves('[White "a"]\n[Black "b"]\n\n*')
+
+    assert result.moves == []
+    assert result.final_fen == START_FEN
+    assert result.fens == [START_FEN]
+
+
+@pytest.mark.parametrize(
+    "pgn",
+    [
+        "",  # nothing to parse
+        "1. e4 e5 2. Ke3 *",  # illegal move: the king cannot jump two squares
+    ],
+)
+def test_parse_pgn_moves_invalid_pgn_raises_parse_error(pgn):
+    with pytest.raises(ChessAPIParseError):
+        parse_pgn_moves(pgn)

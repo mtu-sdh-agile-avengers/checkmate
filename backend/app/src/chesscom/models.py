@@ -302,3 +302,42 @@ class ChessComPgnGame(ChessComModel):
     def url(self) -> str | None:
         """Game URL from the "Link" header (Chess.com adds it to every game)."""
         return self.headers.get("Link")
+
+
+# Moves replayed from a game's PGN (CMG4-72, CMG4-63) -------------------------------
+
+
+class ChessComMove(ChessComModel):
+    """One half-move (ply) of a game and the board position it leads to."""
+
+    ply: int = Field(ge=1)  # half-move number: 1 = white's 1st move, 2 = black's reply
+    san: str  # Standard Algebraic Notation, e.g. "Nxf6+" (for display)
+    uci: str  # UCI notation, e.g. "e4f6" (for Stockfish / animating the board)
+    fen: str  # FEN of the position AFTER this move
+    clock: float | None = None  # mover's remaining clock in seconds, from {[%clk ...]}
+
+    @property
+    def move_number(self) -> int:
+        """Full-move number as shown in PGN, e.g. ply 3 -> move 2."""
+        return (self.ply + 1) // 2
+
+    @property
+    def is_white_move(self) -> bool:
+        return self.ply % 2 == 1
+
+
+class ChessComGameMoves(ChessComModel):
+    """All positions of a game: the starting position, then one entry per half-move."""
+
+    initial_fen: str  # position before the first move
+    moves: list[ChessComMove] = Field(default_factory=list)
+
+    @property
+    def final_fen(self) -> str:
+        """Position after the last move (the starting position if there are no moves)."""
+        return self.moves[-1].fen if self.moves else self.initial_fen
+
+    @property
+    def fens(self) -> list[str]:
+        """Every position in order, starting position included (len = moves + 1)."""
+        return [self.initial_fen, *(move.fen for move in self.moves)]
