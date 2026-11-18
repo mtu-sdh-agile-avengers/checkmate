@@ -8,9 +8,9 @@ export type TabletopMode = 'computer' | 'deliberation';
  * It sits on its own patch of the chessboard floor, with the board (`children`) centred on
  * the table top. `near` and `far` are the players seated at the bottom and top edges.
  *
- * The camera tilts down to it from the stage: the view rises into frame as the stage
- * travels out of it (tabletop.css), and `leaving` plays that backwards while the stage
- * comes back.
+ * Mounting it plays the camera's arrival: the table tilts up from the angle of the side view
+ * until the camera looks straight down at the middle of the board. `leaving` plays it in
+ * reverse while the stage comes back.
  */
 export function Tabletop({ mode, leaving = false, near, far, children }: {
   mode: TabletopMode;

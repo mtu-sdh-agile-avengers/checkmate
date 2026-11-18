@@ -23,6 +23,8 @@ export type StageView = 'search' | 'player' | TopDownView;
 /** The camera move between views (--cam-time in stage-layout.css): a closing view stays on
  *  screen this long, to be seen leaving. */
 const CAMERA_MS = 700;
+/** The top-down views keep their own, longer move: the table tilts away over 0.75s. */
+const TOP_DOWN_LEAVE_MS = 800;
 
 /** Says when `children` are on screen (and when they go): a view loaded on demand is only
  *  committed once its code has arrived, so this is the moment the camera can start moving
@@ -52,8 +54,8 @@ function useLingering<T>(value: T | null, ms: number): T | null {
  * - `/` is the search view, with the main menu under the search.
  * - `/players/:username` is the same stage with the camera panned to the opponent's seat,
  *   where the television shows that player's profile and statistics.
- * - `/play` (In-Game Chess) and `/deliberation` tilt the camera down onto the chess set; the
- *   stage travels up out of view and sleeps meanwhile.
+ * - `/play` (In-Game Chess) and `/deliberation` crane the camera up and tip it down onto the
+ *   table; the stage rises out of view, fades and sleeps meanwhile.
  * The view is a data attribute; the stylesheets turn it into the camera moves. A view that
  * closes stays mounted for the length of the move, so it is seen leaving rather than cut.
  */
@@ -61,7 +63,7 @@ export function StageLayout() {
   const { username } = useParams<{ username: string }>();
   const { pathname } = useLocation();
   const topDown: TopDownView | null = pathname === ROUTES.play ? 'computer' : pathname === ROUTES.deliberation ? 'deliberation' : null;
-  const scene = useLingering(topDown, CAMERA_MS);
+  const scene = useLingering(topDown, TOP_DOWN_LEAVE_MS);
   const shownPlayer = useLingering(username ?? null, CAMERA_MS);
   // The camera moves to a view once that view is there (see Arrival); until then it holds.
   const [arrived, setArrived] = useState<string | null>(null);
@@ -89,7 +91,8 @@ export function StageLayout() {
   }, []);
 
   return (
-    <div className="stage-screen" data-view={view}>
+    // data-leaving-view: a top-down view is on its way out, so the stage returns its own way (stage-layout.css).
+    <div className="stage-screen" data-view={view} data-leaving-view={!topDown && scene ? scene : undefined}>
       {/* First in the markup, so reading and tab order start with the search. */}
       <SearchPage guest={username} guestAvatar={player?.avatar} topDown={topDown} />
       {shownPlayer && (

@@ -25,7 +25,7 @@ npm run format:check # Prettier
 
 ## Screens and route mapping
 
-Every screen is a view of one chess stage (`src/app/stage-layout.tsx`); moving between them is a camera move (a pan, or a tilt down onto the board), never a fade.
+Every screen is a view of one chess stage (`src/app/stage-layout.tsx`); moving between them is a camera move: a pan to a player (no fade), or a crane up and tilt down onto the board for In-Game Chess and Deliberation, where the stage fades out as the table fades in.
 
 | Feature | Route | Behaviour |
 |---|---|---|

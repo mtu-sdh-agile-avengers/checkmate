@@ -9,8 +9,8 @@
   --table-h: 184px; --fig-h: calc(var(--table-h) * 1.848); --fig-w: calc(var(--fig-h) * .6765); --chair-w: calc(var(--fig-h) * .4412);
   position: relative; z-index: 3; display: block; flex: 0 0 auto; min-height: 0; gap: 0;
   width: var(--table-w, min(720px, 100% - 340px));
-  /* The camera: the whole set tracks sideways when a player has been found, and travels up out
-     of frame for the top-down views (stage-layout.css). Both are position only. */
+  /* The camera: the whole set tracks sideways when a player has been found, and rises out of
+     view and fades for the top-down views (stage-layout.css, which also brings it back). */
   translate: var(--cam-shift, 0px) 0;
   transition: translate var(--cam-time, .7s) var(--cam-ease, cubic-bezier(.65, 0, .35, 1)), visibility 0s;
 }
