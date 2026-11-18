@@ -1,0 +1,81 @@
+/* The top-down views (In-Game Chess, Deliberation). The view covers the stage; the camera
+   looks straight down at the middle of the board, which is centred on the stage.
+
+   --board is the playing area of the board. It is the largest that fits under the header
+   and above the footer with the table around it, and narrow enough that the side panel
+   (--panel-w, on the right) never covers it. Everything on the table scales from it. */
+.topdown-view { --panel-w: 340px; position: absolute; inset: 0; z-index: 7; }
+.tabletop {
+  position: absolute; inset: 0; overflow: clip;
+  perspective: 1400px; perspective-origin: 50% 42%;
+  --seat-w: calc(var(--board) * .56);
+}
+.tabletop[data-mode='computer'] { --board: clamp(240px, min((100svh - 150px) / 1.22, 100vw - 2 * (var(--panel-w) + 96px)), 640px); }
+/* Deliberation leaves room above and below the table for the two seated players. Its table is wider (players at both ends), so the width limit keeps the whole table clear of the panel. */
+.tabletop[data-mode='deliberation'] { --board: clamp(220px, min((100svh - 150px) / 1.85, (100vw - 2 * (var(--panel-w) + 54px)) / 1.46), 520px); }
+
+/* --- The camera ------------------------------------------------------------
+   Arriving, the table starts as the side view saw it, low in the frame and tipped back like
+   the floor, then tilts up, turns square and settles until the camera looks straight down.
+   It starts while the stage is still rising out of view (stage-layout.css) and shares its
+   ease, so the two read as one move. Leaving plays it backwards. */
+.tabletop__camera {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  animation: tabletop-arrive 1.1s var(--topdown-ease, cubic-bezier(.65, 0, .2, 1)) .3s both;
+}
+.tabletop[data-leaving] .tabletop__camera { animation: tabletop-depart .75s cubic-bezier(.55, 0, 1, .45) both; }
+@keyframes tabletop-arrive {
+  from { opacity: 0; transform: translateY(20%) rotateX(52deg) rotateZ(-8deg) scale(1.3); }
+  40% { opacity: 1; }
+  to { opacity: 1; transform: none; }
+}
+@keyframes tabletop-depart {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(20%) rotateX(52deg) rotateZ(-8deg) scale(1.3); }
+}
+
+/* The chessboard floor seen from above, lit only around the table. It reaches well past the
+   frame so the tilt above never shows its edges. */
+.tabletop__floor {
+  position: absolute; inset: -45%;
+  background:
+    radial-gradient(ellipse calc(var(--board) * 1.3) calc(var(--board) * 1.05) at 50% 50%, rgb(9 9 10 / .2), rgb(9 9 10 / .78) 58%, rgb(9 9 10 / .97)),
+    repeating-conic-gradient(#d7d3ca 0 25%, #1c1c1d 0 50%) 50% 50% / calc(var(--board) / 2) calc(var(--board) / 2);
+}
+
+/* The table top: paper with an ink edge and the stone offset shadow, like the table's front
+   in the side view. */
+.tabletop__table { position: relative; }
+.tabletop__surface {
+  position: relative; z-index: 1; padding: calc(var(--board) * .075);
+  background: #fffefa; border: 3px solid #0b0b0c;
+  outline: 1px solid rgb(27 28 29 / .14); outline-offset: calc(var(--board) * -.03);
+  box-shadow: 10px 10px 0 #80796d, 0 30px 70px rgb(0 0 0 / .6);
+}
+.tabletop[data-mode='deliberation'] .tabletop__surface { padding: calc(var(--board) * .085) calc(var(--board) * .2); }
+
+/* Seats: the near player's hands rest just inside the bottom edge, the far player is the
+   same figure turned round at the top edge. */
+.tabletop__seat { position: absolute; z-index: 2; left: 50%; width: var(--seat-w); translate: -50% 0; pointer-events: none; }
+.tabletop__seat--near { top: calc(100% - var(--seat-w) * .1333); }
+.tabletop__seat--far { bottom: calc(100% - var(--seat-w) * .1333); rotate: 180deg; }
+.td-figure { display: block; width: 100%; height: auto; overflow: visible; }
+/* The far player is turned round, but the letter on their head still reads upright. */
+.tabletop__seat--far .td-figure__face { transform: rotate(180deg); transform-box: fill-box; transform-origin: center; }
+/* Both players lean in towards the board as the camera settles. */
+.tabletop__seat .td-figure { animation: td-lean .6s cubic-bezier(.2, .8, .2, 1) var(--lean-at, 1.05s) both; }
+.tabletop__seat--far .td-figure { animation-delay: calc(var(--lean-at, 1.05s) + .12s); }
+@keyframes td-lean { from { transform: translateY(14%) scale(.96); } to { transform: none; } }
+
+/* Narrow screens: no room beside the board, so the view becomes a column the page scrolls:
+   the table, then the panel (or the VS set) under it. */
+@media (max-width: 1099px) {
+  .topdown-view { position: relative; inset: auto; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 6px 0 12px; }
+  .topdown-view[data-leaving] { position: absolute; inset: 0; }
+  .tabletop { position: relative; inset: auto; width: 100%; height: var(--scene-h); flex: 0 0 auto; }
+  .tabletop[data-mode='computer'] { --board: clamp(200px, min(100vw - 72px, 100svh - 330px), 560px); --scene-h: calc(var(--board) * 1.3 + 24px); }
+  .tabletop[data-mode='deliberation'] { --board: clamp(160px, min((100vw - 40px) / 1.5, (100svh - 240px) / 1.85), 440px); --scene-h: calc(var(--board) * 1.9 + 24px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tabletop__camera, .tabletop[data-leaving] .tabletop__camera, .tabletop__seat .td-figure { animation: none; }
+}

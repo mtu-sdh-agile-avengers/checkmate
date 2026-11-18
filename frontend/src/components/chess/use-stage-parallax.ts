@@ -3,7 +3,7 @@ import { useEffect, type RefObject } from 'react';
 const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
 
 /** The layers that move with the pointer; everything else on the stage is left alone. */
-const LAYERS = '.stage-world, .stage-rig, .stage-beams, .stage-sign';
+const LAYERS = '.stage-world, .stage-rig, .stage-beams';
 const VARS = ['--px', '--py', '--ps'] as const;
 
 /** Feeds the pointer and scroll position to CSS as --px / --py (-1..1) and --ps (0..1).

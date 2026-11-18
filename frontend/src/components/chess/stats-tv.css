@@ -1,15 +1,17 @@
 /* The statistics television: a graphite cabinet with an ivory, paper-white screen, so the
    shared light-themed statistics components read on it unchanged. Sizes are compacted for
    the screen further down; nothing here uses a colour outside the ivory/charcoal theme. */
-.stats-tv { display: flex; flex-direction: column; min-height: 0; width: 100%; height: 100%; filter: drop-shadow(0 22px 26px rgb(0 0 0 / .6)); }
+/* The cast shadow is a box-shadow on the cabinet, not a drop-shadow filter on the whole set:
+   a filter is re-run over everything inside whenever any number or chart on screen changes. */
+.stats-tv { display: flex; flex-direction: column; min-height: 0; width: 100%; height: 100%; }
 .stats-tv__cabinet {
   flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 14px 14px 0;
   border: 2px solid #0b0a08; border-radius: 14px;
   background: linear-gradient(155deg, #4a4947 0, #2c2b29 14%, #1f1e1c 60%, #121110 100%);
-  box-shadow: inset 1px 1px 0 rgb(154 152 149 / .35);
+  box-shadow: inset 1px 1px 0 rgb(154 152 149 / .35), 0 22px 30px rgb(0 0 0 / .55);
 }
 .stats-tv__screen {
-  position: relative; flex: 1; min-height: 0; overflow: hidden; display: grid; grid-template-columns: minmax(210px, 27%) minmax(0, 1fr);
+  position: relative; flex: 1; min-height: 0; overflow: hidden; display: grid; grid-template-columns: minmax(250px, 30%) minmax(0, 1fr);
   border: 3px solid #0d0c0a; border-radius: 26px / 22px; background: #f4f2ec; color: var(--ink, #1b1c1d);
   box-shadow: 0 0 0 5px #1a1917, 0 0 0 6px #5f5e5c;
 }
@@ -84,51 +86,86 @@
 .stats-tv__feet { flex: 0 0 auto; display: flex; justify-content: space-between; padding: 0 9%; }
 .stats-tv__feet i { width: 54px; height: 12px; background: linear-gradient(180deg, #2c2b29, #0b0a08); border-radius: 0 0 4px 4px; }
 
-/* --- Compact statistics for the screen ----------------------------------- */
-.stats-tv .eyebrow { font-size: 10px; letter-spacing: 1.8px; margin-bottom: 4px; }
-.stats-tv .page-title-row { align-items: flex-end; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 12px; }
-.stats-tv .page-title-row h2 { margin: 0 0 2px; font-size: 22px; line-height: 1.1; letter-spacing: -.7px; font-weight: 830; }
-.stats-tv .page-title-row p { margin: 0; font-size: 12px; color: #676663; }
-.stats-tv .page-title-row .empty-copy { margin-top: 4px; color: #5f5c56; font-weight: 650; }
-.stats-tv .label-pill { padding: 7px 12px; font-size: 10px; }
-.stats-tv .summary-filters { gap: 10px; }
+/* --- Statistics on the screen --------------------------------------------
+   Built to be scanned: every label sits directly above its value, everything lines up on
+   one left edge so a row of numbers reads straight across, figures are tabular, labels are
+   dark enough to read at a glance (about 9:1 on the screen), and nothing is smaller than
+   11.5px. The px sizes here are the narrow, scrolling set; above 900px the same rules are
+   scaled to the set in container units (see "Fit to the screen"). */
+.stats-tv { --tv-label: #45423c; --tv-soft: #55514a; --tv-rule: #d4d0c7; }
+.stats-tv .eyebrow { font-size: 11px; letter-spacing: 1.6px; margin-bottom: 4px; color: var(--tv-soft); }
+.stats-tv .page-title-row { align-items: flex-end; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 14px; }
+.stats-tv .page-title-row h2 { margin: 0 0 3px; font-size: 24px; line-height: 1.1; letter-spacing: -.6px; font-weight: 830; }
+.stats-tv .page-title-row p { margin: 0; font-size: 13px; color: var(--tv-soft); }
+.stats-tv .page-title-row .empty-copy { margin-top: 4px; color: var(--tv-soft); font-weight: 650; }
+.stats-tv .label-pill { padding: 7px 12px; font-size: 11px; color: var(--tv-label); }
+.stats-tv .summary-filters { gap: 10px 12px; }
 /* Never squeeze the time-frame buttons under the time-class select: wrap instead. */
 .stats-tv .summary-filters .filter-unit:first-child { flex: 0 0 auto; }
-.stats-tv .filter-label { margin-bottom: 4px; font-size: 9px; }
-.stats-tv .segment-control button { padding: 6px 9px; font-size: 12px; }
-.stats-tv .select-wrap { min-height: 36px; }
-.stats-tv .analytics-column { gap: 10px; }
-.stats-tv .metric-grid { gap: 8px; }
-.stats-tv .stat-card { min-height: 0; padding: 10px 6px; gap: 3px; border-radius: 8px; }
-.stats-tv .stat-card svg { width: 16px; height: 16px; }
-.stats-tv .stat-label { font-size: 11px; }
-.stats-tv .stat-value, .stats-tv .rating-summary-grid .stat-card .stat-value { font-size: clamp(18px, 1.7vw, 23px); }
-.stats-tv .stat-note { font-size: 10px; }
+.stats-tv .filter-label { margin-bottom: 5px; font-size: 11.5px; letter-spacing: .8px; color: var(--tv-label); }
+.stats-tv .segment-control button { padding: 7px 10px; font-size: 13px; color: #34322e; }
+.stats-tv .segment-control button.selected { color: #fff; }
+.stats-tv .select-wrap { min-height: 38px; }
+.stats-tv .select-wrap select { font-size: 13px; color: #1b1c1d; }
+.stats-tv .analytics-column { gap: 12px; }
+.stats-tv .metric-grid { gap: 10px; }
+.stats-tv .panel { border-radius: 8px; box-shadow: none; border-color: var(--tv-rule); }
+
+/* One statistic: its icon and label on the first line, the value under them, a note last. */
+.stats-tv .stat-card {
+  /* Top-aligned, so labels and values line up across a row whether or not a card has a note. */
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-content: start; align-items: center; justify-items: start; gap: 4px 7px;
+  min-height: 0; padding: 11px 13px 12px; border: 1px solid var(--tv-rule); border-radius: 8px; background: #fffefa; text-align: left;
+}
+.stats-tv .stat-card > svg { grid-column: 1; width: 15px; height: 15px; color: var(--tv-label); }
+.stats-tv .stat-label { grid-column: 2; font-size: 12px; font-weight: 760; line-height: 1.2; letter-spacing: .5px; text-transform: uppercase; color: var(--tv-label); }
+.stats-tv .stat-card:not(:has(> svg)) .stat-label { grid-column: 1 / -1; }
+.stats-tv .stat-value, .stats-tv .rating-summary-grid .stat-card .stat-value { grid-column: 1 / -1; font-size: 24px; line-height: 1.05; letter-spacing: -.6px; }
+.stats-tv .stat-note { grid-column: 1 / -1; font-size: 12px; line-height: 1.3; color: var(--tv-soft); }
 .stats-tv .rating-summary-grid .stat-card { min-height: 0; }
-.stats-tv .panel { border-radius: 8px; box-shadow: none; }
-.stats-tv .summary-rate-panel { padding: 8px 14px 10px; }
-.stats-tv .result-rate { margin-bottom: 6px; }
-.stats-tv .result-rate strong:last-child { font-size: 17px; }
-.stats-tv .chart-panel { padding: 10px 14px 6px; }
-.stats-tv .chart-heading { margin-bottom: 2px; }
+
+/* Win rate: the figure, the bar, and a key naming each shade of the bar. */
+.stats-tv .summary-rate-panel { padding: 11px 14px 12px; }
+.stats-tv .result-rate { align-items: baseline; margin-bottom: 8px; }
+.stats-tv .result-rate strong:first-child { font-size: 12px; font-weight: 760; letter-spacing: .5px; text-transform: uppercase; color: var(--tv-label); }
+.stats-tv .result-rate strong:last-child { font-size: 22px; letter-spacing: -.4px; }
+.stats-tv .outcome-legend { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 9px 0 0; padding: 0; list-style: none; font-size: 12px; color: var(--tv-label); }
+.stats-tv .outcome-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.stats-tv .outcome-legend i { width: 11px; height: 11px; border: 1px solid #77736b; border-radius: 2px; }
+.stats-tv .outcome-legend li:nth-child(1) i { background: #292929; }
+.stats-tv .outcome-legend li:nth-child(2) i { background: #9a9a98; }
+.stats-tv .outcome-legend li:nth-child(3) i { background: #dededc; }
+
+/* Rating chart: scale and dates in readable type beside and under the plot. */
+.stats-tv .chart-panel { padding: 11px 14px 9px; }
+.stats-tv .chart-heading { margin-bottom: 8px; }
 .stats-tv .chart-heading h2 { font-size: 15px; margin: 0 0 2px; }
-.stats-tv .chart-current { font-size: 17px; }
-.stats-tv .rating-svg { height: clamp(92px, 15vh, 150px); }
-.stats-tv .overall-chart .rating-svg { height: clamp(120px, 22vh, 210px); }
-.stats-tv .status-screen { margin: 8px 0; min-height: 150px; padding: 16px; border-radius: 8px; background: #fffefa; }
-/* Profile column */
+.stats-tv .chart-heading span { font-size: 12px; color: var(--tv-soft); }
+.stats-tv .chart-current { font-size: 20px; }
+.stats-tv .chart-scale, .stats-tv .chart-dates { font-size: 12px; color: var(--tv-soft); }
+.stats-tv .rating-svg { height: clamp(110px, 16vh, 170px); }
+.stats-tv .overall-chart .rating-svg { height: clamp(130px, 22vh, 220px); }
+/* Overall without a rating graph (live: Chess.com's all-time stats have none): a short note in its place. */
+.stats-tv .chart-panel.overall-chart--empty { display: flex; align-items: center; justify-content: center; min-height: 72px; text-align: center; }
+.stats-tv .overall-chart--empty p { max-width: 46ch; margin: 0; color: var(--tv-soft); font-size: 13px; line-height: 1.45; }
+.stats-tv .status-screen { margin: 8px 0; min-height: 150px; padding: 16px; border-radius: 8px; background: #fffefa; color: var(--tv-label); }
+.stats-tv :is(.stat-value, .result-rate strong, .chart-current, .chart-scale) { font-variant-numeric: tabular-nums; }
+
+/* Profile column: each detail on one line, labels in one column and values in the next. */
 .stats-tv .profile-identity { display: flex; align-items: flex-start; gap: 12px; padding: 0; }
 .stats-tv .profile-avatar { width: 62px; height: 62px; border-radius: 10px; }
 .stats-tv .avatar-silhouette { transform: scale(.5); transform-origin: bottom; }
-.stats-tv .identity-copy h2 { margin: 0 0 2px; font-size: 20px; letter-spacing: -.5px; overflow-wrap: anywhere; }
-.stats-tv .identity-copy a { font-size: 11px; }
-.stats-tv .title-tag { margin-top: 8px; padding: 5px 9px; font-size: 11px; }
-.stats-tv .copy-profile { display: inline-flex; margin: 10px 0 0; padding: 6px 9px; gap: 6px; align-items: center; font-size: 11px; font-weight: 700; border-radius: 6px; }
-.stats-tv .profile-fields { grid-template-columns: 1fr; column-gap: 0; margin-top: 10px; border-top: 1px solid #d9d6cf; }
-.stats-tv .profile-field { min-height: 0; padding: 5px 0; gap: 10px; border-bottom-color: #d9d6cf; }
-.stats-tv .profile-field svg { width: 15px; height: 15px; }
-.stats-tv .profile-field .field-label { margin-bottom: 1px; font-size: 10px; color: #6f6c66; }
-.stats-tv .profile-field strong { font-size: 12px; line-height: 1.35; }
+.stats-tv .identity-copy .eyebrow { margin-bottom: 4px; }
+.stats-tv .identity-copy h2 { margin: 0 0 3px; font-size: 21px; letter-spacing: -.5px; overflow-wrap: anywhere; }
+.stats-tv .identity-copy a { font-size: 12px; color: #45423c; }
+.stats-tv .title-tag { margin-top: 8px; padding: 5px 9px; font-size: 12px; }
+.stats-tv .copy-profile { display: inline-flex; margin: 10px 0 0; padding: 6px 10px; gap: 6px; align-items: center; font-size: 12px; font-weight: 700; border-radius: 6px; }
+.stats-tv .profile-fields { grid-template-columns: 1fr; column-gap: 0; margin-top: 12px; border-top: 1px solid var(--tv-rule); }
+.stats-tv .profile-field { display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: center; gap: 9px; min-height: 0; padding: 7px 0; border-bottom-color: var(--tv-rule); }
+.stats-tv .profile-field > svg { width: 15px; height: 15px; color: var(--tv-label); }
+.stats-tv .profile-field > div { display: grid; grid-template-columns: minmax(0, 45%) minmax(0, 1fr); align-items: baseline; gap: 10px; }
+.stats-tv .profile-field .field-label { margin: 0; font-size: 12px; font-weight: 650; line-height: 1.3; color: var(--tv-label); }
+.stats-tv .profile-field strong { font-size: 13.5px; line-height: 1.3; color: #1b1c1d; }
 
 /* Narrow sets: profile above the statistics, one scrolling column. */
 @media (max-width: 900px) {
@@ -143,63 +180,71 @@
   .stats-tv__channels { margin: 0; width: 100%; }
   .stats-tv__channels button { flex: 1; }
 }
-@media (max-width: 520px) { .stats-tv .profile-fields { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  .stats-tv .profile-fields { grid-template-columns: 1fr; }
+  .stats-tv .metric-grid-four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats-tv .metric-grid-three { grid-template-columns: 1fr; }
+}
 /* --- Fit to the screen (wide layout) --------------------------------------
    Above 900px the two panes are size containers and everything inside is sized in
    container units (1cqh = 1% of the pane's height), so the profile and the statistics
-   scale with the television and fill it exactly: the fixed rows take their share and the
-   chart takes whatever height is left. Scrolling is only a fallback for very short sets.
-   The px rules above remain the layout for the narrow, scrolling set. */
+   scale with the television and fill it: the fixed rows take their share and the chart
+   takes whatever height is left. Each size has a floor that keeps it readable; if a short
+   set cannot hold everything at those sizes, the pane scrolls rather than shrink the text. */
 @media (min-width: 901px) {
   .stats-tv__side, .stats-tv__picture { container-type: size; padding: 16px 18px; }
   .stats-tv__picture > div:not([hidden]) { height: 100%; }
-  .stats-tv .statistics-page, .stats-tv .profile-page { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+  .stats-tv .statistics-page, .stats-tv .profile-page { display: flex; flex-direction: column; min-height: 100%; }
+  .stats-tv .statistics-page { height: 100%; }
 
-  .stats-tv .eyebrow { font-size: clamp(8px, 1.75cqh, 11px); margin-bottom: .6cqh; }
-  .stats-tv .page-title-row { flex: 0 0 auto; gap: 1cqh 16px; margin-bottom: 2cqh; }
-  .stats-tv .page-title-row h2 { font-size: clamp(16px, 4.1cqh, 27px); }
-  .stats-tv .page-title-row p { font-size: clamp(10px, 2cqh, 13px); }
-  .stats-tv .label-pill { padding: 1.1cqh 12px; font-size: clamp(8px, 1.7cqh, 11px); }
-  .stats-tv .filter-label { margin-bottom: .6cqh; font-size: clamp(8px, 1.5cqh, 10px); }
+  .stats-tv .eyebrow { font-size: clamp(11px, 1.9cqh, 13px); margin-bottom: .6cqh; }
+  .stats-tv .page-title-row { flex: 0 0 auto; gap: 1cqh 16px; margin-bottom: 2.2cqh; }
+  .stats-tv .page-title-row h2 { font-size: clamp(20px, 4.4cqh, 30px); }
+  .stats-tv .page-title-row p { font-size: clamp(12px, 2.1cqh, 14.5px); }
+  .stats-tv .label-pill { padding: 1.1cqh 12px; font-size: clamp(11px, 1.8cqh, 12.5px); }
+  .stats-tv .filter-label { margin-bottom: .6cqh; font-size: clamp(11.5px, 1.85cqh, 12.5px); }
   .stats-tv .segment-control { padding: .5cqh; }
-  .stats-tv .segment-control button { padding: .9cqh 1.5cqh; font-size: clamp(10px, 2cqh, 13px); }
+  .stats-tv .segment-control button { padding: .9cqh 1.6cqh; font-size: clamp(12.5px, 2.15cqh, 14.5px); }
   .stats-tv .select-wrap { min-height: 0; padding: .9cqh 10px; }
-  .stats-tv .select-wrap select { font-size: clamp(10px, 2cqh, 13px); }
-  .stats-tv .select-wrap svg { width: clamp(12px, 2.6cqh, 18px); height: clamp(12px, 2.6cqh, 18px); }
+  .stats-tv .select-wrap select { font-size: clamp(12.5px, 2.15cqh, 14.5px); }
+  .stats-tv .select-wrap svg { width: clamp(14px, 2.6cqh, 18px); height: clamp(14px, 2.6cqh, 18px); }
 
-  .stats-tv .analytics-column { flex: 1; min-height: 0; gap: 1.8cqh; }
-  .stats-tv .metric-grid { flex: 0 0 auto; gap: 1.4cqh; }
-  .stats-tv .stat-card { padding: 1.7cqh 6px; gap: .5cqh; }
-  .stats-tv .stat-card svg { width: clamp(12px, 2.8cqh, 19px); height: clamp(12px, 2.8cqh, 19px); }
-  .stats-tv .stat-label { font-size: clamp(9px, 2cqh, 13px); }
-  .stats-tv .stat-value, .stats-tv .rating-summary-grid .stat-card .stat-value { font-size: clamp(15px, min(4.9cqh, 4.6cqw), 34px); line-height: 1.05; }
-  .stats-tv .stat-note { font-size: clamp(8px, 1.7cqh, 11px); }
-  .stats-tv .summary-rate-panel { flex: 0 0 auto; padding: 1.4cqh 14px 1.7cqh; }
+  .stats-tv .analytics-column { flex: 1; min-height: 0; gap: 1.9cqh; }
+  .stats-tv .metric-grid { flex: 0 0 auto; gap: 1.5cqh; }
+  .stats-tv .stat-card { padding: 1.6cqh 1.9cqh 1.8cqh; row-gap: .6cqh; }
+  .stats-tv .stat-card > svg { width: clamp(14px, 2.4cqh, 18px); height: clamp(14px, 2.4cqh, 18px); }
+  .stats-tv .stat-label { font-size: clamp(11.5px, 2.05cqh, 14px); }
+  .stats-tv .stat-value, .stats-tv .rating-summary-grid .stat-card .stat-value { font-size: clamp(22px, min(5.6cqh, 5.4cqw), 42px); }
+  .stats-tv .stat-note { font-size: clamp(11.5px, 1.95cqh, 13.5px); }
+  .stats-tv .summary-rate-panel { flex: 0 0 auto; padding: 1.5cqh 1.9cqh 1.6cqh; }
   .stats-tv .result-rate { margin-bottom: 1cqh; }
-  .stats-tv .result-rate strong:first-child { font-size: clamp(10px, 2.2cqh, 14px); }
-  .stats-tv .result-rate strong:last-child { font-size: clamp(13px, 3.3cqh, 21px); }
-  .stats-tv .outcome-bar { height: clamp(6px, 1.7cqh, 11px); }
+  .stats-tv .result-rate strong:first-child { font-size: clamp(11.5px, 2.05cqh, 14px); }
+  .stats-tv .result-rate strong:last-child { font-size: clamp(18px, 3.7cqh, 27px); }
+  .stats-tv .outcome-bar { height: clamp(8px, 1.7cqh, 12px); }
+  .stats-tv .outcome-legend { margin-top: 1.1cqh; font-size: clamp(11.5px, 1.95cqh, 13.5px); }
   /* The chart is the elastic row. */
-  .stats-tv .chart-panel { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; padding: 1.6cqh 14px 1cqh; }
+  .stats-tv .chart-panel { flex: 1 1 0; min-height: 120px; display: flex; flex-direction: column; padding: 1.6cqh 1.9cqh 1.3cqh; }
   .stats-tv .chart-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-  .stats-tv .chart-heading { flex: 0 0 auto; margin-bottom: .4cqh; }
-  .stats-tv .chart-heading h2 { font-size: clamp(11px, 2.6cqh, 16px); margin: 0 0 .3cqh; }
-  .stats-tv .chart-heading span { font-size: clamp(9px, 1.8cqh, 12px); }
-  .stats-tv .chart-current { font-size: clamp(12px, 3cqh, 20px); }
-  .stats-tv .rating-svg, .stats-tv .overall-chart .rating-svg { flex: 1 1 0; min-height: 0; height: 0; }
+  .stats-tv .chart-heading { flex: 0 0 auto; margin-bottom: .9cqh; }
+  .stats-tv .chart-heading h2 { font-size: clamp(13.5px, 2.6cqh, 18px); margin: 0 0 .3cqh; }
+  .stats-tv .chart-heading span { font-size: clamp(11.5px, 1.95cqh, 13.5px); }
+  .stats-tv .chart-current { font-size: clamp(17px, 3.3cqh, 25px); }
+  .stats-tv .chart-plot { flex: 1 1 0; min-height: 0; }
+  .stats-tv .rating-svg, .stats-tv .overall-chart .rating-svg { height: 100%; }
+  .stats-tv .chart-scale, .stats-tv .chart-dates { font-size: clamp(11.5px, 1.9cqh, 13px); }
   .stats-tv .status-screen { flex: 1; min-height: 0; margin: 0; }
 
   .stats-tv .profile-identity { flex: 0 0 auto; gap: 1.8cqh; }
-  .stats-tv .profile-avatar { flex: 0 0 auto; width: clamp(44px, 11cqh, 76px); height: clamp(44px, 11cqh, 76px); }
-  .stats-tv .identity-copy h2 { font-size: clamp(15px, 3.5cqh, 23px); }
-  .stats-tv .identity-copy a { font-size: clamp(9px, 1.8cqh, 11px); }
-  .stats-tv .title-tag { margin-top: 1.2cqh; padding: .8cqh 9px; font-size: clamp(9px, 1.8cqh, 11px); }
-  .stats-tv .copy-profile { flex: 0 0 auto; align-self: flex-start; margin-top: 1.6cqh; padding: .9cqh 9px; font-size: clamp(9px, 1.8cqh, 11px); }
-  .stats-tv .profile-fields { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-top: 1.6cqh; }
-  .stats-tv .profile-field { flex: 1 1 0; min-height: 0; padding: 0; }
-  .stats-tv .profile-field svg { width: clamp(12px, 2.4cqh, 16px); height: clamp(12px, 2.4cqh, 16px); }
-  .stats-tv .profile-field .field-label { font-size: clamp(8px, 1.65cqh, 10.5px); }
-  .stats-tv .profile-field strong { font-size: clamp(10px, 2.05cqh, 13px); line-height: 1.25; }
+  .stats-tv .profile-avatar { flex: 0 0 auto; width: clamp(48px, 11cqh, 80px); height: clamp(48px, 11cqh, 80px); }
+  .stats-tv .identity-copy h2 { font-size: clamp(18px, 3.8cqh, 26px); }
+  .stats-tv .identity-copy a { font-size: clamp(11.5px, 1.95cqh, 13px); }
+  .stats-tv .title-tag { margin-top: 1.2cqh; padding: .8cqh 9px; font-size: clamp(11.5px, 1.95cqh, 13px); }
+  .stats-tv .copy-profile { flex: 0 0 auto; align-self: flex-start; margin-top: 1.6cqh; padding: .9cqh 10px; font-size: clamp(11.5px, 1.95cqh, 13px); }
+  .stats-tv .profile-fields { flex: 1 0 auto; display: flex; flex-direction: column; margin-top: 1.6cqh; }
+  .stats-tv .profile-field { flex: 1 0 auto; padding: .7cqh 0; }
+  .stats-tv .profile-field > svg { width: clamp(13px, 2.3cqh, 16px); height: clamp(13px, 2.3cqh, 16px); }
+  .stats-tv .profile-field .field-label { font-size: clamp(11.5px, 1.95cqh, 13.5px); }
+  .stats-tv .profile-field strong { font-size: clamp(12.5px, 2.2cqh, 15px); }
 }
 
 /* --- Broadcast effects ----------------------------------------------------
@@ -263,7 +308,7 @@
    The chart re-keys its drawing on new data, so this replays for every new period. */
 .stats-tv .rating-line { stroke-dasharray: 1; animation: tv-draw 1.2s ease-out calc(var(--tv-wake, 0s) + .3s) both; }
 .stats-tv .rating-area { animation: tv-fade .7s ease-out calc(var(--tv-wake, 0s) + 1s) both; }
-.stats-tv .rating-dot { transform-box: fill-box; transform-origin: center; animation: tv-land .45s cubic-bezier(.2, 1.6, .4, 1) calc(var(--tv-wake, 0s) + 1.4s) both; }
+.stats-tv .rating-dot { animation: tv-land .45s cubic-bezier(.2, 1.6, .4, 1) calc(var(--tv-wake, 0s) + 1.4s) both; }
 @keyframes tv-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @keyframes tv-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes tv-land { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }

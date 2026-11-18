@@ -1,5 +1,5 @@
-import { Clock3 } from 'lucide-react';
-import { TIME_CLASSES, TIME_FRAMES } from '@/config/constants';
+import { TimeClassSelect } from '@/components/ui/time-class-select';
+import { TIME_FRAMES } from '@/config/constants';
 import type { TimeClass, TimeFrame } from '@/types/chess';
 
 export function SummaryFilters({
@@ -23,14 +23,7 @@ export function SummaryFilters({
           ))}
         </div>
       </div>
-      <div className="filter-unit">
-        <label className="filter-label" htmlFor="time-class">Time class</label>
-        <div className="select-wrap"><Clock3 size={18} aria-hidden="true" />
-          <select id="time-class" value={timeClass} onChange={(event) => onClassChange(event.target.value as TimeClass)}>
-            {TIME_CLASSES.map(({ value, label }) => <option value={value} key={value}>{label}</option>)}
-          </select>
-        </div>
-      </div>
+      <TimeClassSelect value={timeClass} onChange={onClassChange} />
     </div>
   );
 }

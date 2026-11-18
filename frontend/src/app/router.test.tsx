@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
@@ -54,5 +54,49 @@ describe('app router', () => {
 
     expect(await screen.findByRole('heading', { name: 'Overall statistics' }, SLOW)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Overall' })).toHaveAttribute('aria-pressed', 'true');
+  }, JOURNEY_TIMEOUT);
+
+  it('opens In-Game Chess from the main menu, starts a game and comes back', async () => {
+    const user = userEvent.setup();
+    renderApp('/');
+
+    const menu = await screen.findByRole('navigation', { name: 'Main menu' }, SLOW);
+    expect(within(menu).getByRole('link', { name: '01 / Player lookup' })).toHaveAttribute('aria-current', 'page');
+    await user.click(within(menu).getByRole('link', { name: '02 / In-Game Chess' }));
+
+    // The camera is over the board: the board in its start position and the difficulty panel.
+    expect(await screen.findByRole('radiogroup', { name: 'Difficulty' }, SLOW)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Chess board, starting position' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('radio', { name: /intermediate/i })).toHaveFocus());
+    await user.click(screen.getByRole('radio', { name: 'Advanced' }));
+    await user.click(screen.getByRole('button', { name: 'Start game' }));
+
+    expect(screen.getByRole('heading', { name: 'Your game' })).toHaveFocus();
+    expect(screen.getByText('Advanced · Black')).toBeInTheDocument();
+    expect(screen.getByText(/moves will work once the game engine is connected/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Back to menu' }));
+    expect(await screen.findByRole('searchbox', undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Your game' })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('link', { name: '02 / In-Game Chess' })).toHaveFocus());
+  }, JOURNEY_TIMEOUT);
+
+  it('opens Deliberation, pairs two players and returns with Cancel', async () => {
+    const user = userEvent.setup();
+    renderApp('/deliberation');
+
+    const player1 = await screen.findByRole('textbox', { name: /Player 1/ }, SLOW);
+    await user.type(player1, 'hikaru');
+    await user.type(screen.getByRole('textbox', { name: /Player 2/ }), 'magnuscarlsen');
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    expect(await screen.findByRole('heading', { name: 'hikaru vs magnuscarlsen' }, SLOW)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /hikaru \(White\) against magnuscarlsen \(Black\)/ })).toBeInTheDocument();
+
+    // Changing players drops the set again with both players kept; Cancel goes back to the menu.
+    await user.click(screen.getByRole('button', { name: 'Change players' }));
+    expect(await screen.findByRole('button', { name: 'Change Player 1' }, SLOW)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(await screen.findByRole('searchbox', undefined, SLOW)).toBeInTheDocument();
   }, JOURNEY_TIMEOUT);
 });

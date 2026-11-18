@@ -1,0 +1,35 @@
+/* The main menu sits on the table's paper front, right under the search, as one row as wide
+   as the search box: the search and the modes read as one place. Stickers stuck on slightly
+   crooked, as elsewhere on the set: the current mode is the ink sticker with a torn edge, the
+   others are outlined in ink with the stone offset shadow. */
+.main-menu { width: 100%; margin-top: 12px; padding-top: 12px; border-top: 1.5px dashed rgb(27 28 29 / .28); }
+.main-menu ul { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.main-menu li:nth-child(1) { --tilt: -1.2deg; }
+.main-menu li:nth-child(2) { --tilt: .8deg; }
+.main-menu li:nth-child(3) { --tilt: -.6deg; }
+.main-menu li { animation: menu-arrive .45s ease-out calc(.2s + var(--n, 0) * 70ms) both; }
+.main-menu li:nth-child(2) { --n: 1; }
+.main-menu li:nth-child(3) { --n: 2; }
+.main-menu__item {
+  display: grid; place-items: center; min-height: 44px; padding: 8px 10px; border: 2px solid var(--ink);
+  background: #fffefa; color: var(--ink); box-shadow: 3px 3px 0 #80796d;
+  font-size: 12px; font-weight: 800; line-height: 1.2; letter-spacing: 1.6px; text-align: center; text-transform: uppercase; text-decoration: none;
+  transform: rotate(var(--tilt, 0deg)); transition: background .15s, transform .15s, box-shadow .15s;
+}
+.main-menu__item:hover { background: #ece9e2; transform: rotate(var(--tilt, 0deg)) translate(-1px, -1px); box-shadow: 4px 4px 0 #80796d; }
+.main-menu__item:active { transform: rotate(var(--tilt, 0deg)) translate(2px, 2px); box-shadow: 1px 1px 0 #80796d; }
+.main-menu__item[aria-current='page'] { background: var(--ink); color: var(--paper); }
+/* The torn edge of the current sticker; dropped while focused so the ring is not clipped. */
+.main-menu__item[aria-current='page']:not(:focus-visible) { clip-path: polygon(1% 0, 100% 4%, 99% 94%, 0 100%); box-shadow: none; }
+.main-menu__item:focus-visible { outline: 3px solid #80796d; outline-offset: 3px; }
+@keyframes menu-arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 700px) {
+  .main-menu { margin-top: 10px; padding-top: 10px; }
+  .main-menu ul { gap: 7px; }
+  .main-menu__item { padding: 6px 4px; font-size: 10px; letter-spacing: .9px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .main-menu li { animation: none; }
+  .main-menu__item { transition: none; }
+}
