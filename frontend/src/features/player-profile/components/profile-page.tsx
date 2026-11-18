@@ -6,9 +6,11 @@ import { ProfileField } from '@/features/player-profile/components/profile-field
 import { usePlayer } from '@/features/player-profile/hooks/use-player';
 import { formatNumber, formatUtc } from '@/utils/format';
 
-/** Profile panel of the single player view: identity and account details. */
-export function ProfilePage() {
-  const { username = '' } = useParams<{ username: string }>();
+/** Profile panel of the single player view: identity and account details. The player is
+ *  `username`, or the one in the URL. */
+export function ProfilePage({ username: name }: { username?: string }) {
+  const params = useParams<{ username: string }>();
+  const username = name ?? params.username ?? '';
   const [copied, setCopied] = useState(false);
   const { data: player, isPending, error, refetch } = usePlayer(username);
   async function copyProfile(url: string) {
@@ -24,7 +26,7 @@ export function ProfilePage() {
               {player.avatar ? <img src={player.avatar} alt={`${player.username} avatar`} /> : <span className="avatar-silhouette" aria-hidden="true" />}
             </div>
             <div className="identity-copy"><span className="eyebrow">PLAYER PROFILE</span><h2>{player.username}</h2>
-              <a href={player.url} target="_blank" rel="noopener noreferrer">{player.url} <ExternalLink size={14} aria-hidden="true" /></a>
+              <a href={player.url} target="_blank" rel="noopener noreferrer">{player.url.replace(/^https?:\/\/(www\.)?/, '')} <ExternalLink size={14} aria-hidden="true" /></a>
               <div className="title-tag"><ShieldCheck size={16} aria-hidden="true" /> {player.title ?? 'No title listed'}</div>
             </div>
           </div>
