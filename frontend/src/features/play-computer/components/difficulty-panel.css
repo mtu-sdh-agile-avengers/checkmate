@@ -1,0 +1,39 @@
+/* In-Game Chess: the difficulty list in the side panel (difficulty-panel.tsx).
+   States of a level (all in the theme's ink, paper and stone; no colour carries meaning alone):
+     rest      paper card, grey edge                  hover     ink edge, lifted 1px
+     selected  ink card, paper text, check mark,      focus     stone ring outside the card
+               stone offset shadow (a stamped card)   disabled  dashed edge, faded, no hover */
+.difficulty-list { display: grid; gap: 8px; }
+.difficulty-list__legend { color: #6f6b64; font-size: 11px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; }
+.difficulty-option {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  width: 100%; padding: 11px 12px; border: 2px solid #d2cec6; border-radius: 0;
+  background: #fffefa; color: var(--ink); text-align: left;
+  transition: border-color .12s, background .12s, color .12s, transform .12s, box-shadow .12s;
+}
+.difficulty-option:hover:not([aria-disabled='true']) { border-color: #0b0b0c; transform: translateY(-1px); }
+.difficulty-option:focus-visible { outline: 3px solid #80796d; outline-offset: 3px; }
+.difficulty-option[aria-checked='true'] {
+  border-color: #0b0b0c; background: var(--ink); color: var(--paper); box-shadow: 4px 4px 0 #80796d; transform: none;
+}
+.difficulty-option[aria-disabled='true'] { border-style: dashed; opacity: .45; cursor: not-allowed; }
+
+.difficulty-option__meter { display: grid; grid-template-columns: repeat(4, 5px); align-items: end; gap: 3px; height: 22px; }
+.difficulty-option__meter i { display: block; border: 1.5px solid currentColor; }
+.difficulty-option__meter i:nth-child(1) { height: 7px; }
+.difficulty-option__meter i:nth-child(2) { height: 12px; }
+.difficulty-option__meter i:nth-child(3) { height: 17px; }
+.difficulty-option__meter i:nth-child(4) { height: 22px; }
+.difficulty-option__meter i[data-on='true'] { background: currentColor; }
+.difficulty-option__body { display: grid; gap: 2px; min-width: 0; }
+.difficulty-option__name { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 800; }
+.difficulty-option__text { color: #5f5c56; font-size: 12px; line-height: 1.35; }
+.difficulty-option[aria-checked='true'] .difficulty-option__text { color: #d6d3cc; }
+.difficulty-option__tag {
+  padding: 3px 6px 2px; border: 1.5px solid currentColor; font-size: 9px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;
+}
+.difficulty-option__check { opacity: 0; }
+.difficulty-option[aria-checked='true'] .difficulty-option__check { opacity: 1; }
+.difficulty-summary { margin: 0; color: #4a4844; font-size: 13px; }
+
+@media (prefers-reduced-motion: reduce) { .difficulty-option { transition: none; } }

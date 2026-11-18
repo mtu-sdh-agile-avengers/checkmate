@@ -1,0 +1,41 @@
+/* The side panel of the top-down views: a paper card on the right, vertically centred in the
+   space under the header, scrolling inside itself if it is taller than the window. */
+.side-panel {
+  position: absolute; z-index: 8; top: 76px; bottom: clamp(24px, 4vh, 44px); right: clamp(14px, 2.2vw, 30px);
+  width: var(--panel-w, 340px); height: fit-content; max-height: calc(100% - 76px - clamp(24px, 4vh, 44px)); margin-block: auto;
+  display: flex; flex-direction: column; gap: 14px; overflow: auto; padding: 20px 20px 18px;
+  background: var(--paper); color: var(--ink); border: 3px solid #0b0b0c; box-shadow: 9px 9px 0 #80796d;
+}
+/* A replacement panel slides in from past the right edge. It is hidden (not just out of
+   frame) until it moves, so nothing in it can be clicked or focused early. */
+.side-panel[data-enter='slide'] { animation: side-panel-in .45s cubic-bezier(.2, .8, .2, 1) var(--panel-delay, 0s) both; }
+@keyframes side-panel-in { from { visibility: hidden; transform: translateX(calc(100% + 60px)) rotate(1.5deg); } to { visibility: visible; transform: none; } }
+
+.side-panel__eyebrow { color: #6f6b64; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+.side-panel__title { margin: -6px 0 0; font-size: 28px; line-height: 1.05; letter-spacing: -1px; font-weight: 850; }
+.side-panel__title:focus { outline: none; }
+.side-panel__lead { margin: -4px 0 0; color: #575653; font-size: 14px; line-height: 1.45; }
+
+/* Actions: the primary is ink with the stone offset shadow (pressed, it sinks into it);
+   the secondary is a ghost with an ink edge. */
+.panel-actions { display: flex; gap: 10px; margin-top: 4px; }
+.panel-button {
+  flex: 1; min-height: 46px; padding: 10px 14px; border: 2px solid #0b0b0c; border-radius: 0;
+  background: var(--ink); color: var(--paper); font-weight: 800; letter-spacing: .2px;
+  box-shadow: 4px 4px 0 #80796d; transition: transform .12s, box-shadow .12s, background .12s;
+}
+.panel-button:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 #80796d; }
+.panel-button:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: 1px 1px 0 #80796d; }
+.panel-button--ghost { background: transparent; color: var(--ink); box-shadow: none; }
+.panel-button--ghost:hover:not(:disabled) { background: #ece9e2; box-shadow: none; transform: none; }
+.panel-button--ghost:active:not(:disabled) { background: #e2dfd8; transform: translateY(1px); box-shadow: none; }
+.panel-button:focus-visible { outline: 3px solid #80796d; outline-offset: 3px; }
+.panel-button:disabled { opacity: .45; box-shadow: none; }
+
+@media (max-width: 1099px) {
+  .side-panel { position: relative; inset: auto; width: min(560px, 100% - 28px); height: auto; max-height: none; margin: 0 auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .side-panel[data-enter='slide'] { animation: none; }
+  .panel-button { transition: none; }
+}
