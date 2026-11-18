@@ -10,6 +10,9 @@ export default defineConfig({
   // Requests to /api go to the backend (cd backend/app && uv run fastapi dev)
   server: { proxy: { '/api': BACKEND_URL } },
   preview: { proxy: { '/api': BACKEND_URL } },
+  // The 3D chess set (three.js, about 150 kB gzipped) is a chunk of its own, fetched only for
+  // In-Game Chess and Deliberation (and ahead of time while the visitor is idle on the search).
+  build: { chunkSizeWarningLimit: 650 },
   test: {
     environment: 'jsdom',
     globals: true,
