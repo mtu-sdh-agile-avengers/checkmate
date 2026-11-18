@@ -5,11 +5,12 @@
   width: var(--panel-w, 340px); height: fit-content; max-height: calc(100% - 76px - clamp(24px, 4vh, 44px)); margin-block: auto;
   display: flex; flex-direction: column; gap: 14px; overflow: auto; padding: 20px 20px 18px;
   background: var(--paper); color: var(--ink); border: 3px solid #0b0b0c; box-shadow: 9px 9px 0 #80796d;
+  animation: side-panel-in .45s cubic-bezier(.2, .8, .2, 1) var(--panel-delay, 1.05s) both;
 }
-/* A replacement panel slides in from past the right edge. It is hidden (not just out of
-   frame) until it moves, so nothing in it can be clicked or focused early. */
-.side-panel[data-enter='slide'] { animation: side-panel-in .45s cubic-bezier(.2, .8, .2, 1) var(--panel-delay, 0s) both; }
-@keyframes side-panel-in { from { visibility: hidden; transform: translateX(calc(100% + 60px)) rotate(1.5deg); } to { visibility: visible; transform: none; } }
+.side-panel[data-leaving] { animation: side-panel-out .25s ease-in both; }
+/* Hidden (not just transparent) until it arrives, so nothing in it can be clicked or focused early. */
+@keyframes side-panel-in { from { opacity: 0; visibility: hidden; transform: translateX(36px) rotate(1.5deg); } to { opacity: 1; visibility: visible; transform: none; } }
+@keyframes side-panel-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(36px) rotate(1.5deg); } }
 
 .side-panel__eyebrow { color: #6f6b64; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
 .side-panel__title { margin: -6px 0 0; font-size: 28px; line-height: 1.05; letter-spacing: -1px; font-weight: 850; }
@@ -36,6 +37,6 @@
   .side-panel { position: relative; inset: auto; width: min(560px, 100% - 28px); height: auto; max-height: none; margin: 0 auto; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .side-panel[data-enter='slide'] { animation: none; }
+  .side-panel, .side-panel[data-leaving] { animation: none; }
   .panel-button { transition: none; }
 }

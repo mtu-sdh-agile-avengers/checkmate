@@ -1,6 +1,5 @@
 import { Suspense, lazy, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
-import { loadChessScene } from '@/components/chess/scene/load-chess-scene';
 import { ROUTES } from '@/config/routes';
 import { usePlayer } from '@/features/player-profile/hooks/use-player';
 import { searchPlayer } from '@/features/player-search/api/search-player';
@@ -72,26 +71,21 @@ export function StageLayout() {
   // put the player's picture on the figure in the opponent's seat.
   const { data: player } = usePlayer(username ?? '');
 
-  // While the visitor is on the search, fetch the other views and the 3D set in the
-  // background, and prepare the set's models, so the camera never waits when one is opened.
+  // While the visitor is on the search, fetch the other views in the background, so the
+  // camera never waits for code when one is opened.
   useEffect(() => {
     if (import.meta.env.MODE === 'test') return;
-    const whenIdle = (task: () => void) =>
-      typeof window.requestIdleCallback === 'function' ? window.requestIdleCallback(task, { timeout: 4000 }) : window.setTimeout(task, 1500);
-    let cancelled = false;
-    const handle = whenIdle(() => {
+    const warm = () => {
       void loadPlayerView();
       void loadPlayComputer();
       void loadDeliberation();
-      loadChessScene()
-        .then((set) => whenIdle(() => !cancelled && set.prepareChessScene()))
-        .catch(() => undefined);
-    });
-    return () => {
-      cancelled = true;
-      if (typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(handle);
-      else window.clearTimeout(handle);
     };
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(warm, { timeout: 4000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const timer = window.setTimeout(warm, 1500);
+    return () => window.clearTimeout(timer);
   }, []);
 
   return (

@@ -1,37 +1,23 @@
-/* The VS screen: a television of the same make as the stats TV, lowered on two cables until
-   it stands on the stage floor beside the table, to the right of the shot, the way the stats
-   TV stands beside the opponent's chair. Its screen is split down the middle, Player 1 on
-   ink (White), Player 2 on paper (Black), with the VS badge on the seam.
+/* The VS screen: a television of the same make as the stats TV, lowered over the table on two
+   cables. Its screen is split down the middle, Player 1 on ink (White), Player 2 on paper
+   (Black), with the VS badge on the seam.
 
    Sequence on first arrival (times from the view opening; reduced motion skips all of it):
-     0–0.7s     the camera tilts down onto the set (chess-set.css)
-     0.55s      the set drops: 0.58s falling (ease-in), lands on its feet, two bounces, settled by 1.6s
-     1.13s      it rocks on its cables, damped, for 0.9s
-     1.6s       power on: two shutters open from the middle (0.4s)
-     1.9s       title, slots and badge tune in one after another (90ms apart)
+     0–1.4s     camera arrives over the table (tabletop.css)
+     1.25s      the set drops: 0.58s falling (ease-in), lands, two bounces, settled by 2.3s
+     1.83s      it swings on its cables, damped, for 0.9s
+     2.3s       power on: two shutters open from the middle (0.4s)
+     2.6s       title, slots and badge tune in one after another (90ms apart)
    --drop-at moves the whole sequence (a set dropped again to change players starts at once). */
-.deliberation {
-  /* The VS set's width; while it is up, the camera frames the table in the rest of the stage. */
-  --rig-w: clamp(470px, 44vw, 640px);
-}
-.deliberation[data-stage='choosing'] { --set-reserve: calc(var(--rig-w) + var(--edge, 24px) + 24px); }
 .vs-rig {
-  --drop-at: .55s; --power-at: calc(var(--drop-at) + 1.05s);
-  position: absolute; z-index: 8; top: 64px; bottom: clamp(26px, 5vh, 52px); right: var(--edge, 24px); width: var(--rig-w);
-  display: flex; flex-direction: column; justify-content: flex-end; pointer-events: none;
+  --drop-at: 1.25s; --power-at: calc(var(--drop-at) + 1.05s);
+  position: absolute; inset: 0; z-index: 8; display: grid; place-items: center; padding: 76px 24px 36px; pointer-events: none;
 }
-.vs-tv { position: relative; width: 100%; pointer-events: auto; animation: vs-drop 1.05s linear var(--drop-at) both; container-type: inline-size; }
+.vs-tv { position: relative; width: min(860px, 100%); pointer-events: auto; animation: vs-drop 1.05s linear var(--drop-at) both; }
 /* The cables it hangs from, up into the lighting rig. */
 .vs-tv::before, .vs-tv::after { content: ''; position: absolute; bottom: 100%; width: 3px; height: 100vh; background: linear-gradient(180deg, #19191b, #3c3b39); }
 .vs-tv::before { left: 16%; }
 .vs-tv::after { right: 16%; }
-/* Feet, and its shadow on the floor. */
-.vs-tv__feet { position: relative; display: flex; justify-content: space-between; padding: 0 12%; }
-.vs-tv__feet i { width: 54px; height: 12px; background: linear-gradient(180deg, #2c2b29, #0b0a08); border-radius: 0 0 4px 4px; }
-.vs-tv__feet::after {
-  content: ''; position: absolute; z-index: -1; left: -6%; right: -6%; top: 2px; height: 30px; border-radius: 50%;
-  background: radial-gradient(closest-side, rgb(0 0 0 / .7), transparent);
-}
 @keyframes vs-drop {
   0% { transform: translateY(calc(-100vh - 100%)); animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
   55% { transform: translateY(16px); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
@@ -50,7 +36,7 @@
 /* --- Screen ---------------------------------------------------------------- */
 .vs-tv__screen {
   position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-rows: auto 1fr;
-  min-height: 300px; border: 3px solid #0d0c0a; border-radius: 26px / 22px; box-shadow: 0 0 0 5px #1a1917, 0 0 0 6px #5f5e5c;
+  min-height: 340px; border: 3px solid #0d0c0a; border-radius: 26px / 22px; box-shadow: 0 0 0 5px #1a1917, 0 0 0 6px #5f5e5c;
   background: linear-gradient(90deg, #1b1c1d 50%, #f4f2ec 50%);
 }
 .vs-tv__head { grid-column: 1 / -1; position: relative; z-index: 1; display: grid; justify-items: center; gap: 8px; padding: 18px 16px 6px; }
@@ -64,18 +50,16 @@
 .vs-slot[data-slot='2'] { grid-column: 3; grid-row: 2; }
 
 /* The VS badge sits on the seam: VS while waiting, READY once both are locked, LOCKED IN on confirm. */
-.vs-tv__vs { position: relative; z-index: 1; align-self: center; display: grid; place-items: center; width: 72px; height: 72px; }
+.vs-tv__vs { position: relative; z-index: 1; align-self: center; display: grid; place-items: center; width: 84px; height: 84px; }
 .vs-tv__vs span {
   display: grid; place-items: center; width: 100%; height: 100%; border: 3px solid #0b0b0c; border-radius: 50%;
   background: var(--paper); color: var(--ink); box-shadow: 4px 4px 0 #80796d; transform: rotate(-8deg);
-  font-size: 25px; font-style: italic; font-weight: 900; letter-spacing: -1px; text-align: center; text-transform: uppercase;
+  font-size: 28px; font-style: italic; font-weight: 900; letter-spacing: -1px; text-align: center; text-transform: uppercase;
 }
 .vs-tv__vs[data-state='ready'] span { background: var(--ink); color: var(--paper); font-size: 13px; font-style: normal; letter-spacing: 1.2px; line-height: 1.05; }
 
 /* --- Slots ----------------------------------------------------------------- */
-/* One column that may shrink below its content's natural width, so the field gives way
-   rather than push its button off the screen. */
-.vs-slot { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; align-content: start; gap: 10px; min-width: 0; padding: 12px 14px 20px; text-align: center; }
+.vs-slot { display: grid; justify-items: center; align-content: start; gap: 10px; min-width: 0; padding: 14px 22px 22px; text-align: center; }
 .vs-slot[data-tone='ink'] { color: #f7f6f3; }
 .vs-slot[data-tone='paper'] { color: #1b1c1d; }
 .vs-slot__label { margin: 0; font: 800 12px/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 2px; text-transform: uppercase; }
@@ -160,20 +144,11 @@
 .vs-rig:is([data-phase='rising'], [data-leaving]) .vs-tv { animation: vs-rise .45s cubic-bezier(.55, 0, 1, .45) both; }
 @keyframes vs-rise { from { transform: none; } to { transform: translateY(calc(-100vh - 100%)); } }
 
-/* A narrow set (the window is not much wider than the break below): the field and its
-   button stack, so the field keeps room for a whole username. */
-@container (max-width: 560px) {
-  .vs-slot__form { flex-direction: column; }
-  .vs-slot__input { border-right: 2px solid currentColor; border-bottom: 0; }
-  .vs-slot__lock { width: 100%; }
-}
-
 /* --- Narrow screens -----------------------------------------------------------
    Below 1100px the set hangs above the table in the page column; below 700px its two
    halves stack, Player 1 above Player 2, with the badge on the seam between them. */
 @media (max-width: 1099px) {
-  .vs-rig { position: relative; inset: auto; order: -1; width: min(860px, 100%); padding: 0 12px; display: block; }
-  .deliberation[data-stage='choosing'] { --set-reserve: 0px; }
+  .vs-rig { position: relative; inset: auto; order: -1; width: 100%; padding: 0 12px; }
 }
 @media (max-width: 700px) {
   .vs-tv__screen { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; background: #f4f2ec; }

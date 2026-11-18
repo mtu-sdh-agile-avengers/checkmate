@@ -13,8 +13,6 @@ export type IntroState = 'playing' | 'done';
  */
 export function useIntro(root: RefObject<HTMLElement | null>, durationMs: number) {
   const [state, setState] = useState<IntroState>(() => (afterMotion(durationMs) === 0 ? 'done' : 'playing'));
-  // Skipped rather than played out: anything animating outside CSS (the 3D set) jumps to its end too.
-  const [skipped, setSkipped] = useState(false);
 
   useEffect(() => {
     if (state === 'done') return;
@@ -37,8 +35,7 @@ export function useIntro(root: RefObject<HTMLElement | null>, durationMs: number
       }
     }
     setState('done');
-    setSkipped(true);
   }, [state, root]);
 
-  return { state, done: state === 'done', skipped, skip };
+  return { state, done: state === 'done', skip };
 }

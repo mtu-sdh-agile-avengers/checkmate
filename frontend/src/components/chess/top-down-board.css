@@ -19,6 +19,6 @@
 .td-board__piece svg { display: block; width: 100%; height: 100%; overflow: visible; }
 
 /* The pieces are set out one after another once the camera has settled (--pieces-at). */
-.td-board__piece { animation: td-piece-set .38s cubic-bezier(.2, 1.5, .4, 1) calc(var(--pieces-at, .5s) + var(--i, 0) * 16ms) both; }
+.td-board__piece { animation: td-piece-set .38s cubic-bezier(.2, 1.5, .4, 1) calc(var(--pieces-at, 1.25s) + var(--i, 0) * 22ms) both; }
 @keyframes td-piece-set { from { opacity: 0; transform: translateY(-34%) scale(.7); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .td-board__piece { animation: none; } }

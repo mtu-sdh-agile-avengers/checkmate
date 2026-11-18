@@ -81,7 +81,7 @@
 /* Top-down views: the camera tilts down from the stage onto the chess set. Everything on the
    stage travels up out of frame together (the 3D layers here, the table set in
    search-page.css) while the view of the set rises into frame from below
-   (components/chess/chess-set.css), the same distance in the same time: one continuous
+   (components/chess/tabletop.css), the same distance in the same time: one continuous
    strip, like film running past the gate. Once out of view, the stage is hidden outright and
    stops animating (ChessStage `dormant`). */
 .stage-screen:is([data-view='computer'], [data-view='deliberation']) .chess-stage__art > div {

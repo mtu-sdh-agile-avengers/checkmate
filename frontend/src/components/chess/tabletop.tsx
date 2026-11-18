@@ -4,11 +4,13 @@ import './tabletop.css';
 export type TabletopMode = 'computer' | 'deliberation';
 
 /**
- * The chess table seen from straight above: what the chess set (chess-set.tsx) shows when it
- * cannot draw in 3D. It sits on its own patch of the chessboard floor, with the board
- * (`children`) centred on the table top. `near` and `far` are the players seated at the
- * bottom and top edges, who lean in once the camera has arrived. `leaving` marks the view
- * on its way out.
+ * The chess table seen from straight above: the view In-Game Chess and Deliberation share.
+ * It sits on its own patch of the chessboard floor, with the board (`children`) centred on
+ * the table top. `near` and `far` are the players seated at the bottom and top edges.
+ *
+ * The camera tilts down to it from the stage: the view rises into frame as the stage
+ * travels out of it (tabletop.css), and `leaving` plays that backwards while the stage
+ * comes back.
  */
 export function Tabletop({ mode, leaving = false, near, far, children }: {
   mode: TabletopMode;

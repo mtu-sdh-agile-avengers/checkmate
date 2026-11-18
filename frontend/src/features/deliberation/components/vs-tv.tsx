@@ -29,8 +29,8 @@ function nameIn(slot: Slot): string | null {
 }
 
 /**
- * The VS screen of Deliberation: a television lowered on two cables onto the stage floor
- * beside the table, with a slot for each player. A slot takes a Chess.com username or member link, checks it on this
+ * The VS screen of Deliberation: a television lowered over the table on two cables, with a
+ * slot for each player. A slot takes a Chess.com username or member link, checks it on this
  * device (not empty, a valid username, not the player in the other slot), then looks the
  * player up with the player search (`findPlayer`) and shows their picture and title.
  * "Lock in" (or Enter) does that for one slot; Confirm does it for any slot still typed in
@@ -250,7 +250,6 @@ export function VsTv({ findPlayer, initial = null, dropAt, introDone, leaving = 
             </div>
           </div>
         </div>
-        <span className="vs-tv__feet" aria-hidden="true"><i /><i /></span>
       </div>
     </div>
   );

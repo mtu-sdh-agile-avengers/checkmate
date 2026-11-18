@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChessSet } from '@/components/chess/chess-set';
 import { MatchPanel } from '@/components/chess/match-panel';
+import { Tabletop } from '@/components/chess/tabletop';
+import { TopDownBoard } from '@/components/chess/top-down-board';
+import { TopDownFigure } from '@/components/chess/top-down-figure';
 import { getApiMode } from '@/config/api';
 import { ROUTES } from '@/config/routes';
 import { VsTv, type PlayerPair } from '@/features/deliberation/components/vs-tv';
@@ -9,24 +11,22 @@ import type { FindPlayer, FoundPlayer } from '@/features/deliberation/types';
 import { oneAtATime } from '@/features/deliberation/utils/one-at-a-time';
 import { useIntro } from '@/hooks/use-intro';
 
-/** Camera (0.7s), both players leaning in, the VS set dropping, powering on and tuning in. */
-const INTRO_MS = 2500;
+/** Camera (1.4s), both players leaning in, the VS set dropping, powering on and tuning in. */
+const INTRO_MS = 3100;
 /** A VS set dropped again to change players starts falling straight away. */
 const REDROP_AT = '.05s';
-/** The player search allows one request a second (backend rate limit): the next lookup waits
- *  this long after the last one has answered. */
-const SEARCH_GAP_MS = 1050;
+/** The player search allows one request a second (backend rate limit); a little margin on top. */
+const SEARCH_GAP_MS = 1100;
 
 const initial = (player: FoundPlayer | null) => (player ? player.username.charAt(0).toUpperCase() : '?');
 const detail = (slot: string, player: FoundPlayer) => (player.title ? `${slot} · ${player.title}` : slot);
 
 /**
- * Deliberation (player vs player), at /deliberation. The shot is a photograph of the match:
- * the table seen from beside it at a spectator's height, a player seated at each end leaning
- * in, the visitor's figure (ink, hat) as Player 1 and the guest (ivory, wearing Player 2's
- * picture once found) as Player 2. The VS set is lowered onto the stage floor beside the
- * table to take both players, each looked up with the player search (`findPlayer`); once
- * confirmed it is raised away, the camera reframes and the side panel shows the pairing.
+ * Deliberation (player vs player), at /deliberation. The camera looks straight down at the
+ * table, with a player seated at each end leaning in: the visitor's figure (ink, hat) for
+ * Player 1 and the guest (ivory, wearing Player 2's picture once found) for Player 2.
+ * The VS set drops in to take both players, each looked up with the player search
+ * (`findPlayer`); once confirmed it is raised and the side panel shows the pairing.
  * For now the board is a preview, as the game engine is still to be built.
  */
 export function DeliberationView({ findPlayer, leaving = false }: { findPlayer: FindPlayer; leaving?: boolean }) {
@@ -51,25 +51,27 @@ export function DeliberationView({ findPlayer, leaving = false }: { findPlayer: 
       ref={root}
       className="topdown-view deliberation"
       data-intro={intro.state}
-      data-stage={players ? 'match' : 'choosing'}
       data-leaving={leaving || undefined}
       inert={leaving}
       onPointerDownCapture={intro.skip}
       onKeyDownCapture={intro.skip}
     >
-      {/* TODO(engine): the board is a preview. Once the engine exists, start a game between
-          `players` on Confirm and pass the position here as a FEN placement (`placement`). */}
-      <ChessSet
+      <Tabletop
         mode="deliberation"
-        label={
-          players
-            ? `Board for ${players[0].username} (White) against ${players[1].username} (Black), starting position`
-            : 'Chess board, starting position'
-        }
-        guest={{ face: initial(guest), avatar: guest?.avatar ?? null }}
         leaving={leaving}
-        skipIntro={intro.skipped}
-      />
+        near={<TopDownFigure tone="ink" hat />}
+        far={<TopDownFigure tone="ivory" face={initial(guest)} avatar={guest?.avatar} />}
+      >
+        {/* TODO(engine): the board is a preview. Once the engine exists, start a game between
+            `players` on Confirm and pass the position here as a FEN placement (`placement`). */}
+        <TopDownBoard
+          label={
+            players
+              ? `Board for ${players[0].username} (White) against ${players[1].username} (Black), starting position`
+              : 'Chess board, starting position'
+          }
+        />
+      </Tabletop>
       {players ? (
         <MatchPanel
           eyebrow="03 / Deliberation"
