@@ -39,6 +39,26 @@ describe('api-client', () => {
     });
   });
 
+  it('shows the first validation message of a 422 response', async () => {
+    mockFetchJson(
+      {
+        detail: [
+          {
+            type: 'invalid_player_search',
+            loc: ['query', 'search'],
+            msg: 'Please use a Chess.com link. Use a link like chess.com/member/username.',
+          },
+        ],
+      },
+      422,
+    );
+
+    await expect(apiGet('/players/', { search: 'x' })).rejects.toMatchObject({
+      status: 422,
+      message: 'Please use a Chess.com link. Use a link like chess.com/member/username.',
+    });
+  });
+
   it('explains rate limiting (429) in plain words', async () => {
     mockFetchJson({ error: 'Rate limit exceeded: 1 per 1 second' }, 429);
 

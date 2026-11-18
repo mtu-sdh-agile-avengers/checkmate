@@ -1,12 +1,34 @@
 from datetime import datetime
 
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, field_validator
+from pydantic_core import PydanticCustomError
 
+from src.chesscom.links import InvalidChessComInputError, parse_player_query
 from src.enums import SummaryPeriod, TimeClass
 from src.schemas.common import BaseSchema, QuerySchema
 
-
 # Query Models ---------------------------------------------------------------
+
+
+class PlayerSearchQuery(QuerySchema):
+    search: str = Field(
+        examples=["hikaru", "https://www.chess.com/member/Hikaru"],
+        description="Chess.com username or member profile URL",
+    )
+
+    @field_validator("search")
+    @classmethod
+    def _to_username(cls, value: str) -> str:
+        try:
+            return parse_player_query(value)
+        except InvalidChessComInputError as e:
+            # custom error type: the message is returned to the client without a prefix
+            raise PydanticCustomError("invalid_player_search", str(e)) from e
+
+    @property
+    def username(self) -> str:
+        """Username parsed from `search` (lowercase)."""
+        return self.search
 
 
 class PlayerSummaryQuery(QuerySchema):

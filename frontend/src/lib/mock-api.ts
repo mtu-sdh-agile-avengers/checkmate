@@ -1,5 +1,14 @@
 import { MOCK_DELAY_MS } from '@/config/constants';
-import type { OverallStats, Player, RatingPoint, SummaryStats, TimeClass, TimeFrame } from '@/types/chess';
+import type {
+  GameDetails,
+  OverallStats,
+  Player,
+  RatingPoint,
+  SummaryStats,
+  TimeClass,
+  TimeFrame,
+} from '@/types/chess';
+import { formatDay } from '@/utils/format';
 
 // Mock repository: all figures are fictional design fixtures, NOT live Chess.com records.
 const currentUtc = 1793743200; // 2026-11-03 UTC; fixed for reproducible screenshots.
@@ -103,6 +112,42 @@ export async function mockGetOverall(username: string): Promise<OverallStats> {
     peakDate: 'Oct 28, 2026',
     averageOpponent: 1428,
     ratingHistory: makeHistory(1548, 'all'),
+  };
+}
+
+// Demo game (same as the backend DEV mock): the "Opera game" (Morphy, 1858), 17 moves.
+const MOCK_GAME_MOVES =
+  '1. e4 e5 2. Nf3 d6 3. d4 Bg4 4. dxe5 Bxf3 5. Qxf3 dxe5 6. Bc4 Nf6 7. Qb3 Qe7 ' +
+  '8. Nc3 c6 9. Bg5 b5 10. Nxb5 cxb5 11. Bxb5+ Nbd7 12. O-O-O Rd8 13. Rxd7 Rxd7 ' +
+  '14. Rd1 Qe6 15. Bxd7+ Nxd7 16. Qb8+ Nxb8 17. Rd8# 1-0';
+
+export async function mockGetGame(
+  username: string,
+  gameId: string,
+  archive?: { year: number; month: number },
+): Promise<GameDetails> {
+  await mockDelay();
+  ensureAvailable(username);
+  if (gameId === '0') throw new Error('This game is not in the demo data. Try any other game id.');
+  const end = archive
+    ? new Date(Date.UTC(archive.year, archive.month - 1, 15, 18, 30))
+    : new Date('2026-11-03T18:30:00Z');
+  return {
+    id: gameId,
+    url: `https://www.chess.com/game/live/${encodeURIComponent(gameId)}`,
+    timeClass: 'blitz',
+    timeControl: '3 min + 2 s',
+    endTime: end.getTime() / 1000,
+    date: formatDay(end),
+    rated: true,
+    rules: 'chess',
+    result: 'win',
+    player: { username, rating: 1512, color: 'white' },
+    opponent: { username: 'mock_opponent', rating: 1488, color: 'black' },
+    averageRating: 1500,
+    pgn: `[White "${username}"]\n[Black "mock_opponent"]\n[Result "1-0"]\n\n${MOCK_GAME_MOVES}`,
+    initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    finalFen: '1n1Rkb1r/p4ppp/4q3/4p1B1/4P3/8/PPP2PPP/2K5 b k - 1 17',
   };
 }
 

@@ -16,6 +16,7 @@ from src.chesscom.exceptions import (
     ChessAPIRateLimitError,
     ChessAPITooManyRetriesError,
     ChessAPIUnavailiableError,
+    ChessComGameNotFoundError,
 )
 
 CHESS_API_UNAVAILABLE_MESSAGE = "Chess.com is not available right now, try again later"
@@ -26,12 +27,18 @@ def _not_found_message(request: Request) -> str:
     username = request.path_params.get("username")
     if username:
         return f"{username} player data is not available / does not exist"
+    search = request.query_params.get("search")
+    if search:  # GET /players/?search=...
+        return f'No Chess.com player found for "{search.strip()}"'
     return "Requested Chess.com data is not available / does not exist"
 
 
 async def chess_api_error_handler(request: Request, exc: Exception) -> JSONResponse:
     """Converts a ChessAPIError (and its subclasses) into a JSON error response."""
     match exc:
+        case ChessComGameNotFoundError():  # before its base class ChessAPINotFoundError
+            status_code = status.HTTP_404_NOT_FOUND
+            detail = str(exc)
         case ChessAPINotFoundError():
             status_code = status.HTTP_404_NOT_FOUND
             detail = _not_found_message(request)

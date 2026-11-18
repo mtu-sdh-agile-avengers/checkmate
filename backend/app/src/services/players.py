@@ -6,19 +6,15 @@ the DEV-mode mock lives in `src/services/mocks/players.py`.
 
 import asyncio
 from collections.abc import Callable
-from datetime import UTC, datetime, timezone
-
-from fastapi import HTTPException
-import httpx
-from pydantic import ValidationError
+from datetime import UTC, datetime
 
 from src.chesscom.client import ExternalChessComAPIClient
 from src.chesscom.models import ChessComGame, ChessComRecord, ChessComTimeClassStats
 from src.chesscom.parser import (
     parse_games_archives,
     parse_monthly_games,
-    parse_player_stats,
     parse_player_profile,
+    parse_player_stats,
 )
 from src.schemas.players import (
     PlayerComparisonQuery,
@@ -53,7 +49,15 @@ class ChessComPlayersService(PlayersService):
         self._now = now
 
     async def search(self, username: str) -> PlayerSearchProfileResponse:
-        raise NotImplementedError("Player search is not implemented yet (CMG4-83)")
+        # One request: the profile proves the player exists (404 otherwise).
+        profile = parse_player_profile(await self._client.get_player_profile(username))
+
+        return PlayerSearchProfileResponse(
+            username=profile.username,
+            url=profile.url,
+            avatar=profile.avatar,
+            title=profile.title,
+        )
 
     async def compare(self, query: PlayerComparisonQuery) -> PlayerComparisonResponse:
         raise NotImplementedError("Player comparison is not implemented yet (CMG4-89)")
