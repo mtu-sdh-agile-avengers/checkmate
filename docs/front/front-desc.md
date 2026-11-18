@@ -31,8 +31,8 @@ Every screen is a view of one chess stage (`src/app/stage-layout.tsx`); moving b
 |---|---|---|
 | `player-search` | `/` | Validates usernames and Chess.com member URLs; the main menu sits right under the search |
 | `player-profile` + statistics | `/players/:username` (`?stats=overall`) | The camera pans to the television: profile beside the Recent (`summary-statistics`) or Overall (`overall-statistics`) channel |
-| `play-computer` | `/play` | In-Game Chess: the 3D chess set from White's side, difficulty panel (cosmetic until the game engine exists) |
-| `deliberation` | `/deliberation` | Player vs player: a photograph-style shot of the table, the VS television to pick both players (looked up on Chess.com) |
+| `play-computer` | `/play` | In-Game Chess: the camera looks straight down at the board on the table, difficulty panel (cosmetic until the game engine exists) |
+| `deliberation` | `/deliberation` | Player vs player: the table from above with a player at each end, the VS television dropping in to pick both players (looked up on Chess.com) |
 
 ## Architecture
 
@@ -40,7 +40,7 @@ Based on [Bulletproof React](https://github.com/alan2207/bulletproof-react), fol
 
 ```
 src/app            application root, providers, route configuration and global CSS
-src/components     shared stat cards, navigation, chart, the stage and the 3D chess set (components/chess/scene), statuses
+src/components     shared stat cards, navigation, chart, the stage and its cut-out artwork, the top-down table and board, statuses
 src/features       player-search, summary-statistics, overall-statistics, player-profile, play-computer, deliberation
 src/lib            mock API data functions and configured React Query client
 src/config         routes, time-frame and time-class options
@@ -74,7 +74,7 @@ In mock mode, `src/lib/mock-api.ts` adds an artificial delay to demonstrate load
 ## Mockup fidelity and assumptions
 
 - Search/landing, Summary, Overall and Profile are the four screens retained from the latest Scholar designs; no login or publications were specified.
-- In-Game Chess and Deliberation show a **3D chess set** drawn with three.js (`src/components/chess/scene`): turned Staunton pieces on a board on a lit table, with a backdrop and spotlights. It loads only for those two views. It is **cosmetic**: there is no game engine yet, so it draws a FEN placement (the start position) that the engine will drive. Where WebGL 2 is not available it falls back to a flat top-down board. Charts and controls are real HTML/SVG components.
+- In-Game Chess and Deliberation are **cosmetic**: there is no game engine yet. The top-down board draws a FEN placement (the start position) in the stage's cut-out style, which the engine will drive later. Charts and controls are real HTML/SVG components.
 - No avatar, unavailable title/FIDE/streamer data, etc., use explicit fallbacks.
 - Ratings, win/loss counts, account data and date labels are clearly identified as illustrative examples; user input changes the demo profile handle, not live data.
 - The UI is keyboard navigable, uses accessible labels and focus states, respects reduced motion and provides error/loading feedback. A production integration should validate live API response schemas and add end-to-end tests.
