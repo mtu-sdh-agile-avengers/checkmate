@@ -21,7 +21,4 @@ class QuerySchema(BaseSchema):
 class ErrorResponse(BaseSchema):
     """Error response body (same shape as FastAPI's own errors)."""
 
-    detail: str = Field(
-        examples=["hikaru player data is not available / does not exist"],
-        description="Error message that can be shown to the end-user",
-    )
+    detail: str = Field(description="Error message that can be shown to the end-user")

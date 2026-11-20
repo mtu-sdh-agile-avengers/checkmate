@@ -1,9 +1,10 @@
 from datetime import datetime
+from typing import Self
 
 from pydantic import Field, computed_field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
-from src.chesscom.links import InvalidChessComInputError, parse_game_query
+from src.chesscom.parser.links import InvalidChessComInputError, parse_game_query
 from src.enums import (
     GameResult,
     MoveCategory,
@@ -17,21 +18,56 @@ from src.schemas.common import BaseSchema, QuerySchema
 
 # Query Models ---------------------------------------------------------------
 
+MIN_CHESS_COM_ARCHIVE_YEAR = 2007 # chess.com was founded in 2007, so there is no older monthly archives than this
 
 class PlayerGameHistoryListQuery(QuerySchema):
     year: int | None = Field(
-        default=None, description="Archive year; last accessible if none"
+        default=None,
+        ge=MIN_CHESS_COM_ARCHIVE_YEAR,
+        examples=[2026],
+        description="Archive year; last accessible if none"
     )
     month: int | None = Field(
-        default=None, description="Archive moth; last accessible if none"
+        default=None,
+        ge=1,
+        le=12,
+        examples=[10],
+        description="Archive month; last accessible if none"
     )
     time_class: TimeClass | None = Field(
-        default=None, description="Includes all time classes if none"
+        default=None,
+        examples=[TimeClass.BLITZ],
+        description="Time class; all time classes if none"
     )
-    sort_by: SortGameBy | None = SortGameBy.MATCH_DATE_TIME
-    sort_order: SortOrder | None = SortOrder.DESC
-    paging_limit: PagingLimit = PagingLimit.L15
-    page: int = Field(default=1, ge=1)
+    sort_by: SortGameBy = Field(
+        default=SortGameBy.MATCH_DATE_TIME,
+        examples=[SortGameBy.MATCH_DATE_TIME],
+        description="Sorting option; `avgRating` or `matchDateTime`"
+    )
+    sort_order: SortOrder = Field(
+        default=SortOrder.DESC,
+        examples=[SortOrder.DESC],
+        description="Sort order of the page;"
+    )
+    paging_limit: PagingLimit = Field(
+        default=PagingLimit.L50,
+        examples=[PagingLimit.L50],
+        description="Max number of games on a page"
+    )
+    page: int = Field(
+        default=1,
+        ge=1,
+        examples=[3],
+        description="Page number, starting at 1"
+    )
+
+    @model_validator(mode="after")
+    def _year_and_month_together(self) -> Self:
+        if (self.year is None) != (self.month is None):
+            raise PydanticCustomError(
+                "year_month_together", "Send both year and month, or neither of them."
+            )
+        return self
 
 
 class PlayerGameSearchQuery(QuerySchema):
@@ -61,7 +97,6 @@ class PlayerGameSearchQuery(QuerySchema):
         try:
             return parse_game_query(value)
         except InvalidChessComInputError as e:
-            # custom error type: the message is returned to the client without a prefix
             raise PydanticCustomError("invalid_game_search", str(e)) from e
 
     @model_validator(mode="after")
@@ -108,15 +143,32 @@ class GameResponse(BaseSchema):
 
 
 class PaginatedGameListResponse(BaseSchema):
-    year: int | None = Field(default=None)
-    month: int | None = Field(default=None)
-    items: list[GameResponse]
+    year: int | None = Field(
+        default=None,
+        examples=[2026],
+        description="Archive month of the games; null if the player has no games during this period"
+    )
+    month: int | None = Field(
+        default=None,
+        examples=[10],
+    )
+    items: list[GameResponse] = Field(
+        description="Games found (current page)"
+    )
 
     paging_limit: PagingLimit = PagingLimit.L15
-    total_games: int = Field(ge=0)
-    total_pages: int = Field(ge=0)
+    total_games: int = Field(
+        ge=0,
+        description="Total number of games played in the month (after timeClass filter)"
+    )
+    total_pages: int = Field(
+        ge=0,
+        description="Total number of pages; 0 when there are no games"
+    )
     page: int = Field(ge=1)
-    has_more: bool
+    has_next: bool = Field(
+        description="True if there is next page"
+    )
 
 
 class GameBoardDetailsResponse(GameResponse):

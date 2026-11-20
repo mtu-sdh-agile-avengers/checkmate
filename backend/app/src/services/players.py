@@ -1,6 +1,6 @@
 """Players service backed by the Chess.com PubAPI (used when RUN_MODE=prod).
 
-The `PlayersService` protocol it implements lives in `src/services/users.py`;
+The `PlayersService` protocol it implements lives in `src/services/protocols.py`;
 the DEV-mode mock lives in `src/services/mocks/players.py`.
 """
 
@@ -8,9 +8,13 @@ import asyncio
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from src.chesscom.client import ExternalChessComAPIClient
-from src.chesscom.models import ChessComGame, ChessComRecord, ChessComTimeClassStats
-from src.chesscom.parser import (
+from src.chesscom.client.protocols import ExternalChessComAPIClient
+from src.chesscom.parser.models import (
+    ChessComGame,
+    ChessComRecord,
+    ChessComTimeClassStats,
+)
+from src.chesscom.parser.parser import (
     parse_games_archives,
     parse_monthly_games,
     parse_player_profile,
@@ -26,13 +30,13 @@ from src.schemas.players import (
     RatingPointResponse,
     RatingSummaryResponse,
 )
-from src.services.statistics import (
+from src.services.processing.statistics import (
     months_between,
     period_start,
     select_games,
     summarize_period,
 )
-from src.services.users import PlayersService
+from src.services.protocols import PlayersService
 
 
 def _utc_now() -> datetime:

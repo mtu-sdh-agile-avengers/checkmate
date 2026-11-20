@@ -3,7 +3,7 @@ from datetime import datetime
 from pydantic import Field, computed_field, field_validator
 from pydantic_core import PydanticCustomError
 
-from src.chesscom.links import InvalidChessComInputError, parse_player_query
+from src.chesscom.parser.links import InvalidChessComInputError, parse_player_query
 from src.enums import SummaryPeriod, TimeClass
 from src.schemas.common import BaseSchema, QuerySchema
 

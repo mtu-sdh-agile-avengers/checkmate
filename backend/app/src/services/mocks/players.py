@@ -1,4 +1,4 @@
-"""Mock players service, used when RUN_MODE=dev (CMG4-48).
+"""Mock players service, used when RUN_MODE=dev.
 
 Returns realistic, deterministic sample data without calling Chess.com, so the frontend
 can be built and tested independently of the real implementation.
@@ -10,7 +10,7 @@ Special usernames for testing frontend states:
 
 from datetime import UTC, datetime, timedelta
 
-from src.chesscom.exceptions import ChessAPINotFoundError
+from src.chesscom.client.exceptions import ChessAPINotFoundError
 from src.enums import SummaryPeriod, TimeClass
 from src.schemas.players import (
     PlayerComparisonQuery,
@@ -22,7 +22,7 @@ from src.schemas.players import (
     RatingPointResponse,
     RatingSummaryResponse,
 )
-from src.services.users import PlayersService
+from src.services.protocols import PlayersService
 
 MOCK_NOT_FOUND_USERNAME = "notfound"
 MOCK_NO_GAMES_USERNAME = "nogames"

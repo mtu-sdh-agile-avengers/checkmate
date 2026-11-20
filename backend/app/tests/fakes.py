@@ -2,8 +2,8 @@
 
 from datetime import datetime
 
-from src.chesscom.exceptions import ChessAPINotFoundError
-from src.chesscom.models import DRAW_RESULT_CODES, WIN_RESULT_CODE
+from src.chesscom.client.exceptions import ChessAPINotFoundError
+from src.chesscom.parser.models import DRAW_RESULT_CODES, WIN_RESULT_CODE
 
 
 def make_raw_game(
@@ -65,6 +65,7 @@ class FakeChessComClient:
 
     API_BASE_URL = "https://api.chess.com/pub"
 
+
     def __init__(
         self,
         stats: dict | None = None,
@@ -80,32 +81,42 @@ class FakeChessComClient:
         self.not_found = not_found  # simulate a player that does not exist
         self.calls: list[str] = []
 
+
     def _request(self, path: str) -> None:
         self.calls.append(path)
         if self.not_found:
             raise ChessAPINotFoundError(path)
 
+
     async def get_player_profile(self, username: str) -> dict:
         self._request(f"/player/{username}")
         return self.profile
 
+
     async def get_player_stats(self, username: str) -> dict:
         self._request(f"/player/{username}/stats")
         return self.stats
+
 
     async def get_player_games_archives(self, username: str) -> dict:
         self._request(f"/player/{username}/games/archives")
         base = f"{self.API_BASE_URL}/player/{username}/games"
         return {"archives": [f"{base}/{y}/{m:02d}" for y, m in self.archive_months]}
 
+
     async def get_player_monthly_games(
-        self, username: str, year: str, month: str
+        self, 
+        username: str, 
+        year: str, 
+        month: str,
     ) -> dict:
         self._request(f"/player/{username}/games/{year}/{month}")
         return {"games": self.monthly_games.get((int(year), int(month)), [])}
 
+
     async def get_player_monthly_pgn(self, username: str, year: str, month: str) -> str:
         raise NotImplementedError
+
 
     async def get_player_current_games(self, username: str) -> dict:
         raise NotImplementedError

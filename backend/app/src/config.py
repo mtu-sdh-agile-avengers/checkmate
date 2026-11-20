@@ -24,7 +24,13 @@ class Config(BaseSettings):
     api_chesscom_base_url: str
     api_chesscom_user_agent: str
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    # if initialized, could be overridden by CORS_ORIGINS in .env for other ports; required for Vite client
+    cors_origins: list[str] = ["localhost:5173", "127.1.0.0:5173"]
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8"
+    )
 
 
 @lru_cache  # allows Config object to be created only once, the first time it's called
