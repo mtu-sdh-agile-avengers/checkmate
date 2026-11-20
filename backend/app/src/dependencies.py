@@ -2,14 +2,13 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
-from src.chesscom.client import ExternalChessComAPIClient
+from src.chesscom.client.client import ExternalChessComAPIClient
 from src.config import RunMode, get_config
-from src.services.chesscom_games import ChessComGamesService
-from src.services.games import GamesService
+from src.services.games import ChessComGamesService
 from src.services.mocks.games import MockGamesService
 from src.services.mocks.players import MockPlayersService
 from src.services.players import ChessComPlayersService
-from src.services.users import PlayersService
+from src.services.protocols import GamesService, PlayersService
 
 
 def get_external_api_chess_client(request: Request) -> ExternalChessComAPIClient:

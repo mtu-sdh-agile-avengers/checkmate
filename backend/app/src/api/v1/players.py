@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Request
 
+from src.api.v1.common import COMMON_RESPONSES
 from src.dependencies import PlayersServiceDep
 from src.rate_limiting import limiter
 from src.schemas.common import ErrorResponse
@@ -15,7 +16,11 @@ from src.schemas.players import (
     PlayerSummaryQuery,
 )
 
-router = APIRouter(prefix="/players", tags=["players"])
+router = APIRouter(
+    prefix="/players",
+    tags=["players"],
+    responses=COMMON_RESPONSES,
+)
 
 
 # GET /api/v1/players/?search={username|url}
@@ -30,8 +35,6 @@ router = APIRouter(prefix="/players", tags=["players"])
     responses={
         404: {"model": ErrorResponse, "description": "Player does not exist"},
         422: {"description": "`search` is not a valid username or profile URL"},
-        502: {"model": ErrorResponse, "description": "Unexpected Chess.com response"},
-        503: {"model": ErrorResponse, "description": "Chess.com is not available"},
     },
 )
 @limiter.limit("1/second")
@@ -63,11 +66,8 @@ async def compare_players(
     "/{username}/profile",
     summary="Get player profile",
     description="Returns Chess.com player profile record.",
-    response_model=PlayerProfileResponse,
     responses={
         404: {"model": ErrorResponse, "description": "Player does not exist"},
-        502: {"model": ErrorResponse, "description": "Unexpected Chess.com response"},
-        503: {"model": ErrorResponse, "description": "Chess.com is not available"},
     },
 )
 @limiter.limit("1/second")
@@ -91,8 +91,6 @@ async def get_player_profile(
     ),
     responses={
         404: {"model": ErrorResponse, "description": "Player does not exist"},
-        502: {"model": ErrorResponse, "description": "Unexpected Chess.com response"},
-        503: {"model": ErrorResponse, "description": "Chess.com is not available"},
     },
 )
 @limiter.limit("1/second")

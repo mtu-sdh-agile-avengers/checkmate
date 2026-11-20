@@ -1,28 +1,32 @@
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from loguru import logger
-from fastapi.middleware.cors import CORSMiddleware
-from src.config import get_config
-from src.rate_limiting import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from src.api.v1.routers import api_router as api_v1_router
-from src.chesscom.client import ChessComClient
+from src.chesscom.client.client import ChessComClient
+from src.config import get_config
 from src.exception_handlers import register_exception_handlers
+from src.rate_limiting import limiter
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.debug(f"Server startup in {get_config().run_mode} mode")
-    external_chess_api_client = ChessComClient()
+    external_chess_api_client = ChessComClient(
+        get_config().api_chesscom_base_url,
+        get_config().api_chesscom_user_agent,
+    )
     app.state.external_chess_api_client = external_chess_api_client
-
-    yield
-    logger.debug("Server shutdown")
-    await external_chess_api_client.aclose()
+    try:
+        yield
+        logger.debug("Server shutdown")
+    finally:
+        await external_chess_api_client.aclose()
 
 
 def load_routers(app: FastAPI, *routers: APIRouter):
@@ -33,7 +37,7 @@ def load_routers(app: FastAPI, *routers: APIRouter):
 app = FastAPI(
     lifespan=lifespan,
     title="Checkmate REST API",
-    version="0.1.0",
+    version="0.6.0",
     docs_url="/docs/swagger",
     openapi_url="/docs/openapi.json",
     redoc_url="/docs",
@@ -43,20 +47,16 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # pyright: ignore[reportArgumentType]
 
-# Chess.com errors -> HTTP error responses (404, 502, 503)
+# Chess.com errors -> HTTP error responses
 register_exception_handlers(app)
 
 # CORS configuration
 logger.debug("Configuring CORS...")
-origins = [
-    "http://localhost:3000",  # default react app port
-    "http://127.0.0.1:3000",
-]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=get_config().cors_origins,  # 5173: default vite server port
+    # allow_credentials=True,
+    allow_methods=["GET"],
     allow_headers=["*"],
 )
 
@@ -69,7 +69,7 @@ async def root(request: Request):
 
 
 @app.get(
-    "/health", tags=["health"], description="Returns server status if it's avaliable."
+    "/health", tags=["health"], description="Returns server status if it's available."
 )
 @limiter.limit("1/second")
 async def health(request: Request):
@@ -81,9 +81,8 @@ logger.debug("Loading routers...")
 load_routers(app, api_v1_router)
 
 
-# cd backend, uv run uvicorn src.main:app --port 8000 --reload | uv run pytest -v
+# cd backend/app, uv run uvicorn src.main:app --port 8000 --reload | uv run pytest -v
 if __name__ == "__main__":
-    # to run locally first: npx firebase emulators:start --project demo-agentic-lender
     import uvicorn
 
     uvicorn.run("src.main:app", reload=True, port=8000)

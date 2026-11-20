@@ -35,11 +35,10 @@ __pycache__/
 # Built Visual Studio Code Extensions
 *.vsix
 
-#fornt
+# front
 node_modules/
 dist/
 coverage/
-.env
 .env.local
 *.tsbuildinfo
 .DS_Store

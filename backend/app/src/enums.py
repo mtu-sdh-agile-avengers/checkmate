@@ -24,6 +24,7 @@ class PagingLimit(IntEnum):
     L15 = 15
     L30 = 30
     L50 = 50
+    L100 = 100
 
 
 class SortGameBy(StrEnum):
