@@ -27,15 +27,15 @@ class ChessComClient(ExternalChessComAPIClient):
     DEFAULT_CONCURRENT_REQUESTS_LIMIT: ClassVar[int] = 2
 
     def __init__(
-            self,
-            base_url: str,
-            user_agent: str,
-            *,
-            transport: httpx.AsyncBaseTransport | None = None,
-            concurrent_requests_limit: int = DEFAULT_CONCURRENT_REQUESTS_LIMIT,
-            use_http2: bool = True,
-            allow_retry: bool = True,
-            follow_redirects: bool = True,
+        self,
+        base_url: str,
+        user_agent: str,
+        *,
+        transport: httpx.AsyncBaseTransport | None = None,
+        concurrent_requests_limit: int = DEFAULT_CONCURRENT_REQUESTS_LIMIT,
+        use_http2: bool = True,
+        allow_retry: bool = True,
+        follow_redirects: bool = True,
     ):
         if transport is not None and use_http2:
             raise ValueError(
@@ -44,17 +44,19 @@ class ChessComClient(ExternalChessComAPIClient):
             )
 
         self.api_client = httpx.AsyncClient(
-            base_url=base_url,                                         # base url (prepended) for all outgoing requests
+            base_url=base_url,  # base url (prepended) for all outgoing requests
             headers={
-                "User-Agent": user_agent,                              # chess.com requires User-Agent header to prevent temporary blocking due to "abnormal activity"
-                "Accept-Encoding": "gzip, deflate, br, zstd",          # chess.com gzips responses (for data >200 bytes); it may reduce download bandwidth by up to 80%; httpx provides encoding out of the box
+                "User-Agent": user_agent,  # chess.com requires User-Agent header to prevent temporary blocking due to "abnormal activity"
+                "Accept-Encoding": "gzip, deflate, br, zstd",  # chess.com gzips responses (for data >200 bytes); it may reduce download bandwidth by up to 80%; httpx provides encoding out of the box
             },
-            transport=transport,                                       # allows to mock out HTTPTransport, and return pre-determined responses; None means real network
-            follow_redirects = follow_redirects,                       # allows to automatically follow redirect response (i.e., useful when change in API contacts appears)
-            http2=use_http2                                            # use of HTTP/2 may slightly improve performance (header compression, binary transfer, multiplexed responses)
+            transport=transport,  # allows to mock out HTTPTransport, and return pre-determined responses; None means real network
+            follow_redirects=follow_redirects,  # allows to automatically follow redirect response (i.e., useful when change in API contacts appears)
+            http2=use_http2,  # use of HTTP/2 may slightly improve performance (header compression, binary transfer, multiplexed responses)
         )
-        self._allow_retry = allow_retry                                # if True, then if request had exceeds timeout limit server will try N times to send it again
-        self._semaphore = asyncio.Semaphore(concurrent_requests_limit) # semaphore is required due to limited parallel access (which may lead to 429)
+        self._allow_retry = allow_retry  # if True, then if request had exceeds timeout limit server will try N times to send it again
+        self._semaphore = asyncio.Semaphore(
+            concurrent_requests_limit
+        )  # semaphore is required due to limited parallel access (which may lead to 429)
 
     async def _request(
         self, request_func: Callable[[httpx.AsyncClient], Awaitable[httpx.Response]]
@@ -127,7 +129,9 @@ class ChessComClient(ExternalChessComAPIClient):
                 case _ if r_status_code >= status.HTTP_500_INTERNAL_SERVER_ERROR:
                     raise ChessAPIUnavailableError(f"{r_status_code} on {path}") from e
                 case _:
-                    raise ChessAPIError(f"Unexpected status {r_status_code} on {path}") from e
+                    raise ChessAPIError(
+                        f"Unexpected status {r_status_code} on {path}"
+                    ) from e
         except httpx.TimeoutException as e:
             raise ChessAPIUnavailableError(f"Timeout on {path}") from e
         except httpx.RequestError as e:

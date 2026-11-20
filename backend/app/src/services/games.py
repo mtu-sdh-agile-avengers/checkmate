@@ -28,55 +28,36 @@ class ChessComGamesService(GamesService):
     def __init__(self, chess_client: ExternalChessComAPIClient) -> None:
         self._client = chess_client
 
-
     async def get_game_history_list(
-        self,
-        username: str,
-        query: PlayerGameHistoryListQuery
+        self, username: str, query: PlayerGameHistoryListQuery
     ) -> PaginatedGameListResponse:
         month = await self._archive_month(username, query)
         if month is None:
             return build_game_list([], None, query)
 
-        games = await self._month_games(
-            username,
-            month
-        )
+        games = await self._month_games(username, month)
         items = [to_game_response(game, username) for game in games]
-        return build_game_list(
-            items,
-            month,
-            query
-        )
-
+        return build_game_list(items, month, query)
 
     async def get_game_board_details(
-        self,
-        username: str,
-        query: PlayerGameSearchQuery
+        self, username: str, query: PlayerGameSearchQuery
     ) -> GameBoardDetailsResponse:
         game = await self._find_game(username, query)
         return to_game_board_details(game, username)
 
-
     async def analyze_game_board(
-        self,
-        username: str,
-        query: PlayerGameSearchQuery
+        self, username: str, query: PlayerGameSearchQuery
     ) -> GameAnalysisResponse:
         raise NotImplementedError("Game analysis is not implemented yet")
-
 
     # Helper functions (call client & parser directly) ----------------------------------------------
 
     async def _find_game(
-        self,
-        username: str,
-        query: PlayerGameSearchQuery
+        self, username: str, query: PlayerGameSearchQuery
     ) -> ChessComGame:
         """Finds the game in the requested (or latest) monthly archive of the player."""
         month = await self._archive_month(username, query)
-        if month is not None: # if None, then player has never finished a game
+        if month is not None:  # if None, then player has never finished a game
             for game in await self._month_games(username, month):
                 if game.game_id == query.game_id:
                     return game
@@ -88,19 +69,17 @@ class ChessComGamesService(GamesService):
             month.month if month else None,
         )
 
-
     async def _archive_month(
-        self,
-        username: str,
-        query: PlayerGameSearchQuery | PlayerGameHistoryListQuery
+        self, username: str, query: PlayerGameSearchQuery | PlayerGameHistoryListQuery
     ) -> ArchiveMonth | None:
         """Returns (parsed) requested archive month, or the latest one; None if there are none."""
         if query.year is not None and query.month is not None:
             return ArchiveMonth(query.year, query.month)
 
-        archives = parse_games_archives(await self._client.get_player_games_archives(username))
+        archives = parse_games_archives(
+            await self._client.get_player_games_archives(username)
+        )
         return archives.months[-1] if archives.months else None
-
 
     async def _month_games(
         self,
@@ -108,18 +87,23 @@ class ChessComGamesService(GamesService):
         month: ArchiveMonth,
     ) -> list[ChessComGame]:
         """Returns (parsed) requested (list of) monthly games; empty list if there are none."""
-        raw_games = await self._client.get_player_monthly_games(username, str(month.year), f"{month.month:02d}")
+        raw_games = await self._client.get_player_monthly_games(
+            username, str(month.year), f"{month.month:02d}"
+        )
         return parse_monthly_games(raw_games)
 
 
 # Mappings of Chess.com games to Response schemas ----------------------------------------------
+
 
 def to_game_response(game: ChessComGame, username: str) -> GameResponse:
     """Returns game details from the point of view of `username` (selected player)."""
     return GameResponse(**_game_fields(game, username))
 
 
-def to_game_board_details(game: ChessComGame, username: str) -> GameBoardDetailsResponse:
+def to_game_board_details(
+    game: ChessComGame, username: str
+) -> GameBoardDetailsResponse:
     """Builds GameBoardDetailsResponse from ChessComGame (game with the moves (PGN) and positions (FEN) for the game details page)."""
     if not game.pgn or not game.fen:
         raise ChessAPIParseError("monthly games", f"game {game.url} has no PGN / FEN")

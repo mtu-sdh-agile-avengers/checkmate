@@ -52,6 +52,6 @@ def test_player_profile_unknown_user(client):
 
 def test_player_profile_any_username(client):
     response = client.get(URL.format(username="someuser"))
-    
+
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["username"] == "someuser"

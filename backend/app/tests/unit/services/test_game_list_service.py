@@ -11,13 +11,19 @@ OCTOBER = (2026, 10)
 @pytest.fixture
 def fake_client(chesscom_fixture) -> FakeChessComClient:
     return FakeChessComClient(
-        archive_months=[(2026, 9), OCTOBER], # chess.com with 2 archive months: empty September, mock October
-        monthly_games={OCTOBER: chesscom_fixture("hikaru/hikaru_games_2026_10.json")["games"]},
+        archive_months=[
+            (2026, 9),
+            OCTOBER,
+        ],  # chess.com with 2 archive months: empty September, mock October
+        monthly_games={
+            OCTOBER: chesscom_fixture("hikaru/hikaru_games_2026_10.json")["games"]
+        },
     )
 
 
 def query(**params) -> PlayerGameHistoryListQuery:
     return PlayerGameHistoryListQuery.model_validate(params)
+
 
 def ids(response) -> list[str]:
     return [game.id for game in response.items]

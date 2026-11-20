@@ -143,7 +143,9 @@ def _mock_month_games(username: str, month: ArchiveMonth) -> list[GameResponse]:
                 color=PlayerColor.WHITE if index % 2 == 0 else PlayerColor.BLACK,
                 result=result,
                 player=GameMemberResponse(username=username, rating=player_rating),
-                opponent=GameMemberResponse(username=f"{MOCK_OPPONENT}_{index % 5 + 1}", rating=opponent_rating),
+                opponent=GameMemberResponse(
+                    username=f"{MOCK_OPPONENT}_{index % 5 + 1}", rating=opponent_rating
+                ),
             )
         )
     return games

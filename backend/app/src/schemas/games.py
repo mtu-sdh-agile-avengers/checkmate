@@ -18,47 +18,45 @@ from src.schemas.common import BaseSchema, QuerySchema
 
 # Query Models ---------------------------------------------------------------
 
-MIN_CHESS_COM_ARCHIVE_YEAR = 2007 # chess.com was founded in 2007, so there is no older monthly archives than this
+MIN_CHESS_COM_ARCHIVE_YEAR = 2007  # chess.com was founded in 2007, so there is no older monthly archives than this
+
 
 class PlayerGameHistoryListQuery(QuerySchema):
     year: int | None = Field(
         default=None,
         ge=MIN_CHESS_COM_ARCHIVE_YEAR,
         examples=[2026],
-        description="Archive year; last accessible if none"
+        description="Archive year; last accessible if none",
     )
     month: int | None = Field(
         default=None,
         ge=1,
         le=12,
         examples=[10],
-        description="Archive month; last accessible if none"
+        description="Archive month; last accessible if none",
     )
     time_class: TimeClass | None = Field(
         default=None,
         examples=[TimeClass.BLITZ],
-        description="Time class; all time classes if none"
+        description="Time class; all time classes if none",
     )
     sort_by: SortGameBy = Field(
         default=SortGameBy.MATCH_DATE_TIME,
         examples=[SortGameBy.MATCH_DATE_TIME],
-        description="Sorting option; `avgRating` or `matchDateTime`"
+        description="Sorting option; `avgRating` or `matchDateTime`",
     )
     sort_order: SortOrder = Field(
         default=SortOrder.DESC,
         examples=[SortOrder.DESC],
-        description="Sort order of the page;"
+        description="Sort order of the page;",
     )
     paging_limit: PagingLimit = Field(
         default=PagingLimit.L50,
         examples=[PagingLimit.L50],
-        description="Max number of games on a page"
+        description="Max number of games on a page",
     )
     page: int = Field(
-        default=1,
-        ge=1,
-        examples=[3],
-        description="Page number, starting at 1"
+        default=1, ge=1, examples=[3], description="Page number, starting at 1"
     )
 
     @model_validator(mode="after")
@@ -146,29 +144,24 @@ class PaginatedGameListResponse(BaseSchema):
     year: int | None = Field(
         default=None,
         examples=[2026],
-        description="Archive month of the games; null if the player has no games during this period"
+        description="Archive month of the games; null if the player has no games during this period",
     )
     month: int | None = Field(
         default=None,
         examples=[10],
     )
-    items: list[GameResponse] = Field(
-        description="Games found (current page)"
-    )
+    items: list[GameResponse] = Field(description="Games found (current page)")
 
     paging_limit: PagingLimit = PagingLimit.L15
     total_games: int = Field(
         ge=0,
-        description="Total number of games played in the month (after timeClass filter)"
+        description="Total number of games played in the month (after timeClass filter)",
     )
     total_pages: int = Field(
-        ge=0,
-        description="Total number of pages; 0 when there are no games"
+        ge=0, description="Total number of pages; 0 when there are no games"
     )
     page: int = Field(ge=1)
-    has_next: bool = Field(
-        description="True if there is next page"
-    )
+    has_next: bool = Field(description="True if there is next page")
 
 
 class GameBoardDetailsResponse(GameResponse):

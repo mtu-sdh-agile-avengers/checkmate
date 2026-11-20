@@ -27,10 +27,7 @@ class Config(BaseSettings):
     # if initialized, could be overridden by CORS_ORIGINS in .env for other ports; required for Vite client
     cors_origins: list[str] = ["localhost:5173", "127.1.0.0:5173"]
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
 @lru_cache  # allows Config object to be created only once, the first time it's called

@@ -27,6 +27,7 @@ def chesscom_fixture() -> Callable[[str], object]:
 
     `.json` files are returned decoded (dict); any other file is returned as text.
     """
+
     def load(name: str) -> object:
         path = FIXTURES_DIR / "chesscom" / name
         text = path.read_text(encoding="utf-8")

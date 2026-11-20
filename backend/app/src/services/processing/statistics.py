@@ -1,5 +1,4 @@
-"""Player statistics calculations for the summary endpoint.
-"""
+"""Player statistics calculations for the summary endpoint."""
 
 from collections import Counter
 from collections.abc import Iterable

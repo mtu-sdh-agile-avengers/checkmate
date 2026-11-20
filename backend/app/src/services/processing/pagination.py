@@ -1,5 +1,5 @@
-"""Filtering, sorting and paging for the game history list endpoint.
-"""
+"""Filtering, sorting and paging for the game history list endpoint."""
+
 from _collections_abc import Callable, Iterable
 from math import ceil
 
@@ -15,13 +15,12 @@ type SortKey = Callable[[GameResponse], tuple]
 
 _SORT_KEYS: dict[SortGameBy, SortKey] = {
     SortGameBy.MATCH_DATE_TIME: lambda game: (game.end_time, game.id),
-    SortGameBy.AVG_RATING: lambda game: (game.avg_rating, game.end_time, game.id)
+    SortGameBy.AVG_RATING: lambda game: (game.avg_rating, game.end_time, game.id),
 }
 
 
 def filter_by_time_class(
-        games: Iterable[GameResponse],
-        time_class: TimeClass | None
+    games: Iterable[GameResponse], time_class: TimeClass | None
 ) -> list[GameResponse]:
     """Filters games by selected time class; all games if `time_class` is None.
 
@@ -38,9 +37,7 @@ def filter_by_time_class(
 
 
 def sort_games(
-    games: Iterable[GameResponse],
-    sort_by: SortGameBy,
-    sort_order: SortOrder
+    games: Iterable[GameResponse], sort_by: SortGameBy, sort_order: SortOrder
 ) -> list[GameResponse]:
     """Sorts games by date or average rating (DESC / ASC).
 
@@ -55,10 +52,7 @@ def sort_games(
     return sorted(games, key=_SORT_KEYS[sort_by], reverse=sort_order == SortOrder.DESC)
 
 
-def total_pages(
-        total_items: int,
-        page_size: int
-) -> int:
+def total_pages(total_items: int, page_size: int) -> int:
     """Counts amount of pages required to show all items.
 
     Args:
@@ -70,11 +64,8 @@ def total_pages(
     """
     return ceil(total_items / page_size)
 
-def page_slice[T](
-        items: list[T],
-        page: int,
-        page_size: int
-) -> list[T]:
+
+def page_slice[T](items: list[T], page: int, page_size: int) -> list[T]:
     """Returns the items of one page.
 
     Args:
@@ -88,10 +79,11 @@ def page_slice[T](
     start_index = (page - 1) * page_size
     return items[start_index : start_index + page_size]
 
+
 def build_game_list(
-        games: Iterable[GameResponse],
-        archive_month: ArchiveMonth | None,
-        query: PlayerGameHistoryListQuery
+    games: Iterable[GameResponse],
+    archive_month: ArchiveMonth | None,
+    query: PlayerGameHistoryListQuery,
 ) -> PaginatedGameListResponse:
     """Builds one page of game history list from the games of an archive month.
 
@@ -105,7 +97,9 @@ def build_game_list(
     Returns:
         Response with the games of the requested page (filtered and sorted) and paging information.
     """
-    selected = sort_games(filter_by_time_class(games, query.time_class), query.sort_by, query.sort_order)
+    selected = sort_games(
+        filter_by_time_class(games, query.time_class), query.sort_by, query.sort_order
+    )
     page_size = query.paging_limit
     pages = total_pages(len(selected), page_size)
 
@@ -117,5 +111,5 @@ def build_game_list(
         total_games=len(selected),
         total_pages=pages,
         page=query.page,
-        has_next=query.page < pages
+        has_next=query.page < pages,
     )

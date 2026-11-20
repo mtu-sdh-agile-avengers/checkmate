@@ -35,9 +35,9 @@ router = APIRouter(
         "Every item is the game from the point of `username` (selected player)."
     ),
     responses={
-        404: { "model": ErrorResponse, "description": "Player does not exist"},
-        422: { "model": ErrorResponse, "description": "Player does not exist"},
-    }
+        404: {"model": ErrorResponse, "description": "Player does not exist"},
+        422: {"model": ErrorResponse, "description": "Player does not exist"},
+    },
 )
 @limiter.limit("1/second")
 async def get_player_game_history_list(
@@ -62,7 +62,10 @@ async def get_player_game_history_list(
         "latest archive month."
     ),
     responses={
-        404: {"model": ErrorResponse, "description": "Player does not exist or the game is not in the archive"},
+        404: {
+            "model": ErrorResponse,
+            "description": "Player does not exist or the game is not in the archive",
+        },
         422: {"description": "Invalid `search`, or only one of `year` / `month`"},
     },
 )
@@ -77,10 +80,7 @@ async def get_game_board_details(
 
 
 # GET /api/v1/players/{username}/games/analyze?year={int}&month={int}&search={game_id|url}
-@router.get(
-    "/analyze",
-    summary="Get game analysis details"
-)
+@router.get("/analyze", summary="Get game analysis details")
 @limiter.limit("1/second")
 async def analyze_game_board(
     request: Request,
