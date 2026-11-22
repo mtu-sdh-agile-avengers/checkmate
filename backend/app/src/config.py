@@ -23,6 +23,9 @@ class Config(BaseSettings):
     run_mode: Literal[RunMode.PROD, RunMode.DEV]
     api_chesscom_base_url: str
     api_chesscom_user_agent: str
+    # Path to the Stockfish executable (machine-specific); engine settings live in
+    # `stockfish.toml`. None = Stockfish is not installed / game analysis unavailable.
+    stockfish_path: str | None = None
 
     # if initialized, could be overridden by CORS_ORIGINS in .env for other ports; required for Vite client
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
