@@ -36,10 +36,13 @@ export async function apiGet<T>(path: string, params?: Record<string, string>): 
 
 async function readErrorMessage(response: Response): Promise<string> {
   // Our API answers {"detail": "<message>"} for 404 / 502 / 503 (backend: exception_handlers.py)
+  // and {"detail": [{"msg": "<message>", ...}]} for invalid parameters (422).
   try {
     const body: unknown = await response.json();
-    if (body && typeof body === 'object' && 'detail' in body && typeof body.detail === 'string') {
-      return body.detail;
+    if (body && typeof body === 'object' && 'detail' in body) {
+      if (typeof body.detail === 'string') return body.detail;
+      const firstMessage = validationMessage(body.detail);
+      if (firstMessage) return firstMessage;
     }
   } catch {
     // body is not JSON: fall through to a generic message
@@ -47,4 +50,14 @@ async function readErrorMessage(response: Response): Promise<string> {
   if (response.status === 429) return 'Too many requests. Wait a second and try again.';
   if (response.status === 422) return 'The request was not valid. Check the username and filters.';
   return `The server returned an error (${response.status}). Please try again.`;
+}
+
+/** First message of a FastAPI validation error list, e.g. "Please use a Chess.com link. ..." */
+function validationMessage(detail: unknown): string | null {
+  if (!Array.isArray(detail)) return null;
+  const first: unknown = detail[0];
+  if (first && typeof first === 'object' && 'msg' in first && typeof first.msg === 'string') {
+    return first.msg;
+  }
+  return null;
 }

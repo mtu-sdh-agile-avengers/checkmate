@@ -144,8 +144,136 @@
   .stats-tv__channels button { flex: 1; }
 }
 @media (max-width: 520px) { .stats-tv .profile-fields { grid-template-columns: 1fr; } }
-/* Reduced motion: channels change with a plain cut. */
+/* --- Fit to the screen (wide layout) --------------------------------------
+   Above 900px the two panes are size containers and everything inside is sized in
+   container units (1cqh = 1% of the pane's height), so the profile and the statistics
+   scale with the television and fill it exactly: the fixed rows take their share and the
+   chart takes whatever height is left. Scrolling is only a fallback for very short sets.
+   The px rules above remain the layout for the narrow, scrolling set. */
+@media (min-width: 901px) {
+  .stats-tv__side, .stats-tv__picture { container-type: size; padding: 16px 18px; }
+  .stats-tv__picture > div:not([hidden]) { height: 100%; }
+  .stats-tv .statistics-page, .stats-tv .profile-page { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+
+  .stats-tv .eyebrow { font-size: clamp(8px, 1.75cqh, 11px); margin-bottom: .6cqh; }
+  .stats-tv .page-title-row { flex: 0 0 auto; gap: 1cqh 16px; margin-bottom: 2cqh; }
+  .stats-tv .page-title-row h2 { font-size: clamp(16px, 4.1cqh, 27px); }
+  .stats-tv .page-title-row p { font-size: clamp(10px, 2cqh, 13px); }
+  .stats-tv .label-pill { padding: 1.1cqh 12px; font-size: clamp(8px, 1.7cqh, 11px); }
+  .stats-tv .filter-label { margin-bottom: .6cqh; font-size: clamp(8px, 1.5cqh, 10px); }
+  .stats-tv .segment-control { padding: .5cqh; }
+  .stats-tv .segment-control button { padding: .9cqh 1.5cqh; font-size: clamp(10px, 2cqh, 13px); }
+  .stats-tv .select-wrap { min-height: 0; padding: .9cqh 10px; }
+  .stats-tv .select-wrap select { font-size: clamp(10px, 2cqh, 13px); }
+  .stats-tv .select-wrap svg { width: clamp(12px, 2.6cqh, 18px); height: clamp(12px, 2.6cqh, 18px); }
+
+  .stats-tv .analytics-column { flex: 1; min-height: 0; gap: 1.8cqh; }
+  .stats-tv .metric-grid { flex: 0 0 auto; gap: 1.4cqh; }
+  .stats-tv .stat-card { padding: 1.7cqh 6px; gap: .5cqh; }
+  .stats-tv .stat-card svg { width: clamp(12px, 2.8cqh, 19px); height: clamp(12px, 2.8cqh, 19px); }
+  .stats-tv .stat-label { font-size: clamp(9px, 2cqh, 13px); }
+  .stats-tv .stat-value, .stats-tv .rating-summary-grid .stat-card .stat-value { font-size: clamp(15px, min(4.9cqh, 4.6cqw), 34px); line-height: 1.05; }
+  .stats-tv .stat-note { font-size: clamp(8px, 1.7cqh, 11px); }
+  .stats-tv .summary-rate-panel { flex: 0 0 auto; padding: 1.4cqh 14px 1.7cqh; }
+  .stats-tv .result-rate { margin-bottom: 1cqh; }
+  .stats-tv .result-rate strong:first-child { font-size: clamp(10px, 2.2cqh, 14px); }
+  .stats-tv .result-rate strong:last-child { font-size: clamp(13px, 3.3cqh, 21px); }
+  .stats-tv .outcome-bar { height: clamp(6px, 1.7cqh, 11px); }
+  /* The chart is the elastic row. */
+  .stats-tv .chart-panel { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; padding: 1.6cqh 14px 1cqh; }
+  .stats-tv .chart-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .stats-tv .chart-heading { flex: 0 0 auto; margin-bottom: .4cqh; }
+  .stats-tv .chart-heading h2 { font-size: clamp(11px, 2.6cqh, 16px); margin: 0 0 .3cqh; }
+  .stats-tv .chart-heading span { font-size: clamp(9px, 1.8cqh, 12px); }
+  .stats-tv .chart-current { font-size: clamp(12px, 3cqh, 20px); }
+  .stats-tv .rating-svg, .stats-tv .overall-chart .rating-svg { flex: 1 1 0; min-height: 0; height: 0; }
+  .stats-tv .status-screen { flex: 1; min-height: 0; margin: 0; }
+
+  .stats-tv .profile-identity { flex: 0 0 auto; gap: 1.8cqh; }
+  .stats-tv .profile-avatar { flex: 0 0 auto; width: clamp(44px, 11cqh, 76px); height: clamp(44px, 11cqh, 76px); }
+  .stats-tv .identity-copy h2 { font-size: clamp(15px, 3.5cqh, 23px); }
+  .stats-tv .identity-copy a { font-size: clamp(9px, 1.8cqh, 11px); }
+  .stats-tv .title-tag { margin-top: 1.2cqh; padding: .8cqh 9px; font-size: clamp(9px, 1.8cqh, 11px); }
+  .stats-tv .copy-profile { flex: 0 0 auto; align-self: flex-start; margin-top: 1.6cqh; padding: .9cqh 9px; font-size: clamp(9px, 1.8cqh, 11px); }
+  .stats-tv .profile-fields { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-top: 1.6cqh; }
+  .stats-tv .profile-field { flex: 1 1 0; min-height: 0; padding: 0; }
+  .stats-tv .profile-field svg { width: clamp(12px, 2.4cqh, 16px); height: clamp(12px, 2.4cqh, 16px); }
+  .stats-tv .profile-field .field-label { font-size: clamp(8px, 1.65cqh, 10.5px); }
+  .stats-tv .profile-field strong { font-size: clamp(10px, 2.05cqh, 13px); line-height: 1.25; }
+}
+
+/* --- Broadcast effects ----------------------------------------------------
+   All one-shot (nothing loops) and limited to opacity, transform, clip-path and the
+   chart's dash offset. --tv-wake holds the content back while the set powers on;
+   after that, channel changes and new data play immediately. */
+.stats-tv[data-fresh='true'] { --tv-wake: .8s; }
+
+/* Power-on: two shutters open from a bright line across the middle of the tube. */
+.stats-tv__screen::before, .stats-tv__screen::after {
+  content: ''; position: absolute; z-index: 3; left: 0; right: 0; height: 50.5%; pointer-events: none;
+  background: #0b0a08; transform: scaleY(0); animation: tv-shutter .4s cubic-bezier(.7, 0, .2, 1) .5s both;
+}
+.stats-tv__screen::before { top: 0; transform-origin: 50% 0; }
+.stats-tv__screen::after { bottom: 0; transform-origin: 50% 100%; }
+@keyframes tv-shutter { from { transform: scaleY(1); } to { transform: scaleY(0); } }
+
+/* On-screen display: the channel label blinks in after a change, holds, then goes. */
+.stats-tv__osd {
+  position: absolute; z-index: 2; right: 20px; bottom: 16px; padding: 5px 10px 4px; pointer-events: none; opacity: 0;
+  background: var(--ink, #1b1c1d); color: var(--paper, #f7f6f3); font: 700 12px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 2.4px; text-transform: uppercase;
+  animation: tv-osd 2.4s steps(1, end) var(--tv-wake, 0s) both;
+}
+.stats-tv__osd b { margin-left: 8px; font-weight: 900; }
+@keyframes tv-osd { 0% { opacity: 0; } 4% { opacity: 1; } 9% { opacity: 0; } 14% { opacity: 1; } 86% { opacity: 1; } 91% { opacity: 0; } 95% { opacity: .7; } 100% { opacity: 0; } }
+
+/* Tune-in: cards, panels and profile rows lock on one after another, left to right and
+   top to bottom, each with a single flicker. --row and --col place a piece in the order. */
+.stats-tv .stat-card, .stats-tv .analytics-column > .panel, .stats-tv .page-title-row > *,
+.stats-tv .profile-identity, .stats-tv .copy-profile, .stats-tv .profile-field {
+  animation: tv-tune-in .5s ease-out calc(var(--tv-wake, 0s) + (var(--row, 0) * 3 + var(--col, 0)) * 55ms) both;
+}
+.stats-tv .analytics-column > :nth-child(1) { --row: 1; }
+.stats-tv .analytics-column > :nth-child(2) { --row: 2; }
+.stats-tv .analytics-column > :nth-child(3) { --row: 3; }
+.stats-tv .analytics-column > :nth-child(4) { --row: 4; }
+.stats-tv .metric-grid > :nth-child(2), .stats-tv .profile-field:nth-child(1) { --col: 1; }
+.stats-tv .metric-grid > :nth-child(3), .stats-tv .profile-field:nth-child(2) { --col: 2; }
+.stats-tv .metric-grid > :nth-child(4), .stats-tv .profile-field:nth-child(3) { --col: 3; }
+.stats-tv .profile-field:nth-child(4) { --col: 4; }
+.stats-tv .profile-field:nth-child(5) { --col: 5; }
+.stats-tv .profile-field:nth-child(6) { --col: 6; }
+.stats-tv .profile-field:nth-child(7) { --col: 7; }
+.stats-tv .profile-field:nth-child(8) { --col: 8; }
+.stats-tv .profile-field:nth-child(9) { --col: 9; }
+@keyframes tv-tune-in {
+  0%   { opacity: 0; transform: translateY(8px) scaleY(.9); }
+  35%  { opacity: 1; transform: translateX(-3px); }
+  50%  { opacity: .3; transform: translateX(2px); }
+  65%, 100% { opacity: 1; transform: none; }
+}
+/* Numbers count up (components/ui/animated-number); fixed-width digits stop them jittering. */
+.stats-tv .animated-number { font-variant-numeric: tabular-nums; }
+
+/* Results bar: wipes in from the left; segments glide when the filters change. */
+.stats-tv .outcome-bar { animation: tv-wipe .9s cubic-bezier(.2, .8, .2, 1) calc(var(--tv-wake, 0s) + .35s) both; }
+.stats-tv .outcome-bar span { transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+@keyframes tv-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+
+/* Rating chart: the line draws itself, the fill fades in under it, the last point lands.
+   The chart re-keys its drawing on new data, so this replays for every new period. */
+.stats-tv .rating-line { stroke-dasharray: 1; animation: tv-draw 1.2s ease-out calc(var(--tv-wake, 0s) + .3s) both; }
+.stats-tv .rating-area { animation: tv-fade .7s ease-out calc(var(--tv-wake, 0s) + 1s) both; }
+.stats-tv .rating-dot { transform-box: fill-box; transform-origin: center; animation: tv-land .45s cubic-bezier(.2, 1.6, .4, 1) calc(var(--tv-wake, 0s) + 1.4s) both; }
+@keyframes tv-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes tv-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tv-land { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+
+@media (max-width: 900px) {
+  .stats-tv__screen::before, .stats-tv__screen::after { animation-delay: .15s; }
+  .stats-tv[data-fresh='true'] { --tv-wake: .45s; }
+}
+/* Reduced motion: no effects at all. Channels change with a plain cut and everything is
+   simply there (the count-up is switched off in animated-number as well). */
 @media (prefers-reduced-motion: reduce) {
-  .stats-tv__picture, .stats-tv__static { animation: none; }
-  .stats-tv__channels button { transition: none; }
+  .stats-tv *, .stats-tv *::before, .stats-tv *::after { animation: none !important; transition: none !important; }
 }

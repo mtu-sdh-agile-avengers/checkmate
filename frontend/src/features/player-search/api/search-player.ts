@@ -1,28 +1,31 @@
+import { getApiMode } from '@/config/api';
+import { apiGet } from '@/lib/api-client';
 import { mockFindPlayer } from '@/lib/mock-api';
+import type { PlayerSearchResult } from '@/features/player-search/types/search';
 import { parseChessUsername } from '@/features/player-search/utils/parse-query';
-import type { Player } from '@/types/chess';
 
-/*
- * TODO(CMG4-47): connect the search to the backend API.
+/** Response of GET /api/v1/players/?search={username|url} (backend: PlayerSearchProfileResponse). */
+export type PlayerSearchDto = {
+  username: string;
+  url: string;
+  avatar: string | null;
+  title: string | null;
+};
+
+/**
+ * Finds a Chess.com player by username or member profile URL.
  *
- * BLOCKED by CMG4-83: `GET /api/v1/players/?search={username|url}` is routed in
- * backend/app/src/api/v1/players.py, but `ChessComPlayersService.search` still raises
- * NotImplementedError, so calling it in live mode would fail for every player.
- *
- * When the endpoint works, follow get-player.ts and get-summary.ts:
- *
- *   if (getApiMode() === 'mock') return mockFindPlayer(username);
- *   const dto = await apiGet<PlayerSearchDto>('/players/', { search: username });
- *
- * - The response (backend: PlayerSearchProfileResponse) is { username, url, avatar, title },
- *   which is narrower than `Player`: agree the return type first. SearchForm only reads `username`.
- * - A 404 becomes an ApiError; SearchForm already shows its message on the search page
- *   (role="alert"), so "player not found" needs no extra UI.
- *
- * Until then both modes resolve from demo data, and in live mode an unknown player is
- * reported by the profile view after the redirect.
+ * The input is validated here first, so an invalid username never reaches the API.
+ * Errors (e.g. 404 "No Chess.com player found for ...") are thrown as `ApiError` with a
+ * message SearchForm shows as it is.
  */
-export async function searchPlayer(input: string): Promise<Player> {
+export async function searchPlayer(input: string): Promise<PlayerSearchResult> {
   const username = parseChessUsername(input);
-  return mockFindPlayer(username);
+
+  if (getApiMode() === 'mock') {
+    const { url, avatar, title } = await mockFindPlayer(username);
+    return { username, url, avatar, title };
+  }
+
+  return apiGet<PlayerSearchDto>('/players/', { search: username });
 }

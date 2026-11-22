@@ -1,5 +1,6 @@
 import { Suspense, lazy } from 'react';
 import { useParams } from 'react-router-dom';
+import { usePlayer } from '@/features/player-profile/hooks/use-player';
 import { SearchPage } from '@/features/player-search/components/search-page';
 import './stage-layout.css';
 
@@ -16,10 +17,13 @@ const PlayerView = lazy(() => import('@/app/player-view').then((m) => ({ default
  */
 export function StageLayout() {
   const { username } = useParams<{ username: string }>();
+  // Same query as the profile panel, so this costs no extra request: it is only here to
+  // put the player's picture on the figure in the opponent's seat.
+  const { data: player } = usePlayer(username ?? '');
   return (
     <div className="stage-screen" data-view={username ? 'player' : 'search'}>
       {/* First in the markup, so reading and tab order start with the search. */}
-      <SearchPage guest={username} />
+      <SearchPage guest={username} guestAvatar={player?.avatar} />
       {username && <Suspense fallback={null}><PlayerView key={username} username={username} /></Suspense>}
       <Suspense fallback={null}><ChessStage /></Suspense>
     </div>

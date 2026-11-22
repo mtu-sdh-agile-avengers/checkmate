@@ -49,3 +49,28 @@ export type OverallStats = {
   averageOpponent: number;
   ratingHistory: RatingPoint[];
 };
+
+export type PlayerColor = 'white' | 'black';
+export type GameResult = 'win' | 'loss' | 'draw';
+
+/** One side of a game; `rating` is the player's rating after the game. */
+export type GamePlayer = { username: string; rating: number; color: PlayerColor };
+
+/** One game for the game page (CMG4-17), seen by `player` (the player whose page it is). */
+export type GameDetails = {
+  id: string;
+  url: string;
+  timeClass: TimeClass;
+  timeControl: string; // e.g. "3 min + 2 s", "1 day / move"
+  endTime: number; // unix seconds (UTC)
+  date: string; // e.g. "Oct 31, 2026"
+  rated: boolean;
+  rules: string; // "chess" for standard chess, otherwise the variant ("chess960", ...)
+  result: GameResult; // result of `player`
+  player: GamePlayer;
+  opponent: GamePlayer;
+  averageRating: number;
+  pgn: string; // whole game in PGN (headers, moves and clock comments) for the replay
+  initialFen: string;
+  finalFen: string;
+};

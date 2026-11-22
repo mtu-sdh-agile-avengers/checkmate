@@ -1,3 +1,5 @@
+import { useId, useState } from 'react';
+
 /* Cut-paper artwork for the chess stage: flat silhouettes in the ivory/charcoal palette
    with a die-cut edge, like stickers. Everything here is decorative and aria-hidden;
    the scene that uses it carries the text description. */
@@ -109,16 +111,26 @@ const OPPONENT_CHAIR = [
 ];
 
 /** The opponent's chair: lit, empty and waiting on the search view. Once a player has been
- *  found, an anonymous guest takes the seat: the same seated figure mirrored to face the
- *  table, bare-headed, in ivory, with a question mark for a face.
+ *  found, a guest takes the seat: the same seated figure mirrored to face the table,
+ *  bare-headed, in ivory. If the player has a profile picture (`avatar`) it becomes the
+ *  guest's head; without one, or if the picture fails to load, the face is a question mark.
  *  Same floor and table heights as the player. */
-export function OpponentChair({ occupied = false }: { occupied?: boolean }) {
+export function OpponentChair({ occupied = false, avatar }: { occupied?: boolean; avatar?: string | null }) {
+  const clip = `head${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const [broken, setBroken] = useState<string | null>(null);
+  const picture = avatar && avatar !== broken ? avatar : null;
   return <svg className="opponent-chair" data-occupied={occupied} viewBox="0 0 150 340" aria-hidden="true" focusable="false">
     <Cutout shapes={OPPONENT_CHAIR} fill={IVORY} edge="#0b0b0c" width={5} shadow />
     <path d="M32 218 H114 Q121 218 121 224 V229 H27 V224 Q27 218 32 218 Z" fill={STONE} stroke="#0b0b0c" strokeWidth="2.5" strokeLinejoin="round" />
     {occupied && <g className="opponent-guest">
       <g transform="translate(154 0) scale(-1 1)"><Cutout shapes={GUEST} fill={IVORY} edge="#0b0b0c" width={5} /></g>
-      <text x="20" y="63" textAnchor="middle" fontSize="30" fontWeight="900" fill={INK}>?</text>
+      {picture ? <g className="opponent-guest__face">
+        {/* The picture sits over the drawn head, a little larger, like a cut-out photo on a stick figure. */}
+        <clipPath id={clip}><circle cx="20" cy="49" r="28" /></clipPath>
+        <circle cx="20" cy="49" r="28" fill={IVORY} />
+        <image href={picture} x="-8" y="21" width="56" height="56" preserveAspectRatio="xMidYMid slice" clipPath={`url(#${clip})`} onError={() => setBroken(picture)} />
+        <circle cx="20" cy="49" r="28" fill="none" stroke="#0b0b0c" strokeWidth="3" />
+      </g> : <text x="20" y="63" textAnchor="middle" fontSize="30" fontWeight="900" fill={INK}>?</text>}
     </g>}
   </svg>;
 }

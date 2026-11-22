@@ -49,9 +49,12 @@ export function RatingChart({
           const y = yEnd - ((tick - minimum) / Math.max(1, maximum - minimum)) * (yEnd - yStart);
           return <g key={tick}><line x1={xStart} y1={y} x2={xEnd} y2={y} stroke="#dedbd5" strokeWidth="1"/><text x="5" y={y + 4} fontSize="14" fill="#77736d">{formatNumber(Math.round(tick))}</text></g>;
         })}
-        <polygon points={area} fill={`url(#${gradientId})`} />
-        <polyline points={line} fill="none" stroke="#202020" strokeWidth="3.25" strokeLinejoin="round" strokeLinecap="round" />
-        {lastPoint && <circle cx={lastPoint.x} cy={lastPoint.y} r="5" fill="#202020" />}
+        {/* Keyed by the data, so a stylesheet that animates the line (the television does) redraws it for new data. */}
+        <g key={line}>
+          <polygon className="rating-area" points={area} fill={`url(#${gradientId})`} />
+          <polyline className="rating-line" pathLength={1} points={line} fill="none" stroke="#202020" strokeWidth="3.25" strokeLinejoin="round" strokeLinecap="round" />
+          {lastPoint && <circle className="rating-dot" cx={lastPoint.x} cy={lastPoint.y} r="5" fill="#202020" />}
+        </g>
         <text x={xStart} y="246" fontSize="14" fill="#77736d">{dateLabel(firstDate)}</text>
         <text x={xEnd} y="246" fontSize="14" textAnchor="end" fill="#77736d">{dateLabel(lastDate)}</text>
       </svg>

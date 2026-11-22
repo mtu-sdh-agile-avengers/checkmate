@@ -10,8 +10,6 @@ Special usernames for testing frontend states:
 
 from datetime import UTC, datetime, timedelta
 
-import json
-
 from src.chesscom.exceptions import ChessAPINotFoundError
 from src.enums import SummaryPeriod, TimeClass
 from src.schemas.players import (
@@ -88,7 +86,15 @@ def _mock_rating_history(
 
 class MockPlayersService(PlayersService):
     async def search(self, username: str) -> PlayerSearchProfileResponse:
-        raise NotImplementedError("Mock player search is not implemented yet")
+        if username.casefold() == MOCK_NOT_FOUND_USERNAME:
+            raise ChessAPINotFoundError(f"/player/{username}")
+
+        return PlayerSearchProfileResponse(
+            username=username,
+            url=f"https://www.chess.com/member/{username}",
+            avatar=_MOCK_PROFILE.avatar,
+            title=_MOCK_PROFILE.title,
+        )
 
     async def compare(self, query: PlayerComparisonQuery) -> PlayerComparisonResponse:
         raise NotImplementedError("Mock player comparison is not implemented yet")

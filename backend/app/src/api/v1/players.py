@@ -2,14 +2,15 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Request
 
-from src.rate_limiting import limiter
 from src.dependencies import PlayersServiceDep
+from src.rate_limiting import limiter
 from src.schemas.common import ErrorResponse
 from src.schemas.players import (
     PlayerComparisonQuery,
     PlayerComparisonResponse,
     PlayerProfileResponse,
     PlayerSearchProfileResponse,
+    PlayerSearchQuery,
     PlayerStatisticSummaryResponse,
     PlayerSummaryQuery,
 )
@@ -19,13 +20,27 @@ router = APIRouter(prefix="/players", tags=["players"])
 
 # GET /api/v1/players/?search={username|url}
 @router.get(
-    "/", summary="Find player", description="Finds a player by username or profile URL."
+    "/",
+    summary="Find player",
+    description=(
+        "Finds a Chess.com player by username or member profile URL "
+        "(e.g. `https://www.chess.com/member/Hikaru`). Returns the short profile "
+        "the search page needs to open the player view."
+    ),
+    responses={
+        404: {"model": ErrorResponse, "description": "Player does not exist"},
+        422: {"description": "`search` is not a valid username or profile URL"},
+        502: {"model": ErrorResponse, "description": "Unexpected Chess.com response"},
+        503: {"model": ErrorResponse, "description": "Chess.com is not available"},
+    },
 )
 @limiter.limit("1/second")
 async def search_player(
-    request: Request, search: str, service: PlayersServiceDep
+    request: Request,
+    query: Annotated[PlayerSearchQuery, Query()],
+    service: PlayersServiceDep,
 ) -> PlayerSearchProfileResponse:
-    return await service.search(search)
+    return await service.search(query.username)
 
 
 # GET /api/v1/players/compare?p1={username|url}&p2={username|url}&timeClass={bullet|blitz|rapid|daily}
@@ -50,16 +65,14 @@ async def compare_players(
     description="Returns Chess.com player profile record.",
     response_model=PlayerProfileResponse,
     responses={
-            404: {"model": ErrorResponse, "description": "Player does not exist"},
-            502: {"model": ErrorResponse, "description": "Unexpected Chess.com response"},
-            503: {"model": ErrorResponse, "description": "Chess.com is not available"},
-        }
+        404: {"model": ErrorResponse, "description": "Player does not exist"},
+        502: {"model": ErrorResponse, "description": "Unexpected Chess.com response"},
+        503: {"model": ErrorResponse, "description": "Chess.com is not available"},
+    },
 )
 @limiter.limit("1/second")
 async def get_player_profile(
-    request: Request,
-    username: str,
-    service: PlayersServiceDep
+    request: Request, username: str, service: PlayersServiceDep
 ) -> PlayerProfileResponse:
     return await service.get_profile(username)
 

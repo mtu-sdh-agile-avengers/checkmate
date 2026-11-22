@@ -1,12 +1,12 @@
 import { BarChart3, Crown, Equal, Trophy, X } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { getApiMode } from '@/config/api';
+import { AnimatedNumber } from '@/components/ui/animated-number';
 import { PageError, PageLoading } from '@/components/ui/page-status';
 import { Panel } from '@/components/ui/panel';
 import { RatingChart } from '@/components/ui/rating-chart';
 import { StatCard } from '@/components/ui/stat-card';
 import { useOverall } from '@/features/overall-statistics/hooks/use-overall';
-import { formatNumber } from '@/utils/format';
 
 /** All-time panel of the single player view. */
 export function OverallPage() {
@@ -18,15 +18,15 @@ export function OverallPage() {
       {isPending ? <PageLoading /> : error ? <PageError message={error.message} onRetry={() => void refetch()} /> : data ? (
         <div className="analytics-column">
           <div className="metric-grid metric-grid-four">
-            <StatCard icon={BarChart3} label="Games" value={formatNumber(data.games)} />
-            <StatCard icon={Crown} label="Wins" value={formatNumber(data.wins)} note={`${data.winRate}% win rate`} />
-            <StatCard icon={Equal} label="Draws" value={formatNumber(data.draws)} />
-            <StatCard icon={X} label="Losses" value={formatNumber(data.losses)} />
+            <StatCard icon={BarChart3} label="Games" value={<AnimatedNumber value={data.games} />} />
+            <StatCard icon={Crown} label="Wins" value={<AnimatedNumber value={data.wins} />} note={`${data.winRate}% win rate`} />
+            <StatCard icon={Equal} label="Draws" value={<AnimatedNumber value={data.draws} />} />
+            <StatCard icon={X} label="Losses" value={<AnimatedNumber value={data.losses} />} />
           </div>
           <Panel className="chart-panel overall-chart"><RatingChart points={data.ratingHistory} title="Rating progression" subtitle="All available sample history" /></Panel>
           <div className="metric-grid metric-grid-two">
-            <StatCard icon={Trophy} label="Peak rating" value={formatNumber(data.peakRating)} note={data.peakDate} />
-            <StatCard icon={BarChart3} label="Average opponent" value={formatNumber(data.averageOpponent)} />
+            <StatCard icon={Trophy} label="Peak rating" value={<AnimatedNumber value={data.peakRating} />} note={data.peakDate} />
+            <StatCard icon={BarChart3} label="Average opponent" value={<AnimatedNumber value={data.averageOpponent} />} />
           </div>
         </div>
       ) : null}
