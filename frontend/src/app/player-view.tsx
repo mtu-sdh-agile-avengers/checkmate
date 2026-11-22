@@ -17,10 +17,15 @@ const CHANNELS: readonly TvChannel<StatsChannel>[] = [
  * The single player view: profile and both sets of statistics on the television beside the
  * opponent's seat. The channel lives in the URL (`?stats=overall`), so old /overall links
  * and the browser's back button keep working.
+ *
+ * `leaving`: the visitor has gone back to the search and the camera is panning away. The set
+ * keeps its player and channel while it goes, and is hidden from assistive technology.
  */
-export function PlayerView({ username }: { username: string }) {
+export function PlayerView({ username, leaving = false }: { username: string; leaving?: boolean }) {
   const [params, setParams] = useSearchParams();
-  const channel: StatsChannel = params.get('stats') === 'overall' ? 'overall' : 'recent';
+  const requested: StatsChannel = params.get('stats') === 'overall' ? 'overall' : 'recent';
+  const [channel, setChannel] = useState(requested);
+  if (!leaving && channel !== requested) setChannel(requested);
   // The overall panel is mounted on its first visit and then kept, like the recent one,
   // so switching back and forth does not refetch or reset the filters.
   const [overallOpened, setOverallOpened] = useState(channel === 'overall');
@@ -30,7 +35,7 @@ export function PlayerView({ username }: { username: string }) {
   useEffect(() => { heading.current?.focus({ preventScroll: true }); }, []);
 
   return (
-    <>
+    <div className="player-view" data-leaving={leaving || undefined} inert={leaving} aria-hidden={leaving || undefined}>
       <Link className="stage-back" to={ROUTES.search}><ArrowLeft size={18} aria-hidden="true" /> Back to search</Link>
       <section className="player-set" aria-labelledby="player-view-title">
         <h1 id="player-view-title" className="sr-only" tabIndex={-1} ref={heading}>Player {username}</h1>
@@ -39,12 +44,12 @@ export function PlayerView({ username }: { username: string }) {
           channels={CHANNELS}
           channel={channel}
           onChannel={(next) => setParams(next === 'overall' ? { stats: 'overall' } : {}, { replace: true })}
-          side={<ProfilePage />}
+          side={<ProfilePage username={username} />}
         >
-          <div hidden={channel !== 'recent'}><SummaryPage /></div>
-          {overallOpened && <div hidden={channel !== 'overall'}><OverallPage /></div>}
+          <div hidden={channel !== 'recent'}><SummaryPage username={username} /></div>
+          {overallOpened && <div hidden={channel !== 'overall'}><OverallPage username={username} /></div>}
         </StatsTv>
       </section>
-    </>
+    </div>
   );
 }

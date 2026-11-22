@@ -1,0 +1,171 @@
+/* The VS screen: a television of the same make as the stats TV, lowered over the table on two
+   cables. Its screen is split down the middle, Player 1 on ink (White), Player 2 on paper
+   (Black), with the VS badge on the seam.
+
+   Sequence on first arrival (times from the view opening; reduced motion skips all of it):
+     0–1.4s     camera arrives over the table (tabletop.css)
+     1.25s      the set drops: 0.58s falling (ease-in), lands, two bounces, settled by 2.3s
+     1.83s      it swings on its cables, damped, for 0.9s
+     2.3s       power on: two shutters open from the middle (0.4s)
+     2.6s       title, slots and badge tune in one after another (90ms apart)
+   --drop-at moves the whole sequence (a set dropped again to change players starts at once). */
+.vs-rig {
+  --drop-at: 1.25s; --power-at: calc(var(--drop-at) + 1.05s);
+  position: absolute; inset: 0; z-index: 8; display: grid; place-items: center; padding: 76px 24px 36px; pointer-events: none;
+}
+.vs-tv { position: relative; width: min(860px, 100%); pointer-events: auto; animation: vs-drop 1.05s linear var(--drop-at) both; }
+/* The cables it hangs from, up into the lighting rig. */
+.vs-tv::before, .vs-tv::after { content: ''; position: absolute; bottom: 100%; width: 3px; height: 100vh; background: linear-gradient(180deg, #19191b, #3c3b39); }
+.vs-tv::before { left: 16%; }
+.vs-tv::after { right: 16%; }
+@keyframes vs-drop {
+  0% { transform: translateY(calc(-100vh - 100%)); animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
+  55% { transform: translateY(16px); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  72% { transform: translateY(-7px); animation-timing-function: ease-in-out; }
+  86% { transform: translateY(2px); animation-timing-function: ease-in-out; }
+  100% { transform: none; }
+}
+.vs-tv__cabinet {
+  padding: 14px 14px 0; border: 2px solid #0b0a08; border-radius: 16px; transform-origin: 50% -60%;
+  background: linear-gradient(155deg, #4a4947 0, #2c2b29 14%, #1f1e1c 60%, #121110 100%);
+  box-shadow: inset 1px 1px 0 rgb(154 152 149 / .35), 0 26px 44px rgb(0 0 0 / .6);
+  animation: vs-swing .9s ease-out calc(var(--drop-at) + .58s) both;
+}
+@keyframes vs-swing { 0% { transform: rotate(1.4deg); } 35% { transform: rotate(-.8deg); } 65% { transform: rotate(.3deg); } 100% { transform: none; } }
+
+/* --- Screen ---------------------------------------------------------------- */
+.vs-tv__screen {
+  position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-rows: auto 1fr;
+  min-height: 340px; border: 3px solid #0d0c0a; border-radius: 26px / 22px; box-shadow: 0 0 0 5px #1a1917, 0 0 0 6px #5f5e5c;
+  background: linear-gradient(90deg, #1b1c1d 50%, #f4f2ec 50%);
+}
+.vs-tv__head { grid-column: 1 / -1; position: relative; z-index: 1; display: grid; justify-items: center; gap: 8px; padding: 18px 16px 6px; }
+.vs-tv__eyebrow { padding: 4px 8px 3px; background: #80796d; color: #fffefa; font: 800 10px/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 2px; text-transform: uppercase; }
+.vs-tv__title {
+  margin: 0; padding: 6px 14px 7px; border: 2px solid #0b0b0c; background: var(--paper); color: var(--ink); box-shadow: 4px 4px 0 #80796d;
+  font-size: clamp(20px, 2.4vw, 28px); line-height: 1.05; letter-spacing: -.6px; font-weight: 850; transform: rotate(-2deg);
+}
+.vs-slot[data-slot='1'] { grid-column: 1; grid-row: 2; }
+.vs-tv__vs { grid-column: 2; grid-row: 2; }
+.vs-slot[data-slot='2'] { grid-column: 3; grid-row: 2; }
+
+/* The VS badge sits on the seam: VS while waiting, READY once both are locked, LOCKED IN on confirm. */
+.vs-tv__vs { position: relative; z-index: 1; align-self: center; display: grid; place-items: center; width: 84px; height: 84px; }
+.vs-tv__vs span {
+  display: grid; place-items: center; width: 100%; height: 100%; border: 3px solid #0b0b0c; border-radius: 50%;
+  background: var(--paper); color: var(--ink); box-shadow: 4px 4px 0 #80796d; transform: rotate(-8deg);
+  font-size: 28px; font-style: italic; font-weight: 900; letter-spacing: -1px; text-align: center; text-transform: uppercase;
+}
+.vs-tv__vs[data-state='ready'] span { background: var(--ink); color: var(--paper); font-size: 13px; font-style: normal; letter-spacing: 1.2px; line-height: 1.05; }
+
+/* --- Slots ----------------------------------------------------------------- */
+.vs-slot { display: grid; justify-items: center; align-content: start; gap: 10px; min-width: 0; padding: 14px 22px 22px; text-align: center; }
+.vs-slot[data-tone='ink'] { color: #f7f6f3; }
+.vs-slot[data-tone='paper'] { color: #1b1c1d; }
+.vs-slot__label { margin: 0; font: 800 12px/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 2px; text-transform: uppercase; }
+.vs-slot__label span { opacity: .7; }
+.vs-slot__avatar { display: grid; place-items: center; width: 72px; height: 72px; overflow: hidden; border: 3px solid currentColor; border-radius: 50%; font-size: 32px; font-weight: 900; }
+.vs-slot__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.vs-slot[data-tone='ink'] .vs-slot__avatar { background: #2c2c2e; }
+.vs-slot[data-tone='paper'] .vs-slot__avatar { background: #e8e5de; }
+.vs-slot[data-tone='ink'][data-state='locked'] .vs-slot__avatar { background: #f7f6f3; color: #1b1c1d; }
+.vs-slot[data-tone='paper'][data-state='locked'] .vs-slot__avatar { background: #1b1c1d; color: #f7f6f3; }
+
+.vs-slot__form { display: flex; width: 100%; max-width: 300px; }
+.vs-slot__input {
+  flex: 1; min-width: 0; height: 46px; padding: 0 12px; border: 2px solid currentColor; border-right: 0; border-radius: 0;
+  background: transparent; color: inherit; font-size: 15px;
+}
+.vs-slot__input::placeholder { color: currentColor; opacity: .55; }
+.vs-slot__input[aria-invalid='true'] { border-style: dashed; }
+/* Looking the player up: the field holds still and the button says so. */
+.vs-slot[data-state='checking'] .vs-slot__input { opacity: .7; }
+.vs-slot[data-state='checking'] .vs-slot__lock { opacity: .75; cursor: progress; }
+.vs-slot__lock { height: 46px; padding: 0 14px; border: 2px solid currentColor; border-radius: 0; font-weight: 800; white-space: nowrap; }
+.vs-slot[data-tone='ink'] .vs-slot__lock { background: #f7f6f3; color: #1b1c1d; }
+.vs-slot[data-tone='paper'] .vs-slot__lock { background: #1b1c1d; color: #f7f6f3; }
+.vs-slot__input:focus-visible, .vs-slot__lock:focus-visible, .vs-slot__change:focus-visible { outline: 3px solid #80796d; outline-offset: 2px; }
+.vs-slot__locked { display: grid; justify-items: center; gap: 2px; max-width: 100%; }
+.vs-slot__name { display: flex; align-items: center; gap: 8px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 24px; font-weight: 850; letter-spacing: -.5px; }
+.vs-slot__title { flex: none; padding: 3px 6px 2px; border: 2px solid currentColor; font-size: 11px; font-weight: 900; letter-spacing: 1px; }
+.vs-slot__link { font-size: 12px; opacity: .7; }
+.vs-slot__change { margin-top: 2px; padding: 4px 6px; border: 0; background: none; color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+/* Problems are told in words with an icon and a dashed field, never by colour. */
+.vs-slot__message { max-width: 300px; min-height: 2.8em; margin: 0; font-size: 12.5px; line-height: 1.4; opacity: .78; }
+.vs-slot__message[data-error] { display: flex; align-items: flex-start; gap: 6px; font-weight: 700; text-align: left; opacity: 1; }
+.vs-slot__message svg { flex: none; margin-top: 1px; }
+
+/* --- Glass and power-on ----------------------------------------------------- */
+.vs-tv__glass {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 60%, rgb(10 9 7 / .22) 100%), repeating-linear-gradient(180deg, transparent 0 2px, rgb(10 9 7 / .05) 2px 3px);
+}
+.vs-tv__screen::before, .vs-tv__screen::after {
+  content: ''; position: absolute; z-index: 3; left: 0; right: 0; height: 50.5%; pointer-events: none;
+  background: #0b0a08; transform: scaleY(0); animation: vs-shutter .4s cubic-bezier(.7, 0, .2, 1) var(--power-at) both;
+}
+.vs-tv__screen::before { top: 0; transform-origin: 50% 0; }
+.vs-tv__screen::after { bottom: 0; transform-origin: 50% 100%; }
+@keyframes vs-shutter { from { transform: scaleY(1); } to { transform: scaleY(0); } }
+.vs-tune { animation: vs-tune .45s ease-out calc(var(--power-at) + .3s + var(--n, 0) * 90ms) both; }
+.vs-slot[data-slot='1'] { --n: 1; }
+.vs-tv__vs { --n: 2; }
+.vs-slot[data-slot='2'] { --n: 3; }
+@keyframes vs-tune {
+  0% { opacity: 0; transform: translateY(6px) scaleY(.9); }
+  40% { opacity: 1; transform: translateX(-3px); }
+  55% { opacity: .35; transform: translateX(2px); }
+  70%, 100% { opacity: 1; transform: none; }
+}
+
+/* --- Cabinet controls ------------------------------------------------------- */
+.vs-tv__controls { display: flex; align-items: center; gap: 14px; padding: 11px 6px 12px; }
+.vs-tv__grille { flex: none; width: 110px; height: 14px; background: repeating-linear-gradient(180deg, #0e0d0b 0 2px, transparent 2px 5px); }
+.vs-tv__hint { flex: 1; min-width: 0; margin: 0; color: #d6d3cc; font: 600 12px/1.35 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .3px; }
+.vs-tv__keys { display: flex; gap: 8px; }
+.tv-key {
+  min-width: 104px; min-height: 42px; padding: 8px 16px; border: 2px solid #0b0a08; border-radius: 4px;
+  background: #2c2b29; color: #ece9e2; font-size: 13px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase;
+  box-shadow: 0 3px 0 #0b0a08, inset 0 1px 0 rgb(255 255 255 / .12); transition: transform .08s, box-shadow .08s, background .12s;
+}
+.tv-key:hover:not(:disabled) { background: #3b3a37; }
+.tv-key:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 #0b0a08, inset 0 2px 3px rgb(0 0 0 / .25); }
+.tv-key--primary:not(:disabled) { background: var(--paper); color: var(--ink); }
+.tv-key--primary:hover:not(:disabled) { background: #fffefa; }
+.tv-key:disabled { opacity: .45; box-shadow: none; }
+.tv-key:focus-visible { outline: 3px solid #f7f6f3; outline-offset: 3px; }
+
+/* --- Confirm and leave ----------------------------------------------------------
+   Confirm: the badge is stamped LOCKED IN and both slots flicker; then the set is raised. */
+.vs-rig:is([data-phase='locking'], [data-phase='rising']) .vs-tv__vs span { animation: vs-stamp .35s steps(1, end) both; }
+.vs-rig:is([data-phase='locking'], [data-phase='rising']) .vs-slot { animation: vs-flash .45s steps(1, end) both; }
+@keyframes vs-stamp { 0% { opacity: 0; transform: rotate(-8deg) scale(1.7); } 30% { opacity: 1; } 60% { transform: rotate(-8deg) scale(.92); } 100% { opacity: 1; transform: rotate(-8deg); } }
+@keyframes vs-flash { 0%, 50% { opacity: .35; } 25%, 75%, 100% { opacity: 1; } }
+.vs-rig:is([data-phase='rising'], [data-leaving]) .vs-tv { animation: vs-rise .45s cubic-bezier(.55, 0, 1, .45) both; }
+@keyframes vs-rise { from { transform: none; } to { transform: translateY(calc(-100vh - 100%)); } }
+
+/* --- Narrow screens -----------------------------------------------------------
+   Below 1100px the set hangs above the table in the page column; below 700px its two
+   halves stack, Player 1 above Player 2, with the badge on the seam between them. */
+@media (max-width: 1099px) {
+  .vs-rig { position: relative; inset: auto; order: -1; width: 100%; padding: 0 12px; }
+}
+@media (max-width: 700px) {
+  .vs-tv__screen { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; background: #f4f2ec; }
+  .vs-tv__head { grid-row: 1; background: #1b1c1d; }
+  .vs-slot[data-slot='1'] { grid-column: 1; grid-row: 2; background: #1b1c1d; padding-bottom: 34px; }
+  .vs-tv__vs { grid-column: 1; grid-row: 3; justify-self: center; width: 64px; height: 64px; margin: -32px 0; }
+  .vs-tv__vs span { font-size: 22px; }
+  .vs-slot[data-slot='2'] { grid-column: 1; grid-row: 4; padding-top: 34px; }
+  .vs-tv__controls { flex-wrap: wrap; }
+  .vs-tv__grille { display: none; }
+  .vs-tv__hint { flex-basis: 100%; }
+  .vs-tv__keys { width: 100%; }
+  .tv-key { flex: 1; min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vs-tv, .vs-tv__cabinet, .vs-tv__screen::before, .vs-tv__screen::after, .vs-tune,
+  .vs-rig:is([data-phase='locking'], [data-phase='rising']) :is(.vs-tv__vs span, .vs-slot),
+  .vs-rig:is([data-phase='rising'], [data-leaving]) .vs-tv { animation: none; }
+  .tv-key { transition: none; }
+}

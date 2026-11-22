@@ -1,0 +1,17 @@
+/* Who is playing: one row per side, a square chip in the side's colour, White to move. */
+.match-panel__seats { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.match-panel__seat {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  padding: 10px 12px; border: 2px solid #d2cec6; background: #fffefa;
+}
+.match-panel__seat[data-color='white'] { border-color: #0b0b0c; box-shadow: 4px 4px 0 #80796d; }
+.match-panel__chip { width: 22px; height: 22px; border: 2px solid #0b0b0c; background: #efece5; }
+.match-panel__seat[data-color='black'] .match-panel__chip { background: #121213; }
+.match-panel__who { display: grid; min-width: 0; }
+.match-panel__who strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+.match-panel__who small { color: #6f6b64; font-size: 12px; }
+.match-panel__turn { padding: 4px 7px 3px; background: var(--ink); color: var(--paper); font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; }
+.match-panel__note {
+  margin: 0; padding: 10px 12px; border-left: 3px solid #80796d; background: #ece9e2;
+  color: #4a4844; font-size: 13px; line-height: 1.45;
+}

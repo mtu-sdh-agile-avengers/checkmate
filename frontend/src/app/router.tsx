@@ -29,10 +29,13 @@ export function AppRouter() {
     <Suspense fallback={<PageLoading label="Loading page…" />}>
       <Routes>
         <Route element={<AppLayout />}>
-          {/* One layout for search and player view, so the stage stays mounted and the camera can move between them. */}
+          {/* One layout for every view on the stage (search, player, In-Game Chess, Deliberation),
+              so the stage stays mounted and the camera can move between them. */}
           <Route element={<StageLayout />}>
             <Route index element={null} />
             <Route path="players/:username" element={null} />
+            <Route path="play" element={null} />
+            <Route path="deliberation" element={null} />
           </Route>
           <Route path="players/:username/summary" element={<ToPlayerView />} />
           <Route path="players/:username/overall" element={<ToPlayerView stats="overall" />} />
