@@ -54,12 +54,14 @@ const place = (spot: Spot) => ({
   '--turn': `${spot.turn ?? 0}deg`, '--tilt': `${spot.tilt ?? 0}deg`,
 }) as CSSProperties;
 
-export function ChessStage() {
+/** `dormant`: the stage is out of view (the top-down views), so it stops animating and
+ *  listening to the pointer until it is back; the pause button keeps its own state. */
+export function ChessStage({ dormant = false }: { dormant?: boolean }) {
   const id = `stage${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const [paused, setPaused] = useState(false);
   const stage = useRef<HTMLElement>(null);
-  const signals = useTvSignals(paused, TVS.length);
-  useStageParallax(stage, paused);
+  const signals = useTvSignals(paused || dormant, TVS.length);
+  useStageParallax(stage, paused || dormant);
 
   const tv = (spot: TvSpot, index: number) => <div key={`tv-${index}`} className="stage-tv" data-extra={spot.extra} style={place(spot)}>
     <i className="stage-tv__side stage-tv__side--left" /><i className="stage-tv__side stage-tv__side--right" />
@@ -79,12 +81,11 @@ export function ChessStage() {
     {PIECES.map((spot, index) => Boolean(spot.front) === front ? piece(spot, index) : null)}
   </>;
 
-  return <figure className="chess-stage" data-paused={paused} ref={stage}>
+  return <figure className="chess-stage" data-paused={paused} data-dormant={dormant} ref={stage}>
     <div className="chess-stage__art" role="img" aria-label="A dark television studio with a chessboard floor. Piles of vintage televisions flicker between static and brief broadcasts of chess pieces, and giant chess pieces stand and lie scattered across the stage. Under a spotlight a figure in a hat sits at the table, facing an empty chair.">
       <CrtDefs id={id} />
       <div className="stage-backwall">
         <StudioRig />
-        <span className="stage-sign">On air</span>
       </div>
       {/* The floor has a 3D view to itself: props always stand in front of it, so it never
           needs depth-sorting against them, and its light is a flat overlay that costs nothing

@@ -3,8 +3,8 @@ import { useId, useState } from 'react';
 /* Cut-paper artwork for the chess stage: flat silhouettes in the ivory/charcoal palette
    with a die-cut edge, like stickers. Everything here is decorative and aria-hidden;
    the scene that uses it carries the text description. */
-const IVORY = '#efece5';
-const INK = '#121213';
+export const IVORY = '#efece5';
+export const INK = '#121213';
 // Offset 'sticker' shadows and small accents use the theme's warm greys.
 const STONE = '#80796d';
 const ASH = '#a7a5a0';
@@ -24,8 +24,9 @@ const PIECES: Record<PieceKind, string[]> = {
   knight: [BODY, 'M18 41 C15 27 20 17 31 11 L29 3 L37 9 C48 13 53 24 51 34 L45 38 L37 30 C34 34 37 38 42 41 Z'],
 };
 
-/** Two passes give one clean outline around the union of the shapes, with no inner seams. */
-function Cutout({ shapes, fill, edge, width, shadow }: { shapes: string[]; fill: string; edge: string; width: number; shadow?: boolean }) {
+/** Two passes give one clean outline around the union of the shapes, with no inner seams.
+ *  Shared with the top-down figures (top-down-figure.tsx). */
+export function Cutout({ shapes, fill, edge, width, shadow }: { shapes: string[]; fill: string; edge: string; width: number; shadow?: boolean }) {
   return <>
     {shadow && <g transform="translate(6 6)" fill={STONE} stroke={STONE} strokeWidth={width} strokeLinejoin="round">{shapes.map((d, i) => <path key={i} d={d} />)}</g>}
     <g fill={edge} stroke={edge} strokeWidth={width} strokeLinejoin="round">{shapes.map((d, i) => <path key={i} d={d} />)}</g>

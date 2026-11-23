@@ -78,7 +78,8 @@ h1, h2, h3, p { margin-top: 0; }
 .search-combo:focus-within { outline: 2px solid #b1afa8; outline-offset: 3px; }
 .search-submit { white-space: nowrap; min-height: 50px; }
 .form-help, .form-error { font-size: 13px; margin: 13px 0 0 2px; color: #74716b; }
-.form-error { color: #9e2525; font-weight: 680; }
+/* Problems are told in words (and a dashed field), not by colour: the theme has no red. */
+.form-error { color: #1b1c1d; font-weight: 720; }
 .inline-demo { color: #343331; font-weight: 700; padding: 0; border: 0; background: none; text-decoration: underline; }
 .chess-art { position: relative; isolation: isolate; }
 .chess-art img { width: 100%; height: auto; display: block; object-fit: contain; user-select: none; }
@@ -116,7 +117,17 @@ h1, h2, h3, p { margin-top: 0; }
 .chart-heading h2 { font-size: clamp(18px, 1.45vw, 23px); letter-spacing: -.7px; margin: 0 0 4px; }
 .chart-heading span { color: var(--muted); font-size: 12px; text-transform: capitalize; }
 .chart-current { font-size: 22px; letter-spacing: -.8px; }
+/* Rating chart: the stretched plot, the rating scale on its left and the dates under it. */
+.chart-plot { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; column-gap: 10px; }
+.chart-scale { position: relative; grid-area: 1 / 1; min-width: 3.2em; color: #5f5b54; font-size: 12px; font-variant-numeric: tabular-nums; }
+.chart-scale span { position: absolute; right: 0; line-height: 1; translate: 0 -50%; white-space: nowrap; }
+.chart-scale span:nth-child(1) { top: 0; }
+.chart-scale span:nth-child(2) { top: 50%; }
+.chart-scale span:nth-child(3) { top: 100%; }
+.chart-area { position: relative; grid-area: 1 / 2; min-width: 0; min-height: 0; }
+.chart-dates { grid-area: 2 / 2; display: flex; justify-content: space-between; gap: 12px; margin-top: 7px; color: #5f5b54; font-size: 12px; }
 .rating-svg { width: 100%; height: clamp(160px, 19vw, 235px); display: block; overflow: visible; }
+.rating-dot { position: absolute; width: 11px; height: 11px; border-radius: 50%; background: #202020; box-shadow: 0 0 0 3px #fffefa; translate: -50% -50%; }
 .summary-filters { display: flex; align-items: flex-end; gap: 17px; flex-wrap: wrap; }
 .filter-label { display: block; color: #89857e; letter-spacing: 1px; font-size: 10px; font-weight: 840; text-transform: uppercase; margin-bottom: 9px; }
 .filter-unit { min-width: 0; }
@@ -159,7 +170,7 @@ h1, h2, h3, p { margin-top: 0; }
 .status-screen { margin: 45px auto; min-height: 260px; border: 1px solid var(--line); border-radius: var(--radius); background: white; display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center; font-weight: 650; text-align: center; color: #696761; padding: 25px; }
 .status-screen p { margin: 0; }
 .loading-spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #dedbd6; border-top-color: #333; animation: spin .7s linear infinite; }
-.status-error { color: #932b2b; }
+.status-error { color: #2f2c28; }
 .empty-copy { color: #87837b; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }

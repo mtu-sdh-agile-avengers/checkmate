@@ -97,21 +97,29 @@ export async function mockGetSummary(
   };
 }
 
-export async function mockGetOverall(username: string): Promise<OverallStats> {
+export async function mockGetOverall(username: string, timeClass: TimeClass = 'blitz'): Promise<OverallStats> {
   await mockDelay();
   ensureAvailable(username);
+  // Blitz is the reference; the other classes scale it, like the summary demo data.
+  const scale: Record<TimeClass, number> = { bullet: 1.25, blitz: 1, rapid: 0.78, daily: 0.18 };
+  const offset: Record<TimeClass, number> = { bullet: -64, blitz: 0, rapid: 41, daily: -12 };
+  const count = (value: number) => Math.round(value * scale[timeClass]);
+  const [wins, draws, losses] = [count(682), count(134), count(424)];
+  const games = wins + draws + losses;
   return {
+    timeClass,
     from: 'Jan 12, 2023',
     to: 'Nov 3, 2026',
-    games: 1240,
-    wins: 682,
-    draws: 134,
-    losses: 424,
-    winRate: 55,
-    peakRating: 1562,
+    games,
+    wins,
+    draws,
+    losses,
+    winRate: Math.round((wins / games) * 100),
+    currentRating: 1548 + offset[timeClass],
+    peakRating: 1562 + offset[timeClass],
     peakDate: 'Oct 28, 2026',
-    averageOpponent: 1428,
-    ratingHistory: makeHistory(1548, 'all'),
+    averageOpponent: 1428 + offset[timeClass],
+    ratingHistory: makeHistory(1548 + offset[timeClass], 'all'),
   };
 }
 

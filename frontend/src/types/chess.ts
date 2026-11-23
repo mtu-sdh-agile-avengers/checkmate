@@ -36,18 +36,22 @@ export type SummaryStats = {
   ratingHistory: RatingPoint[];
 };
 
+/** All-time results in one time class. Chess.com keeps records per time class, so there is no
+ *  combined total. Fields that the API does not provide (yet) are null; the page leaves them out. */
 export type OverallStats = {
-  from: string;
+  timeClass: TimeClass;
+  from: string | null; // first day covered; null when the record covers the whole account
   to: string;
   games: number;
   wins: number;
   draws: number;
   losses: number;
-  winRate: number;
-  peakRating: number;
-  peakDate: string;
-  averageOpponent: number;
-  ratingHistory: RatingPoint[];
+  winRate: number; // whole percent
+  currentRating: number | null; // null if the player never played this time class
+  peakRating: number | null;
+  peakDate: string | null;
+  averageOpponent: number | null;
+  ratingHistory: RatingPoint[]; // empty when no history is available
 };
 
 export type PlayerColor = 'white' | 'black';

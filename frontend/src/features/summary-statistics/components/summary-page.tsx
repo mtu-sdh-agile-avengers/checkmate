@@ -15,9 +15,11 @@ const percent = (value: number) => `${value}%`;
 /** A rating that counts up, or "N/A" when there is none. */
 const rating = (value: number | null) => (value === null ? formatRating(null) : <AnimatedNumber value={value} />);
 
-/** Recent-form panel of the single player view: filters, results and rating for a period. */
-export function SummaryPage() {
-  const { username = '' } = useParams<{ username: string }>();
+/** Recent-form panel of the single player view: filters, results and rating for a period.
+ *  The player is `username`, or the one in the URL. */
+export function SummaryPage({ username: player }: { username?: string }) {
+  const params = useParams<{ username: string }>();
+  const username = player ?? params.username ?? '';
   const [frame, setFrame] = useState<TimeFrame>('30');
   const [timeClass, setTimeClass] = useState<TimeClass>('blitz');
   const { data, isPending, isFetching, error, refetch } = useSummary(username, frame, timeClass);
@@ -45,6 +47,13 @@ export function SummaryPage() {
               <span style={{ width: `${(data.draws / data.games) * 100}%` }} />
               <span style={{ width: `${(data.losses / data.games) * 100}%` }} />
             </div>
+            {/* The key names each shade of the bar (the counts are on the cards above); the bar's
+                own label already says it all in words. */}
+            <ul className="outcome-legend" aria-hidden="true">
+              <li><i />Wins</li>
+              <li><i />Draws</li>
+              <li><i />Losses</li>
+            </ul>
           </Panel>
           <div className="metric-grid metric-grid-three rating-summary-grid">
             <StatCard label="Expected rating" value={rating(data.expectedRating)} note={data.expectedRating === null ? 'Not available yet' : undefined} />

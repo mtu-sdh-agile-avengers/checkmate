@@ -28,6 +28,7 @@ uv run fastapi dev
 > [!NOTE]
 > Don't forget to set up `RUN_MODE` environment variable, i.e.:
 > ``$env:RUN_MODE = "prod"``.
+(If `uv` is not recognised: install it with `py -m pip install uv`, then run `py -m uv run fastapi dev`.)
 
 **Second**, we need to start our React client.
 
