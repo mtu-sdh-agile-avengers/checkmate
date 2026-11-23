@@ -3,11 +3,13 @@ import type {
   GameDetails,
   OverallStats,
   Player,
+  PlayerComparison,
   RatingPoint,
   SummaryStats,
   TimeClass,
   TimeFrame,
 } from '@/types/chess';
+import { compareMetrics, type ComparedStats } from '@/utils/comparison';
 import { formatDay } from '@/utils/format';
 
 // Mock repository: all figures are fictional design fixtures, NOT live Chess.com records.
@@ -156,6 +158,61 @@ export async function mockGetGame(
     pgn: `[White "${username}"]\n[Black "mock_opponent"]\n[Result "1-0"]\n\n${MOCK_GAME_MOVES}`,
     initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     finalFen: '1n1Rkb1r/p4ppp/4q3/4p1B1/4P3/8/PPP2PPP/2K5 b k - 1 17',
+  };
+}
+
+/**
+ * Demo comparison (same idea as the backend DEV mock): player 1 gets the demo all-time
+ * statistics, player 2 the same with a 64-point lower rating, fewer wins and fewer losses,
+ * so both players have fields where they are better. Usernames starting with "notfound"
+ * are unavailable.
+ */
+export async function mockComparePlayers(
+  p1: string,
+  p2: string,
+  timeClass: TimeClass,
+): Promise<PlayerComparison> {
+  const missing = [p1, p2].filter((username) => username.startsWith('notfound'));
+  if (missing.length > 0) {
+    await mockDelay();
+    throw new Error(
+      `${missing.length === 1 ? 'Player' : 'Players'} ${missing.join(', ')} data is unavailable`,
+    );
+  }
+  // both lookups run, so the demo "error" username fails like a real lookup
+  const [first] = await Promise.all([mockGetOverall(p1, timeClass), mockGetOverall(p2, timeClass)]);
+  const toStats = (stats: OverallStats): ComparedStats => ({
+    games: stats.games,
+    wins: stats.wins,
+    draws: stats.draws,
+    losses: stats.losses,
+    winRate: stats.winRate,
+    currentRating: stats.currentRating,
+    highestRating: stats.peakRating,
+  });
+  const player1 = toStats(first);
+  const wins = first.wins - 60;
+  const losses = first.losses - 30;
+  const draws = first.draws + 10;
+  const player2: ComparedStats = {
+    games: wins + losses + draws,
+    wins,
+    draws,
+    losses,
+    winRate: Math.round((wins / (wins + losses + draws)) * 100),
+    currentRating: (first.currentRating ?? 0) - 64,
+    highestRating: (first.peakRating ?? 0) - 40,
+  };
+  const expected =
+    1 / (1 + 10 ** (((player2.currentRating ?? 0) - (player1.currentRating ?? 0)) / 400));
+  const percent = Math.round(expected * 1000) / 10;
+  return {
+    timeClass,
+    player1: p1,
+    player2: p2,
+    metrics: compareMetrics(player1, player2),
+    winLikelihood: { player1: percent, player2: Math.round((100 - percent) * 10) / 10 },
+    winner: p1,
   };
 }
 

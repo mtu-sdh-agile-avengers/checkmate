@@ -75,3 +75,25 @@ Player 1 gets the sample all-time statistics; player 2 the same sample with a 64
 rating, fewer wins and fewer losses, so each player has fields where they are better.
 Every username starting with `notfound` (e.g. `notfound2`) does not exist -> `404`;
 `nogames` has no games.
+
+## Frontend (CMG4-60)
+
+`frontend/src/features/player-comparison/` has the client for the comparison page (CMG4-59):
+
+```tsx
+import { useComparison, type ComparisonRequest } from '@/features/player-comparison/hooks/use-comparison';
+
+// null until the visitor presses Compare (or Enter), then e.g.
+// { player1: 'hikaru', player2: 'https://www.chess.com/member/MagnusCarlsen', timeClass: 'blitz' }
+const [request, setRequest] = useState<ComparisonRequest | null>(null);
+const { data: comparison, isPending, error } = useComparison(request);
+```
+
+`comparison` is `PlayerComparison` (`src/types/chess.ts`): `player1` / `player2` usernames,
+`metrics` (one row per statistic: games, wins, draws, losses, win rate, current and highest
+rating) where `better` says which value to highlight green (the other one red; `null` = no
+highlight), `winLikelihood` in percent with one decimal and `winner`. Both inputs are
+checked before the request; `error.message` is ready to show (e.g. "Player 2: ...",
+"Choose two different players to compare." or the 404 message above). In mock mode
+(`VITE_API_MODE` unset) it returns demo data; usernames starting with `notfound` simulate
+unavailable players.

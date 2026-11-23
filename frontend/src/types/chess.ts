@@ -78,3 +78,27 @@ export type GameDetails = {
   initialFen: string;
   finalFen: string;
 };
+
+/** The two sides of a comparison (CMG4-15). */
+export type ComparisonSide = 'player1' | 'player2';
+
+/** One row of the comparison: the same statistic for both players. */
+export type ComparisonMetric = {
+  key: 'games' | 'wins' | 'draws' | 'losses' | 'winRate' | 'currentRating' | 'highestRating';
+  label: string; // e.g. "Games played"
+  player1: number | null; // null if the player has no value (e.g. no rating in this time class)
+  player2: number | null;
+  // Who is better in this row: highlight it green and the other one red; null = no highlight
+  better: ComparisonSide | null;
+};
+
+/** Two players side by side in one time class, with all-time statistics (CMG4-15). */
+export type PlayerComparison = {
+  timeClass: TimeClass;
+  player1: string; // username
+  player2: string;
+  metrics: ComparisonMetric[];
+  // Expected score of each player in percent (one decimal); null without both ratings
+  winLikelihood: { player1: number; player2: number } | null;
+  winner: string | null; // username of the more likely winner; null if even or unknown
+};
