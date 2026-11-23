@@ -36,7 +36,7 @@ router = APIRouter(
     ),
     responses={
         404: {"model": ErrorResponse, "description": "Player does not exist"},
-        422: {"model": ErrorResponse, "description": "Player does not exist"},
+        422: {"model": ErrorResponse, "description": "Invalid query parameters, or only one of `year` / `month`"},
     },
 )
 @limiter.limit("1/second")

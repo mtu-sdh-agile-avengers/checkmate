@@ -1,7 +1,8 @@
-import asyncio  # noqa: I001
+import asyncio
+from collections.abc import Awaitable, Callable
 from enum import Enum
 from typing import ClassVar, TypeVar
-from collections.abc import Awaitable, Callable
+
 import httpx
 from fastapi import status
 from loguru import logger

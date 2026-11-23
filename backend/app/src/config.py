@@ -25,7 +25,7 @@ class Config(BaseSettings):
     api_chesscom_user_agent: str
 
     # if initialized, could be overridden by CORS_ORIGINS in .env for other ports; required for Vite client
-    cors_origins: list[str] = ["localhost:5173", "127.1.0.0:5173"]
+    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

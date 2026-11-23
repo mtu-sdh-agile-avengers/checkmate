@@ -1,6 +1,6 @@
 """Filtering, sorting and paging for the game history list endpoint."""
 
-from _collections_abc import Callable, Iterable
+from collections.abc import Callable, Iterable
 from math import ceil
 
 from src.chesscom.parser.models import ArchiveMonth
