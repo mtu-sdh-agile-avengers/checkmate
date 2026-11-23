@@ -60,8 +60,8 @@ export type GameResult = 'win' | 'loss' | 'draw';
 /** One side of a game; `rating` is the player's rating after the game. */
 export type GamePlayer = { username: string; rating: number; color: PlayerColor };
 
-/** One game for the game page (CMG4-17), seen by `player` (the player whose page it is). */
-export type GameDetails = {
+/** A game seen by `player` (the player whose page it is): what the game list and the game page show. */
+export type GameSummary = {
   id: string;
   url: string;
   timeClass: TimeClass;
@@ -74,9 +74,47 @@ export type GameDetails = {
   player: GamePlayer;
   opponent: GamePlayer;
   averageRating: number;
+};
+
+/** One game for the game page (CMG4-17). */
+export type GameDetails = GameSummary & {
   pgn: string; // whole game in PGN (headers, moves and clock comments) for the replay
   initialFen: string;
   finalFen: string;
+};
+
+/** Chess.com monthly archive of a game: the month the game ended (UTC). */
+export type GameArchive = { year: number; month: number };
+
+/** One row of the game history list (CMG4-14). Open its game page with `id` + `archive`. */
+export type GameListItem = GameSummary & {
+  dateTime: string; // e.g. "31 Oct 2026, 19:39 UTC"
+  archive: GameArchive;
+};
+
+export type GameSortBy = 'matchDateTime' | 'avgRating';
+export type SortOrder = 'asc' | 'desc';
+export type GamePageSize = 5 | 10 | 15 | 30 | 50 | 100;
+
+/** Filters, sorting and paging of the game history list; everything is optional. */
+export type GameHistoryFilters = {
+  archive?: GameArchive; // month to list; the latest month with games when left out
+  timeClass?: TimeClass; // all time classes when left out
+  sortBy?: GameSortBy; // matchDateTime (default) or avgRating
+  sortOrder?: SortOrder; // desc (default) = newest / highest first
+  pageSize?: GamePageSize; // 50 by default
+  page?: number; // starts at 1
+};
+
+/** One page of the game history list. */
+export type GameHistoryPage = {
+  archive: GameArchive | null; // month shown; null when the player has no games
+  items: GameListItem[];
+  pageSize: number;
+  totalGames: number; // in the month, after the time class filter
+  totalPages: number;
+  page: number;
+  hasNext: boolean;
 };
 
 /** The two sides of a comparison (CMG4-15). */
