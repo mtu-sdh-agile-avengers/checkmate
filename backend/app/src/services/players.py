@@ -7,7 +7,12 @@ the DEV-mode mock lives in `src/services/mocks/players.py`.
 import asyncio
 from collections.abc import Callable
 from datetime import UTC, datetime
+from typing import cast
 
+from src.chesscom.client.exceptions import (
+    ChessAPINotFoundError,
+    ChessComPlayersNotFoundError,
+)
 from src.chesscom.client.protocols import ExternalChessComAPIClient
 from src.chesscom.parser.models import (
     ChessComGame,
@@ -20,6 +25,7 @@ from src.chesscom.parser.parser import (
     parse_player_profile,
     parse_player_stats,
 )
+from src.enums import SummaryPeriod
 from src.schemas.players import (
     PlayerComparisonQuery,
     PlayerComparisonResponse,
@@ -30,6 +36,7 @@ from src.schemas.players import (
     RatingPointResponse,
     RatingSummaryResponse,
 )
+from src.services.processing.comparison import compare_summaries
 from src.services.processing.statistics import (
     months_between,
     period_start,
@@ -64,7 +71,30 @@ class ChessComPlayersService(PlayersService):
         )
 
     async def compare(self, query: PlayerComparisonQuery) -> PlayerComparisonResponse:
-        raise NotImplementedError("Player comparison is not implemented yet (CMG4-89)")
+        # Both all-time summaries at once: one /stats request per player.
+        all_time = PlayerSummaryQuery.model_validate(
+            {"period": SummaryPeriod.OVERALL, "timeClass": query.time_class}
+        )
+        usernames = (query.p1, query.p2)
+        results = await asyncio.gather(
+            *(self.get_summary(username, all_time) for username in usernames),
+            return_exceptions=True,
+        )
+
+        # Name every missing player in one message, e.g. "Players a, b data is unavailable"
+        missing = [
+            username
+            for username, result in zip(usernames, results, strict=True)
+            if isinstance(result, ChessAPINotFoundError)
+        ]
+        if missing:
+            raise ChessComPlayersNotFoundError(missing)
+        for result in results:
+            if isinstance(result, BaseException):
+                raise result  # e.g. Chess.com unavailable -> 503
+
+        player1, player2 = cast(list[PlayerStatisticSummaryResponse], results)
+        return compare_summaries(query.time_class, player1, player2)
 
     async def get_profile(self, username: str) -> PlayerProfileResponse:
         # FIDE rating is not part of the Chess.com profile, only of /stats (CMG4-65 AC)
