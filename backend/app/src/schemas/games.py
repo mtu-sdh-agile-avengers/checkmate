@@ -179,29 +179,73 @@ class GameBoardDetailsResponse(GameResponse):
 
 
 class MoveEvaluationResponse(BaseSchema):
-    color: PlayerColor
-    uci: str = Field(
-        examples=["e8g8"], description="Move in Universal Chess Interface (UCI) format"
+    """One half-move of the game with the chess engine's verdict (CMG4-18)."""
+
+    ply: int = Field(
+        ge=1,
+        examples=[1],
+        description="Half-move number: 1 = White's first move, 2 = Black's reply, ...",
     )
+    color: PlayerColor = Field(description="Who made the move")
     san: str = Field(
-        examples=["Nf3"],
-        description="Player half-move in Standard Algebraic Notation (SAN) format",
+        examples=["Nf3"], description="Move in Standard Algebraic Notation (SAN)"
+    )
+    uci: str = Field(
+        examples=["g1f3"], description="Move in Universal Chess Interface (UCI) format"
+    )
+    fen: str = Field(
+        examples=["rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"],
+        description="Position AFTER the move (FEN), to show the move on the board",
     )
     eval_cp: int = Field(
-        examples=[-20], description="Player half-move score in centipawns"
+        examples=[31],
+        description=(
+            "Evaluation after the move in centipawns from White's point of view "
+            "(100 = one pawn; positive = White is better). A forced mate counts as "
+            "+/-(10000 - moves to mate)"
+        ),
     )
-    best_move_san: str = Field(
-        examples=["d4"], description="Best possible move predicted by Engine"
+    mate_in: int | None = Field(
+        default=None,
+        examples=[None],
+        description=(
+            "Forced mate after the move: moves to mate, positive = White mates, "
+            "negative = Black mates, 0 = checkmate on the board; null if no forced mate"
+        ),
     )
-    category: MoveCategory
+    best_move_san: str | None = Field(
+        default=None,
+        examples=["Nf3"],
+        description=(
+            "Engine's best move in the position before this move (SAN); equals `san` "
+            'when the best move was played; null if unknown (show "N/A")'
+        ),
+    )
+    category: MoveCategory = Field(
+        description="best / good / inaccuracy / miss / blunder (from the mover's view)"
+    )
+
+    @computed_field(description="Full-move number as written in PGN: ply 3 -> 2")
+    @property
+    def move_number(self) -> int:
+        return (self.ply + 1) // 2
 
 
 class GameAnalysisResponse(BaseSchema):
-    game_id: int = Field(examples=[1], description="Order number in the game list")
+    """Engine analysis of every move of a game, for the replay page (CMG4-18)."""
+
+    game_id: str = Field(examples=["169586417316"], description="Chess.com game id")
     game_url: str = Field(examples=["https://www.chess.com/game/live/169586417316"])
     engine: str = Field(examples=["Stockfish 17"])
     depth: int = Field(
         ge=1,
+        examples=[15],
         description="How many half-moves (plies) ahead the engine looked in its primary search line",
     )
-    moves: list[MoveEvaluationResponse]
+    initial_fen: str = Field(
+        examples=["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"],
+        description="Position before the first move (FEN)",
+    )
+    moves: list[MoveEvaluationResponse] = Field(
+        description="Every half-move in order; empty if the game has no moves"
+    )
