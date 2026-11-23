@@ -2,8 +2,8 @@
 
 from datetime import datetime
 
-from src.chesscom.exceptions import ChessAPINotFoundError
-from src.chesscom.models import DRAW_RESULT_CODES, WIN_RESULT_CODE
+from src.chesscom.client.exceptions import ChessAPINotFoundError
+from src.chesscom.parser.models import DRAW_RESULT_CODES, WIN_RESULT_CODE
 
 
 def make_raw_game(
@@ -99,7 +99,10 @@ class FakeChessComClient:
         return {"archives": [f"{base}/{y}/{m:02d}" for y, m in self.archive_months]}
 
     async def get_player_monthly_games(
-        self, username: str, year: str, month: str
+        self,
+        username: str,
+        year: str,
+        month: str,
     ) -> dict:
         self._request(f"/player/{username}/games/{year}/{month}")
         return {"games": self.monthly_games.get((int(year), int(month)), [])}

@@ -9,13 +9,13 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from loguru import logger
 
-from src.chesscom.exceptions import (
+from src.chesscom.client.exceptions import (
     ChessAPIError,
     ChessAPINotFoundError,
     ChessAPIParseError,
     ChessAPIRateLimitError,
     ChessAPITooManyRetriesError,
-    ChessAPIUnavailiableError,
+    ChessAPIUnavailableError,
     ChessComGameNotFoundError,
 )
 
@@ -44,7 +44,7 @@ async def chess_api_error_handler(request: Request, exc: Exception) -> JSONRespo
             detail = _not_found_message(request)
         case (
             ChessAPIRateLimitError()
-            | ChessAPIUnavailiableError()
+            | ChessAPIUnavailableError()
             | ChessAPITooManyRetriesError()
         ):
             status_code = status.HTTP_503_SERVICE_UNAVAILABLE

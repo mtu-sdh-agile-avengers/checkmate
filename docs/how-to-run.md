@@ -1,20 +1,51 @@
-first terminal 
+# How to run?
 
-...\checkmate\backend\app"
+**First**, we need to run FastAPI server.
 
-$env:RUN_MODE = "prod"
+In the project root, change directory to `bakend\app`:
 
+```bash
+cd ..\backend\app
+```
+
+Create the backend `.env` file from the example (`API_CHESSCOM_*` variables are required, otherwise the app won't start):
+
+```bash
+Copy-Item .env.example .env
+```
+
+> [!NOTE]
+> `CORS_ORIGINS` is optional and must be a JSON list of origins with a scheme, i.e.:
+> `CORS_ORIGINS=["http://localhost:5173","http://127.0.0.1:5173"]`.
+
+
+Then simply run:
+
+```bash
 uv run fastapi dev
+```
 
+> [!NOTE]
+> Don't forget to set up `RUN_MODE` environment variable, i.e.:
+> ``$env:RUN_MODE = "prod"``.
 (If `uv` is not recognised: install it with `py -m pip install uv`, then run `py -m uv run fastapi dev`.)
 
+**Second**, we need to start our React client.
 
-second terminal
+In the project root, change directory to `frontend`:
 
-...\checkmate\frontend"
+```bash
+cd ..\frontend
+```
 
+Then download all required dependencies by running:
+
+```bash
 npm install
+```
 
-Copy-Item .env.example .env
+And, finally run:
 
+```bash
 npm run dev
+```

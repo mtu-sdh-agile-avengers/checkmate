@@ -23,7 +23,7 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 @pytest.fixture
 def chesscom_fixture() -> Callable[[str], object]:
-    """Loads a sample Chess.com response from `tests/fixtures/chesscom/`.
+    """Loads a sample Chess.com response from `tests/fixtures/chesscom`.
 
     `.json` files are returned decoded (dict); any other file is returned as text.
     """
