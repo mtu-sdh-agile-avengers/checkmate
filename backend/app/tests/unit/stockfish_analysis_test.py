@@ -25,6 +25,7 @@ from src.analysis.stockfish import (
 from src.chesscom.parser.parser import parse_pgn_moves
 from src.config import get_config
 from src.enums import MoveCategory, PlayerColor
+from src.services.exceptions import GameAnalysisUnavailableError
 
 FOOLS_MATE_PGN = "1. f3 e5 2. g4 Qh4# 0-1"
 
@@ -84,7 +85,7 @@ def test_load_stockfish_config_rejects_unknown_keys(tmp_path):
 
 
 def test_stockfish_engine_without_path_raises():
-    with pytest.raises(RuntimeError, match="STOCKFISH_PATH"):
+    with pytest.raises(GameAnalysisUnavailableError, match="STOCKFISH_PATH"):
         StockfishEngine(None, CONFIG.engine)
 
 
@@ -168,6 +169,11 @@ async def test_evaluate_moves_fools_mate(fools_mate, fools_mate_engine):
     ]
     # evaluation after each move, from White's point of view
     assert [e.eval_cp for e in evaluations] == [-40, -50, -9999, -10000]
+    # API contract (CMG4-73): half-move number, position after the move, forced mate
+    assert [e.ply for e in evaluations] == [1, 2, 3, 4]
+    assert [e.move_number for e in evaluations] == [1, 1, 2, 2]
+    assert [e.fen for e in evaluations] == fools_mate.fens[1:]
+    assert [e.mate_in for e in evaluations] == [None, None, -1, 0]
 
 
 @pytest.mark.anyio

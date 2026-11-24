@@ -30,6 +30,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from src.chesscom.parser.models import ChessComGameMoves
 from src.enums import MoveCategory, PlayerColor
 from src.schemas.games import MoveEvaluationResponse
+from src.services.exceptions import GameAnalysisUnavailableError
 
 # backend/app/stockfish.toml (this file is backend/app/src/analysis/stockfish.py)
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "stockfish.toml"
@@ -90,7 +91,7 @@ class StockfishEngine:
 
     def __init__(self, path: str | None, settings: EngineSettings) -> None:
         if not path:
-            raise RuntimeError(
+            raise GameAnalysisUnavailableError(
                 "Stockfish is not configured: set STOCKFISH_PATH in .env"
             )
         self._path = path
@@ -98,10 +99,17 @@ class StockfishEngine:
         self._engine: chess.engine.UciProtocol | None = None
 
     async def __aenter__(self) -> Self:
-        _, self._engine = await chess.engine.popen_uci(self._path)
-        await self._engine.configure(
-            {"Threads": self._settings.threads, "Hash": self._settings.hash_mb}
-        )
+        try:
+            _, self._engine = await chess.engine.popen_uci(self._path)
+            await self._engine.configure(
+                {"Threads": self._settings.threads, "Hash": self._settings.hash_mb}
+            )
+        except (
+            OSError,
+            chess.engine.EngineError,
+            chess.engine.EngineTerminatedError,
+        ) as e:
+            raise GameAnalysisUnavailableError(f"Cannot start Stockfish: {e}") from e
         return self
 
     async def __aexit__(
@@ -121,9 +129,12 @@ class StockfishEngine:
 
     async def analyse(self, board: chess.Board) -> PositionAnalysis:
         engine = self._require_engine()
-        info = await engine.analyse(
-            board, chess.engine.Limit(depth=self._settings.depth)
-        )
+        try:
+            info = await engine.analyse(
+                board, chess.engine.Limit(depth=self._settings.depth)
+            )
+        except (chess.engine.EngineError, chess.engine.EngineTerminatedError) as e:
+            raise GameAnalysisUnavailableError(f"Stockfish failed: {e}") from e
         pv = info.get("pv") or []
         return PositionAnalysis(score=info["score"], best_move=pv[0] if pv else None)
 
@@ -210,6 +221,9 @@ async def evaluate_moves(
 
         evaluations.append(
             MoveEvaluationResponse(
+                ply=move.ply,
+                fen=move.fen,
+                mate_in=after.score.white().mate(),
                 color=PlayerColor.WHITE if mover == chess.WHITE else PlayerColor.BLACK,
                 uci=move.uci,
                 san=move.san,
