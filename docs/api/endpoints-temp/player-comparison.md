@@ -94,6 +94,8 @@ const { data: comparison, isPending, error } = useComparison(request);
 rating) where `better` says which value to highlight green (the other one red; `null` = no
 highlight), `winLikelihood` in percent with one decimal and `winner`. Both inputs are
 checked before the request; `error.message` is ready to show (e.g. "Player 2: ...",
-"Choose two different players to compare." or the 404 message above). In mock mode
+"Choose two different players to compare." or the 404 message above). Invalid input is a
+`ValidationError`, which is shown at once and never retried; the form can also call
+`checkPlayers(input1, input2)` on submit to show it before calling `setRequest`. In mock mode
 (`VITE_API_MODE` unset) it returns demo data; usernames starting with `notfound` simulate
 unavailable players.

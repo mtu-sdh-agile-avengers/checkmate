@@ -78,11 +78,24 @@ All errors (except `422`) have the body `{"detail": "<message for the end-user>"
 ## Implementation notes (CMG4-88)
 
 - Find the game like `get_game_board_details` (`ChessComGamesService._find_game`), then
-  `parse_pgn_moves(game.pgn)` and `evaluate_moves(...)` from `src/analysis/stockfish.py`.
-- Per move: `ply = move.ply`, `fen = move.fen`, `mate_in = after.score.white().mate()`;
-  `move_number` is computed by the schema.
-- Raise `GameAnalysisUnavailableError` (`src/services/exceptions.py`) when Stockfish is not
-  configured (`STOCKFISH_PATH`) or fails; the handler returns the `503` above.
+  `parse_pgn_moves(game.pgn)` and `evaluate_moves(...)` from `src/analysis/stockfish.py`
+  (on `norbert/dev`).
+- `ply` and `fen` are required, so `evaluate_moves` must fill them for every move, plus the
+  optional `mate_in`; `move_number` is computed by the schema:
+
+  ```python
+  MoveEvaluationResponse(
+      ply=move.ply,
+      fen=move.fen,  # position after the move
+      mate_in=after.score.white().mate(),  # None when there is no forced mate
+      color=..., uci=..., san=..., eval_cp=..., best_move_san=..., category=...,
+  )
+  ```
+
+- Every engine failure must become `GameAnalysisUnavailableError` (`src/services/exceptions.py`),
+  otherwise the endpoint answers `500` instead of the `503` above: a missing `STOCKFISH_PATH`
+  (instead of `RuntimeError`), `chess.engine.popen_uci` / `configure` failing (`OSError`,
+  `EngineError`, `EngineTerminatedError`) and `engine.analyse` failing.
 
 ## DEV mode (`RUN_MODE=dev`)
 
