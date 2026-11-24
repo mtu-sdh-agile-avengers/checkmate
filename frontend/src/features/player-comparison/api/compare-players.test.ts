@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { comparePlayers, toComparison } from '@/features/player-comparison/api/compare-players';
+import {
+  checkPlayers,
+  comparePlayers,
+  toComparison,
+} from '@/features/player-comparison/api/compare-players';
 import { HIKARU_VS_TESTER } from '@/features/player-comparison/api/compare-players.fixtures';
+import { ValidationError } from '@/lib/errors';
 import { mockFetchJson } from '@/testing/mock-fetch';
 
 describe('player-comparison api', () => {
@@ -79,6 +84,15 @@ describe('player-comparison api', () => {
       status: 404,
       message: 'Players ghost1, ghost2 data is unavailable',
     });
+  });
+
+  it('reports invalid input as a ValidationError, which is not retried', () => {
+    expect(() => checkPlayers('hikaru', 'ab')).toThrow(ValidationError);
+    expect(() => checkPlayers('hikaru', 'HIKARU')).toThrow(ValidationError);
+    expect(checkPlayers('https://www.chess.com/member/Hikaru', 'Magnus')).toEqual([
+      'hikaru',
+      'magnus',
+    ]);
   });
 
   it('checks both inputs before calling the API', async () => {

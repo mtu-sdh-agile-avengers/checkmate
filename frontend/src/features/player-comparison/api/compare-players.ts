@@ -1,5 +1,6 @@
 import { getApiMode } from '@/config/api';
 import { apiGet } from '@/lib/api-client';
+import { ValidationError } from '@/lib/errors';
 import { mockComparePlayers } from '@/lib/mock-api';
 import type { PlayerComparison, TimeClass } from '@/types/chess';
 import { compareMetrics, type ComparedStats } from '@/utils/comparison';
@@ -38,17 +39,16 @@ export type PlayerComparisonDto = {
  * Compares two players in one time class (CMG4-15): their all-time statistics side by side
  * and the estimated win likelihood.
  *
- * Both inputs are usernames or member profile links and are checked here first, so an
- * invalid one never reaches the API.
- * @throws Error / ApiError with a message to show, e.g. 404 "Players a, b data is unavailable"
+ * Both inputs are usernames or member profile links and are checked here first (see
+ * `checkPlayers`), so an invalid one never reaches the API.
+ * @throws ValidationError / ApiError with a message to show, e.g. 404 "Players a, b data is unavailable"
  */
 export async function comparePlayers(
   input1: string,
   input2: string,
   timeClass: TimeClass,
 ): Promise<PlayerComparison> {
-  const [p1, p2] = [checkPlayer(input1, 1), checkPlayer(input2, 2)];
-  if (p1 === p2) throw new Error('Choose two different players to compare.');
+  const [p1, p2] = checkPlayers(input1, input2);
 
   if (getApiMode() === 'mock') return mockComparePlayers(p1, p2, timeClass);
 
@@ -86,11 +86,25 @@ function toComparedStats(player: ComparedPlayerDto): ComparedStats {
 /** 0.5911 -> 59.1 (percent with one decimal) */
 const toPercent = (value: number) => Math.round(value * 1000) / 10;
 
+/**
+ * Checks both inputs on this device, without a request: usernames or member profile links,
+ * and two different players. The form can call it on submit to show the message at once.
+ *
+ * @returns both usernames, lowercased
+ * @throws ValidationError e.g. "Player 2: Please use a Chess.com member URL."
+ */
+export function checkPlayers(input1: string, input2: string): [string, string] {
+  const p1 = checkPlayer(input1, 1);
+  const p2 = checkPlayer(input2, 2);
+  if (p1 === p2) throw new ValidationError('Choose two different players to compare.');
+  return [p1, p2];
+}
+
 function checkPlayer(input: string, number: 1 | 2): string {
   try {
     return parseChessUsername(input);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Check the username.';
-    throw new Error(`Player ${number}: ${message}`);
+    throw new ValidationError(`Player ${number}: ${message}`);
   }
 }
