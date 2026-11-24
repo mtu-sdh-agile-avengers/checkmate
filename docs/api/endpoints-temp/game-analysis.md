@@ -77,25 +77,22 @@ All errors (except `422`) have the body `{"detail": "<message for the end-user>"
 
 ## Implementation notes (CMG4-88)
 
-- Find the game like `get_game_board_details` (`ChessComGamesService._find_game`), then
-  `parse_pgn_moves(game.pgn)` and `evaluate_moves(...)` from `src/analysis/stockfish.py`
-  (on `norbert/dev`).
-- `ply` and `fen` are required, so `evaluate_moves` must fill them for every move, plus the
-  optional `mate_in`; `move_number` is computed by the schema:
+The engine part is already in `src/analysis/stockfish.py` (CMG4-70 / CMG4-72):
+`evaluate_moves` fills `ply`, `fen` and `mate_in` for every move, and every engine failure
+(no `STOCKFISH_PATH`, Stockfish not starting, crashing) raises `GameAnalysisUnavailableError`
+(`src/services/exceptions.py`), which the handler returns as the `503` above.
 
-  ```python
-  MoveEvaluationResponse(
-      ply=move.ply,
-      fen=move.fen,  # position after the move
-      mate_in=after.score.white().mate(),  # None when there is no forced mate
-      color=..., uci=..., san=..., eval_cp=..., best_move_san=..., category=...,
-  )
-  ```
+What CMG4-88 still has to do in `ChessComGamesService.analyze_game_board`:
 
-- Every engine failure must become `GameAnalysisUnavailableError` (`src/services/exceptions.py`),
-  otherwise the endpoint answers `500` instead of the `503` above: a missing `STOCKFISH_PATH`
-  (instead of `RuntimeError`), `chess.engine.popen_uci` / `configure` failing (`OSError`,
-  `EngineError`, `EngineTerminatedError`) and `engine.analyse` failing.
+1. Find the game like `get_game_board_details` (`_find_game`).
+2. `moves = parse_pgn_moves(game.pgn)`, then inside
+   `async with StockfishEngine(get_config().stockfish_path, config.engine) as engine:`
+   call `evaluate_moves(moves, engine, config)` (`config = load_stockfish_config()`).
+3. Return `GameAnalysisResponse(game_id=..., game_url=game.url, engine=engine.name,
+   depth=config.engine.depth, initial_fen=moves.initial_fen, moves=evaluations)`.
+
+Stockfish is installed per machine: download it from https://stockfishchess.org/download/
+and set `STOCKFISH_PATH` in `backend/app/.env` to the executable.
 
 ## DEV mode (`RUN_MODE=dev`)
 
