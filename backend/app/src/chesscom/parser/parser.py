@@ -11,9 +11,9 @@ raises `ChessAPIParseError`. Game lists are tolerant: a malformed game is skippe
 logged, so one odd game does not break a whole statistics page or game list.
 """
 
+import io
 import re
 
-import io
 import chess.pgn
 from loguru import logger
 from pydantic import BaseModel, ValidationError
@@ -23,8 +23,8 @@ from src.chesscom.parser.models import (
     ChessComDailyGame,
     ChessComGame,
     ChessComGameMoves,
-    ChessComMove,
     ChessComGamesArchives,
+    ChessComMove,
     ChessComPgnGame,
     ChessComPlayerProfile,
     ChessComPlayerStats,
