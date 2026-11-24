@@ -160,7 +160,7 @@ def test_real_pgn_moves_from_pgn_file_match_json(chesscom_fixture, games):
     # The same game from the monthly PGN file gives the same positions as from the JSON.
     json_by_url = {game.url: game for game in games}
 
-    for pgn_game in parse_monthly_pgn(chesscom_fixture("hikaru_games_2026_10.pgn")):
+    for pgn_game in parse_monthly_pgn(chesscom_fixture("hikaru/hikaru_games_2026_10.pgn")):
         from_file = parse_pgn_moves(pgn_game.pgn)
         from_json = parse_pgn_moves(json_by_url[pgn_game.url].pgn)
 

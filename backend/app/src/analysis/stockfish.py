@@ -27,7 +27,7 @@ import chess
 import chess.engine
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.chesscom.models import ChessComGameMoves
+from src.chesscom.parser.models import ChessComGameMoves
 from src.enums import MoveCategory, PlayerColor
 from src.schemas.games import MoveEvaluationResponse
 

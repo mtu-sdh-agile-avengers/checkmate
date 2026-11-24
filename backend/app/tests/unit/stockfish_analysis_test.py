@@ -22,7 +22,7 @@ from src.analysis.stockfish import (
     evaluate_moves,
     load_stockfish_config,
 )
-from src.chesscom.parser import parse_pgn_moves
+from src.chesscom.parser.parser import parse_pgn_moves
 from src.config import get_config
 from src.enums import MoveCategory, PlayerColor
 
