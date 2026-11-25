@@ -117,7 +117,7 @@ describe('app router', () => {
     await waitFor(() => expect(screen.getByRole('link', { name: '02 / In-Game Chess' })).toHaveFocus());
   }, JOURNEY_TIMEOUT);
 
-  it('opens Deliberation, pairs two players and returns with Cancel', async () => {
+  it('opens Deliberation, compares two players and returns with Cancel', async () => {
     const user = userEvent.setup();
     renderApp('/deliberation');
 
@@ -126,11 +126,13 @@ describe('app router', () => {
     await user.type(screen.getByRole('textbox', { name: /Player 2/ }), 'magnuscarlsen');
     await user.click(screen.getByRole('button', { name: 'Confirm' }));
 
-    expect(await screen.findByRole('heading', { name: 'hikaru vs magnuscarlsen' }, SLOW)).toBeInTheDocument();
+    // The demo comparison favours Player 1 (lib/mock-api): the verdict set names them.
+    expect(await screen.findByRole('heading', { name: 'hikaru wins' }, SLOW)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /hikaru \(White\) against magnuscarlsen \(Black\)/ })).toBeInTheDocument();
+    expect(screen.getByText('hikaru is the favourite in blitz, with a 59.1% expected score against magnuscarlsen.', { selector: '.verdict-tv__summary' })).toBeInTheDocument();
 
-    // Changing players drops the set again with both players kept; Cancel goes back to the menu.
-    await user.click(screen.getByRole('button', { name: 'Change players' }));
+    // A new comparison drops the VS set again with both players kept; Cancel goes back to the menu.
+    await user.click(screen.getByRole('button', { name: 'New comparison' }));
     expect(await screen.findByRole('button', { name: 'Change Player 1' }, SLOW)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(await screen.findByRole('searchbox', undefined, SLOW)).toBeInTheDocument();

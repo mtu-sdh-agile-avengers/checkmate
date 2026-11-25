@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { CircleAlert } from 'lucide-react';
+import { TIME_CLASSES } from '@/config/constants';
 import type { FindPlayer, FoundPlayer } from '@/features/deliberation/types';
+import type { TimeClass } from '@/types/chess';
 import { checkPlayer, type SlotIndex } from '@/features/deliberation/utils/validate-player';
 import { parseChessUsername } from '@/utils/username';
 import { afterMotion } from '@/utils/motion';
@@ -35,9 +37,10 @@ function nameIn(slot: Slot): string | null {
  * player up with the player search (`findPlayer`) and shows their picture and title.
  * "Lock in" (or Enter) does that for one slot; Confirm does it for any slot still typed in
  * and, once both players are found, shows "Locked in", raises the set and hands the pair to
- * `onConfirm`. Cancel (or Escape) goes back.
+ * `onConfirm`. Cancel (or Escape) goes back. With `onTimeClassChange`, the cabinet also has a
+ * picker for the time class the players are compared in.
  */
-export function VsTv({ findPlayer, initial = null, dropAt, introDone, leaving = false, onCancel, onConfirm, onSeatsChange }: {
+export function VsTv({ findPlayer, initial = null, dropAt, introDone, leaving = false, timeClass, onTimeClassChange, onCancel, onConfirm, onSeatsChange }: {
   findPlayer: FindPlayer;
   /** Players to start with, already found (coming back to change them). */
   initial?: PlayerPair | null;
@@ -46,6 +49,9 @@ export function VsTv({ findPlayer, initial = null, dropAt, introDone, leaving = 
   /** The entrance has played: focus can go to the first slot. */
   introDone: boolean;
   leaving?: boolean;
+  /** The time class the players will be compared in. */
+  timeClass?: TimeClass;
+  onTimeClassChange?: (timeClass: TimeClass) => void;
   onCancel: () => void;
   onConfirm: (players: PlayerPair) => void;
   /** Told whenever a player is found or a slot reopened, so the table can seat the players. */
@@ -242,6 +248,14 @@ export function VsTv({ findPlayer, initial = null, dropAt, introDone, leaving = 
           <div className="vs-tv__controls">
             <span className="vs-tv__grille" aria-hidden="true" />
             <p className="vs-tv__hint" role="status">{hint(slots, phase)}</p>
+            {timeClass && onTimeClassChange && (
+              <label className="vs-tv__class">
+                <span>Compare in</span>
+                <select value={timeClass} onChange={(event) => onTimeClassChange(event.target.value as TimeClass)} disabled={phase !== 'choosing'}>
+                  {TIME_CLASSES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
+            )}
             <div className="vs-tv__keys">
               <button type="button" className="tv-key" onClick={onCancel} disabled={phase !== 'choosing'}>Cancel</button>
               <button type="button" className="tv-key tv-key--primary" ref={confirmButton} onClick={confirm} disabled={!canConfirm}>
@@ -259,7 +273,7 @@ const sameAsMessage = (index: SlotIndex) => `Player ${index + 1} can't be the sa
 
 /** One line on the cabinet saying what is happening or still needed. */
 function hint(slots: readonly [Slot, Slot], phase: Phase): string {
-  if (phase !== 'choosing') return 'Locked in. Setting up the board…';
+  if (phase !== 'choosing') return 'Locked in. Comparing the players…';
   const lookingUp = slots.findIndex((slot) => slot.checking);
   if (lookingUp >= 0) return `Looking up Player ${lookingUp + 1} on Chess.com…`;
   const problem = slots.findIndex((slot) => slot.error);
@@ -268,7 +282,7 @@ function hint(slots: readonly [Slot, Slot], phase: Phase): string {
   if (!first && !second) return 'Enter both players to continue.';
   if (!first) return 'Waiting for Player 1.';
   if (!second) return 'Waiting for Player 2.';
-  return slots.every((slot) => slot.player) ? 'Both players are in. Confirm to start.' : 'Press Confirm to look both players up.';
+  return slots.every((slot) => slot.player) ? 'Both players are in. Confirm to compare them.' : 'Press Confirm to look both players up.';
 }
 
 function PlayerSlot({ index, slot, disabled, sectionRef, inputRef, onInput, onBlur, onLock, onUnlock }: {
@@ -291,7 +305,7 @@ function PlayerSlot({ index, slot, disabled, sectionRef, inputRef, onInput, onBl
       ref={sectionRef}
       className="vs-slot vs-tune"
       data-slot={number}
-      data-tone={index === 0 ? 'ink' : 'paper'}
+      data-tone={index === 0 ? 'paper' : 'ink'}
       data-state={state}
       aria-labelledby={`${ids}-label`}
       aria-busy={slot.checking || undefined}

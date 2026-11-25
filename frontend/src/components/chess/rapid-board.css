@@ -1,0 +1,49 @@
+/* The board with moving pieces (rapid-board.tsx), on top of TopDownBoard's squares and frame.
+   Every piece is positioned by translate from its file and row, so a move is one transition;
+   the hop and the capture are animations of the art inside it. Only transform and opacity
+   change: nothing here makes the browser lay anything out again while the games run.
+
+   --ply-ms is the time between two moves; a slide takes most of it, with a snappy settle. */
+.rapid-board { position: relative; --slide-ms: calc(var(--ply-ms, 330ms) * .8); }
+.rapid-board__pieces { position: absolute; inset: 0; pointer-events: none; }
+.rapid-board__piece {
+  position: absolute; left: 0; top: 0; display: grid; place-items: center; width: var(--sq); height: var(--sq);
+  translate: calc(var(--file) * var(--sq)) calc(var(--row) * var(--sq));
+  transition: translate var(--slide-ms) cubic-bezier(.3, 1.25, .45, 1);
+}
+/* The piece on the move passes over the others. */
+.rapid-board__piece[data-hop] { z-index: 2; }
+.rapid-board__art { position: relative; z-index: 1; display: block; width: 74%; height: 88%; }
+.rapid-board__art svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+/* Contact shadow: a soft dark pool where the piece stands, so it sits on the board. */
+.rapid-board__shadow {
+  position: absolute; left: 20%; right: 20%; bottom: 6%; height: 18%; border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(9 9 10 / .5), rgb(9 9 10 / .18) 60%, transparent);
+}
+
+/* The hop: up towards the camera (larger, a little to the light), while the shadow stays down
+   and shrinks. Two identical keyframes, alternated move by move, restart it every time. */
+.rapid-board__piece[data-hop='a'] .rapid-board__art { animation: piece-hop-a var(--slide-ms) cubic-bezier(.3, .7, .4, 1) both; }
+.rapid-board__piece[data-hop='b'] .rapid-board__art { animation: piece-hop-b var(--slide-ms) cubic-bezier(.3, .7, .4, 1) both; }
+.rapid-board__piece[data-hop='a'] .rapid-board__shadow { animation: shadow-hop-a var(--slide-ms) ease-in-out both; }
+.rapid-board__piece[data-hop='b'] .rapid-board__shadow { animation: shadow-hop-b var(--slide-ms) ease-in-out both; }
+@keyframes piece-hop-a { 0%, 100% { translate: 0 0; scale: 1; } 45% { translate: -4% -32%; scale: 1.22; } }
+@keyframes piece-hop-b { 0%, 100% { translate: 0 0; scale: 1; } 45% { translate: -4% -32%; scale: 1.22; } }
+@keyframes shadow-hop-a { 0%, 100% { scale: 1; opacity: 1; } 45% { scale: .55; opacity: .45; } }
+@keyframes shadow-hop-b { 0%, 100% { scale: 1; opacity: 1; } 45% { scale: .55; opacity: .45; } }
+
+/* Taken: knocked off the board, spinning away and shrinking as it falls. */
+.rapid-board__piece[data-taken] .rapid-board__art { animation: piece-taken .45s cubic-bezier(.5, 0, .75, 0) both; }
+.rapid-board__piece[data-taken] .rapid-board__shadow { opacity: 0; transition: opacity .15s; }
+@keyframes piece-taken {
+  0% { translate: 0 0; rotate: 0deg; scale: 1; opacity: 1; }
+  35% { translate: 18% -38%; rotate: 70deg; scale: 1.1; opacity: 1; }
+  100% { translate: 60% 30%; rotate: 200deg; scale: .35; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rapid-board__piece { transition: none; }
+  .rapid-board__piece .rapid-board__art, .rapid-board__piece .rapid-board__shadow { animation: none; }
+  .rapid-board__piece[data-taken] { display: none; }
+}
