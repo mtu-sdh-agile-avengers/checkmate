@@ -42,3 +42,10 @@ coverage/
 .env.local
 *.tsbuildinfo
 .DS_Store
+
+# Stockfish chess engine (40-80 MB): installed per machine, path in STOCKFISH_PATH
+stockfish
+stockfish*.exe
+stockfish-*/
+stockfish_*/
+*.nnue

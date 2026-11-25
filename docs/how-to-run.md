@@ -30,6 +30,21 @@ uv run fastapi dev
 > ``$env:RUN_MODE = "prod"``.
 (If `uv` is not recognised: install it with `py -m pip install uv`, then run `py -m uv run fastapi dev`.)
 
+**Optional: Stockfish** (the chess engine for "02 / In-Game Chess" and the game analysis).
+
+Stockfish is a program of about 40-80 MB, so it is installed on each machine and **never
+committed** to the repository (GitHub refuses files over 100 MB, and the repo would grow
+with every version). Download it from https://stockfishchess.org/download/, unzip it
+**outside** the project folder (e.g. `C:\Tools\stockfish`) and set the path to the
+executable in `backend\app\.env`:
+
+```bash
+STOCKFISH_PATH=C:\Tools\stockfish\stockfish-windows-x86-64-avx2.exe
+```
+
+Without it, `RUN_MODE=dev` plays with a simple built-in computer player, and
+`RUN_MODE=prod` answers "The computer can't play right now".
+
 **Second**, we need to start our React client.
 
 In the project root, change directory to `frontend`:
