@@ -6,6 +6,7 @@ The last test runs the real engine and is skipped unless STOCKFISH_PATH is set i
 """
 
 import shutil
+import threading
 
 import chess
 import chess.engine
@@ -21,6 +22,7 @@ from src.analysis.stockfish import (
     categorize_move,
     evaluate_moves,
     load_stockfish_config,
+    run_with_engine,
 )
 from src.chesscom.parser.parser import parse_pgn_moves
 from src.config import get_config
@@ -97,6 +99,32 @@ def test_load_stockfish_config_rejects_unknown_keys(tmp_path):
 def test_stockfish_engine_without_path_raises():
     with pytest.raises(ChessEngineUnavailableError, match="STOCKFISH_PATH"):
         StockfishEngine(None, CONFIG.engine)
+
+
+@pytest.mark.anyio
+async def test_a_loop_that_cannot_start_processes_is_an_engine_error(monkeypatch):
+    # e.g. the SelectorEventLoop of `uvicorn --reload` on Windows
+    async def cannot_start(*args, **kwargs):
+        raise NotImplementedError
+
+    monkeypatch.setattr(chess.engine, "popen_uci", cannot_start)
+
+    with pytest.raises(ChessEngineUnavailableError, match="Cannot start Stockfish"):
+        async with StockfishEngine("stockfish", CONFIG.engine):
+            pass
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("own_loop", [False, True])
+async def test_run_with_engine_without_path_raises(monkeypatch, own_loop):
+    monkeypatch.setattr(
+        "src.analysis.stockfish._loop_can_start_processes", lambda: not own_loop
+    )
+
+    with pytest.raises(ChessEngineUnavailableError, match="STOCKFISH_PATH"):
+        await run_with_engine(
+            None, CONFIG.engine, lambda engine: engine.analyse(chess.Board())
+        )
 
 
 # Categories -------------------------------------------------------------------------
@@ -220,3 +248,24 @@ async def test_real_stockfish_fools_mate(fools_mate):
     assert by_san["g4"].category == MoveCategory.BLUNDER  # allows mate in 1
     assert by_san["Qh4#"].category == MoveCategory.BEST
     assert by_san["Qh4#"].eval_cp == -10000  # White is checkmated
+
+
+@pytest.mark.anyio
+@pytest.mark.skipif(not STOCKFISH_PATH, reason="Stockfish is not installed")
+@pytest.mark.parametrize("own_loop", [False, True])
+async def test_run_with_engine_real_stockfish(monkeypatch, own_loop):
+    # own_loop=True is the Windows dev server: the engine runs in a worker thread
+    monkeypatch.setattr(
+        "src.analysis.stockfish._loop_can_start_processes", lambda: not own_loop
+    )
+    board = chess.Board()
+    threads = []
+
+    async def play(engine: StockfishEngine) -> chess.Move:
+        threads.append(threading.get_ident())
+        return await engine.play(board, CONFIG.play[ComputerLevel.BEGINNER])
+
+    move = await run_with_engine(STOCKFISH_PATH, CONFIG.engine, play)
+
+    assert move in board.legal_moves
+    assert (threads[0] != threading.get_ident()) == own_loop

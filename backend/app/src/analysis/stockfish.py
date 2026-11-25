@@ -3,12 +3,15 @@
 Takes the moves produced by the PGN parser (`parse_pgn_moves`, CMG4-72) and gives every
 move a centipawn evaluation and a category (best / good / inaccuracy / miss / blunder).
 
-Usage in a service:
+Usage in a service (`run_with_engine` starts and stops the engine, also on Windows):
 
     moves = parse_pgn_moves(game.pgn)
     config = load_stockfish_config()
-    async with StockfishEngine(get_config().stockfish_path, config.engine) as engine:
-        evaluations = await evaluate_moves(moves, engine, config)
+    evaluations = await run_with_engine(
+        get_config().stockfish_path,
+        config.engine,
+        lambda engine: evaluate_moves(moves, engine, config),
+    )
 
 How a move is categorised: every position is analysed once. For a move, the position
 BEFORE it says how good the engine's best move was; the position AFTER it says how good
@@ -16,7 +19,10 @@ the played move was. The difference (from the mover's point of view) is the
 centipawn loss, compared against the thresholds in `stockfish.toml`.
 """
 
+import asyncio
+import sys
 import tomllib
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -115,10 +121,11 @@ class StockfishEngine:
             )
         except (
             OSError,
+            NotImplementedError,  # the event loop cannot start processes
             chess.engine.EngineError,
             chess.engine.EngineTerminatedError,
         ) as e:
-            raise ChessEngineUnavailableError(f"Cannot start Stockfish: {e}") from e
+            raise ChessEngineUnavailableError(f"Cannot start Stockfish: {e!r}") from e
         return self
 
     async def __aexit__(
@@ -166,6 +173,43 @@ class StockfishEngine:
         if self._engine is None:
             raise RuntimeError("StockfishEngine must be used inside 'async with'")
         return self._engine
+
+
+async def run_with_engine[T](
+    path: str | None,
+    settings: EngineSettings,
+    task: Callable[[StockfishEngine], Awaitable[T]],
+) -> T:
+    """Starts Stockfish, runs `task(engine)` and stops the engine again.
+
+    Use this instead of `async with StockfishEngine(...)` in request handlers. Starting the
+    engine needs an event loop that can run processes, and on Windows the dev server
+    (`fastapi dev` / `uvicorn --reload`) runs a SelectorEventLoop that cannot
+    (NotImplementedError). There the engine runs in a worker thread on its own
+    ProactorEventLoop instead.
+    """
+
+    async def session() -> T:
+        async with StockfishEngine(path, settings) as engine:
+            return await task(engine)
+
+    if _loop_can_start_processes():
+        return await session()
+    return await asyncio.to_thread(
+        asyncio.run, session(), loop_factory=_process_loop_factory()
+    )
+
+
+def _loop_can_start_processes() -> bool:
+    """False on Windows when the running loop is not a ProactorEventLoop."""
+    if sys.platform != "win32":
+        return True
+    return isinstance(asyncio.get_running_loop(), asyncio.ProactorEventLoop)
+
+
+def _process_loop_factory() -> Callable[[], asyncio.AbstractEventLoop] | None:
+    """The Windows loop that can start processes; None (the default loop) elsewhere."""
+    return getattr(asyncio, "ProactorEventLoop", None)
 
 
 # Evaluation ------------------------------------------------------------------------

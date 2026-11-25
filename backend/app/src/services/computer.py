@@ -16,7 +16,7 @@ from typing import Protocol
 
 import chess
 
-from src.analysis.stockfish import StockfishConfig, StockfishEngine
+from src.analysis.stockfish import StockfishConfig, run_with_engine
 from src.enums import ComputerLevel, GameStatus, PlayerColor
 from src.schemas.computer import (
     ComputerMoveRequest,
@@ -42,8 +42,10 @@ class StockfishPlayer:
         self._config = config
 
     async def choose_move(self, board: chess.Board, level: ComputerLevel) -> chess.Move:
-        async with StockfishEngine(self._path, self._config.engine) as engine:
-            return await engine.play(board, self._config.play[level])
+        strength = self._config.play[level]
+        return await run_with_engine(
+            self._path, self._config.engine, lambda engine: engine.play(board, strength)
+        )
 
 
 _PIECE_VALUES = {

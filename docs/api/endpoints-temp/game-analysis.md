@@ -87,10 +87,13 @@ the `503` message above.
 What CMG4-88 still has to do in `ChessComGamesService.analyze_game_board`:
 
 1. Find the game like `get_game_board_details` (`_find_game`).
-2. `moves = parse_pgn_moves(game.pgn)`, then inside
-   `async with StockfishEngine(get_config().stockfish_path, config.engine) as engine:`
-   call `evaluate_moves(moves, engine, config)` (`config = load_stockfish_config()`).
-3. Return `GameAnalysisResponse(game_id=..., game_url=game.url, engine=engine.name,
+2. `moves = parse_pgn_moves(game.pgn)` and `config = load_stockfish_config()`; run the
+   engine with `run_with_engine(get_config().stockfish_path, config.engine, analyse)`, where
+   `async def analyse(engine)` returns `engine.name` and
+   `await evaluate_moves(moves, engine, config)`. Use `run_with_engine`, not
+   `async with StockfishEngine(...)` directly: on Windows the dev server's event loop cannot
+   start processes, and `run_with_engine` handles that.
+3. Return `GameAnalysisResponse(game_id=..., game_url=game.url, engine=<engine name>,
    depth=config.engine.depth, initial_fen=moves.initial_fen, moves=evaluations)`.
 4. Wrap 2-3 in `except ChessEngineUnavailableError as e: raise GameAnalysisUnavailableError(str(e)) from e`.
 
