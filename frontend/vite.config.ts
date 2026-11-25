@@ -40,8 +40,12 @@ export default defineConfig({
       ],
       reporter: ['text-summary', 'html', 'lcov', 'json-summary', 'cobertura'],
       reportsDirectory: './coverage',
-      // CI fails below these (measured: 99.3% lines, 92.0% branches, 95.8% functions)
-      thresholds: { lines: 98, statements: 98, branches: 90, functions: 94 },
+      // CI fails below these (measured: 99.3% lines, 92.0% branches, 95.8% functions).
+      // They are for the whole suite: CI runs each project alone with PARTIAL_COVERAGE=1,
+      // then checks them on the merged coverage (vitest run --merge-reports --coverage).
+      thresholds: process.env.PARTIAL_COVERAGE
+        ? undefined
+        : { lines: 98, statements: 98, branches: 90, functions: 94 },
     },
   },
 });
