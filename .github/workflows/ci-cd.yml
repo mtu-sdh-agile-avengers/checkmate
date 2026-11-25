@@ -4,12 +4,11 @@
 #   backend   ruff lint + format check, pytest unit / integration / acceptance, coverage
 #   frontend  typecheck, ESLint, Vitest unit / integration, coverage, production build
 #   e2e       acceptance tests of the built app in Chromium (Playwright) against the backend
-#   docker    builds the backend image (with Stockfish) and smoke-tests it in prod mode
+#   docker    builds the app image (frontend + backend + Stockfish) and smoke-tests it
 # CD - only after a push to main:
 #   docker    pushes the tested image to GitHub Container Registry (ghcr.io)
-#   deploy-backend   when every CI job passed, Azure Container Apps runs the new image
-#   deploy-frontend  then Azure Static Web Apps serves a build that calls that backend
-# The deploy jobs are skipped until the Azure variables exist (docs/deployment-azure.md).
+#   deploy    when every CI job passed, Azure Container Apps runs the new image
+# The deploy job is skipped until the Azure variables exist (docs/deployment-azure.md).
 
 name: CI/CD
 
@@ -29,7 +28,7 @@ permissions:
 
 env:
   STOCKFISH_PATH: /usr/games/stockfish
-  IMAGE: ghcr.io/${{ github.repository_owner }}/checkmate-backend
+  IMAGE: ghcr.io/${{ github.repository_owner }}/checkmate
   DEPLOY: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
 
 jobs:
@@ -228,7 +227,7 @@ jobs:
             frontend/test-results/
 
   docker:
-    name: Backend image
+    name: App image
     needs: [backend]
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -243,18 +242,18 @@ jobs:
       - name: Build the image
         uses: docker/build-push-action@v6
         with:
-          context: backend/app
+          context: .
           load: true
-          tags: checkmate-backend:ci
+          tags: checkmate:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Smoke test (prod mode, real Stockfish)
+      - name: Smoke test (prod mode, real Stockfish, the site)
         run: |
-          docker run --detach --name backend --publish 8000:8000 \
-            --env API_CHESSCOM_USER_AGENT="checkmate-ci/1.0" checkmate-backend:ci
+          docker run --detach --name app --publish 8000:8000 \
+            --env API_CHESSCOM_USER_AGENT="checkmate-ci/1.0" checkmate:ci
           started=false
-          for attempt in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             if curl --silent --fail http://127.0.0.1:8000/health; then started=true; break; fi
             sleep 1
           done
@@ -266,12 +265,14 @@ jobs:
           cat reply.json; echo
           [ "$status" = 200 ] || { echo "The computer move answered HTTP $status"; exit 1; }
           grep -q '"computerMove":{"uci"' reply.json
-          docker images checkmate-backend:ci --format '{{.Repository}}:{{.Tag}} {{.Size}}' | tee image.txt
-          printf '### Backend image\n\n%s\n' "$(cat image.txt)" >> "$GITHUB_STEP_SUMMARY"
+          # the site: a page of the app (client-side route) gets index.html
+          curl --silent --fail http://127.0.0.1:8000/players/hikaru | grep -q '<div id="root">'
+          docker images checkmate:ci --format '{{.Repository}}:{{.Tag}} {{.Size}}' | tee image.txt
+          printf '### App image\n\n%s\n' "$(cat image.txt)" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Container logs
         if: always()
-        run: docker logs backend || true
+        run: docker logs app || true
 
       - name: Log in to GitHub Container Registry
         if: env.DEPLOY == 'true'
@@ -284,20 +285,20 @@ jobs:
       - name: Push the image
         if: env.DEPLOY == 'true'
         run: |
-          docker tag checkmate-backend:ci "$IMAGE:${{ github.sha }}"
-          docker tag checkmate-backend:ci "$IMAGE:latest"
+          docker tag checkmate:ci "$IMAGE:${{ github.sha }}"
+          docker tag checkmate:ci "$IMAGE:latest"
           docker push "$IMAGE:${{ github.sha }}"
           docker push "$IMAGE:latest"
 
-  deploy-backend:
-    name: Deploy backend (Azure Container Apps)
+  deploy:
+    name: Deploy (Azure Container Apps)
     needs: [backend, frontend, e2e, docker]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AZURE_CONTAINER_APP != ''
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
       name: production
-      url: ${{ vars.BACKEND_URL }}
+      url: ${{ vars.APP_URL }}
     permissions:
       contents: read
       id-token: write # sign in to Azure with GitHub's OIDC token, no password stored
@@ -318,51 +319,13 @@ jobs:
             --image "$IMAGE:${{ github.sha }}" \
             --output table
 
-      - name: Check the deployed API
+      - name: Check the deployed site and API
         run: |
-          for attempt in $(seq 1 30); do
-            curl --silent --fail "${{ vars.BACKEND_URL }}/health" && exit 0
+          for _ in $(seq 1 30); do
+            if curl --silent --fail "${{ vars.APP_URL }}/health"; then
+              curl --silent --fail "${{ vars.APP_URL }}/" | grep -q '<div id="root">'
+              exit 0
+            fi
             sleep 10
           done
           exit 1
-
-  deploy-frontend:
-    name: Deploy frontend (Azure Static Web Apps)
-    needs: [deploy-backend]
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    environment:
-      name: production-frontend
-      url: ${{ vars.FRONTEND_URL }}
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Build against the deployed API
-        working-directory: frontend
-        run: |
-          npm ci
-          npm run build
-        env:
-          VITE_API_MODE: live
-          VITE_API_BASE_URL: ${{ vars.BACKEND_URL }}/api/v1
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist-production
-          path: frontend/dist/
-
-      - name: Upload to Static Web Apps
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          action: upload
-          app_location: frontend/dist
-          skip_app_build: true
-          skip_api_build: true
-          output_location: ""
