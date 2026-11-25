@@ -35,6 +35,20 @@ class ChessComGameNotFoundError(ChessAPINotFoundError):
         super().__init__(path, message)
 
 
+class ChessComPlayersNotFoundError(ChessAPINotFoundError):
+    """Raised when one or more of several requested players do not exist.
+
+    The message is meant for the end-user (returned as the 404 `detail`),
+    e.g. "Players ghost1, ghost2 data is unavailable".
+    """
+
+    def __init__(self, usernames: list[str]) -> None:
+        self.usernames = usernames
+        subject = "Player" if len(usernames) == 1 else "Players"
+        message = f"{subject} {', '.join(usernames)} data is unavailable"
+        super().__init__(f"/player/{usernames[0]}", message)
+
+
 class ChessAPIRateLimitError(ChessAPIError):
     """Raised when a Chess.com rate limit is exceeded."""
 

@@ -50,7 +50,21 @@ async def search_player(
 @router.get(
     "/compare",
     summary="Compare two players",
-    description="Compares two players side-by-side and determines the winner (with more win likelihood).",
+    description=(
+        "Compares two players side by side in one time class: the all-time summary of "
+        "each player (the same as `/{username}/summary?period=all`) and the estimated "
+        "win likelihood of each, from the Elo expected score of their current ratings. "
+        "`p1` and `p2` are usernames or member profile URLs and must be different players."
+    ),
+    responses={
+        404: {
+            "model": ErrorResponse,
+            "description": 'One or both players do not exist, e.g. "Players ghost1, ghost2 data is unavailable"',
+        },
+        422: {
+            "description": "Invalid `p1` / `p2` / `timeClass`, or the same player twice"
+        },
+    },
 )
 @limiter.limit("1/second")
 async def compare_players(

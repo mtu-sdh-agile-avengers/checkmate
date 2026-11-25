@@ -11,10 +11,14 @@ results; filtering, sorting and paging works like in a real service.
 
 Without year / month the "latest" month is November 2026.
 
+Game analysis: every half-move of the sample game with real Stockfish evaluations
+(see `game_analysis.py`).
+
 Special values for testing frontend states:
 - username "notfound": the player does not exist -> 404
 - username "nogames": the player has no games -> empty list
 - game id "0" (`search=0`): the game is not in the player's archive -> 404
+- game id "503" (`search=503`, analysis only): the chess engine is unavailable -> 503
 """
 
 from datetime import UTC, datetime, timedelta
@@ -30,15 +34,23 @@ from src.schemas.games import (
     GameBoardDetailsResponse,
     GameMemberResponse,
     GameResponse,
+    MoveEvaluationResponse,
     PaginatedGameListResponse,
     PlayerGameHistoryListQuery,
     PlayerGameSearchQuery,
+)
+from src.services.exceptions import GameAnalysisUnavailableError
+from src.services.mocks.game_analysis import (
+    MOCK_ANALYSIS_MOVES,
+    MOCK_DEPTH,
+    MOCK_ENGINE,
 )
 from src.services.mocks.players import MOCK_NO_GAMES_USERNAME, MOCK_NOT_FOUND_USERNAME
 from src.services.processing.pagination import build_game_list
 from src.services.protocols import GamesService
 
 MOCK_NOT_FOUND_GAME_ID = "0"
+MOCK_ENGINE_UNAVAILABLE_GAME_ID = "503"
 MOCK_OPPONENT = "mock_opponent"
 # End time of the sample game when the request has no year / month (latest month).
 MOCK_LATEST_END_TIME = datetime(2026, 11, 3, 18, 30, tzinfo=UTC)
@@ -172,12 +184,7 @@ class MockGamesService(GamesService):
     async def get_game_board_details(
         self, username: str, query: PlayerGameSearchQuery
     ) -> GameBoardDetailsResponse:
-        if username.casefold() == MOCK_NOT_FOUND_USERNAME:
-            raise ChessAPINotFoundError(f"/player/{username}/games")
-        if query.game_id == MOCK_NOT_FOUND_GAME_ID:
-            raise ChessComGameNotFoundError(
-                username, query.game_id, query.year, query.month
-            )
+        _check_mock_game(username, query)
 
         end_time = MOCK_LATEST_END_TIME
         if query.year is not None and query.month is not None:
@@ -205,4 +212,40 @@ class MockGamesService(GamesService):
     async def analyze_game_board(
         self, username: str, query: PlayerGameSearchQuery
     ) -> GameAnalysisResponse:
-        raise NotImplementedError("Mock game analysis is not implemented yet")
+        _check_mock_game(username, query)
+        if query.game_id == MOCK_ENGINE_UNAVAILABLE_GAME_ID:
+            raise GameAnalysisUnavailableError("Mock: the chess engine is unavailable")
+
+        return GameAnalysisResponse(
+            game_id=query.game_id,
+            game_url=f"https://www.chess.com/game/live/{query.game_id}",
+            engine=MOCK_ENGINE,
+            depth=MOCK_DEPTH,
+            initial_fen=STANDARD_START_FEN,
+            moves=[
+                MoveEvaluationResponse(
+                    ply=ply,
+                    color=PlayerColor.WHITE if ply % 2 else PlayerColor.BLACK,
+                    san=san,
+                    uci=uci,
+                    fen=fen,
+                    eval_cp=eval_cp,
+                    mate_in=mate_in,
+                    best_move_san=best_move_san,
+                    category=category,
+                )
+                for ply, (san, uci, fen, eval_cp, mate_in, best_move_san, category) in (
+                    enumerate(MOCK_ANALYSIS_MOVES, start=1)
+                )
+            ],
+        )
+
+
+def _check_mock_game(username: str, query: PlayerGameSearchQuery) -> None:
+    """Special values: unknown player / game -> 404 (see the module docstring)."""
+    if username.casefold() == MOCK_NOT_FOUND_USERNAME:
+        raise ChessAPINotFoundError(f"/player/{username}/games")
+    if query.game_id == MOCK_NOT_FOUND_GAME_ID:
+        raise ChessComGameNotFoundError(
+            username, query.game_id, query.year, query.month
+        )

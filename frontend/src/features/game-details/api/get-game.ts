@@ -1,30 +1,18 @@
 import { getApiMode } from '@/config/api';
 import { apiGet } from '@/lib/api-client';
 import { mockGetGame } from '@/lib/mock-api';
-import type { GameDetails, GameResult, PlayerColor, TimeClass } from '@/types/chess';
-import { formatDay, formatTimeControl } from '@/utils/format';
+import type { GameArchive, GameDetails } from '@/types/chess';
+import { toGameSummary, type GameDto } from '@/utils/games';
 
 /** Response of GET /api/v1/players/{username}/games/ (backend: GameBoardDetailsResponse). */
-export type GameDetailsDto = {
-  id: string;
-  url: string;
-  timeClass: TimeClass;
-  timeControl: string; // "<base seconds>[+<increment>]", daily: "1/<seconds per move>"
-  endTime: string; // ISO date-time (UTC)
-  rated: boolean;
-  rules: string;
-  color: PlayerColor; // color of the requested player
-  result: GameResult; // result of the requested player
-  player: { username: string; rating: number };
-  opponent: { username: string; rating: number };
-  avgRating: number;
+export type GameDetailsDto = GameDto & {
   pgn: string;
   initialSetup: string; // FEN
   fen: string; // FEN of the final position
 };
 
 /** Chess.com monthly archive of a game: the month the game ended (UTC). */
-export type GameArchive = { year: number; month: number };
+export type { GameArchive };
 
 /**
  * Loads one game of the player for the game page.
@@ -55,21 +43,8 @@ export async function getGame(
 
 /** Maps the API response to the shape the game page uses. */
 export function toGameDetails(dto: GameDetailsDto): GameDetails {
-  const endTime = new Date(dto.endTime);
-  const opponentColor: PlayerColor = dto.color === 'white' ? 'black' : 'white';
   return {
-    id: dto.id,
-    url: dto.url,
-    timeClass: dto.timeClass,
-    timeControl: formatTimeControl(dto.timeControl),
-    endTime: Math.floor(endTime.getTime() / 1000),
-    date: formatDay(endTime),
-    rated: dto.rated,
-    rules: dto.rules,
-    result: dto.result,
-    player: { ...dto.player, color: dto.color },
-    opponent: { ...dto.opponent, color: opponentColor },
-    averageRating: dto.avgRating,
+    ...toGameSummary(dto),
     pgn: dto.pgn,
     initialFen: dto.initialSetup,
     finalFen: dto.fen,

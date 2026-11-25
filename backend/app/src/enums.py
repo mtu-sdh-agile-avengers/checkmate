@@ -67,6 +67,6 @@ class GameResult(StrEnum):
 class MoveCategory(StrEnum):
     BEST = "best"
     GOOD = "good"
-    NORMAL = "normal"
+    INACCURACY = "inaccuracy"
     MISS = "miss"
     BLUNDER = "blunder"
