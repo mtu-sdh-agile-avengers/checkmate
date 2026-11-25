@@ -49,3 +49,12 @@ stockfish*.exe
 stockfish-*/
 stockfish_*/
 *.nnue
+
+# test and coverage reports (CI uploads them as artifacts)
+backend/app/reports/
+backend/app/htmlcov/
+.coverage
+frontend/playwright-report/
+frontend/test-results/
+frontend/.vitest-reports/
+frontend/reports/

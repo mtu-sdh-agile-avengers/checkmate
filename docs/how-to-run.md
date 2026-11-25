@@ -64,3 +64,26 @@ And, finally run:
 ```bash
 npm run dev
 ```
+## Tests
+
+Backend (in `backend\app`; with `STOCKFISH_PATH` set, the Stockfish tests run too):
+
+```bash
+uv run pytest                      # all tests
+uv run pytest -m unit              # one level: unit, integration or acceptance
+uv run pytest --cov                # with coverage
+```
+
+Frontend (in `frontend`):
+
+```bash
+npm test                           # unit + integration tests (Vitest)
+npm run test:coverage              # with coverage
+npm run build; npm run test:e2e    # acceptance tests in a browser (Playwright); needs `uv`
+```
+
+The first time, `npx playwright install chromium` downloads the browser for the acceptance
+tests. They start the backend (dev mode) and the built frontend themselves.
+
+The same checks run on GitHub for every push: see `.github/workflows/ci-cd.yml` and
+[deployment-azure.md](deployment-azure.md).
