@@ -56,7 +56,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=get_config().cors_origins,  # 5173: default vite server port
     # allow_credentials=True,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],  # POST: computer moves
     allow_headers=["*"],
 )
 
