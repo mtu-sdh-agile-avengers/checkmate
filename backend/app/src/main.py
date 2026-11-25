@@ -2,7 +2,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
 from loguru import logger
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -11,6 +10,7 @@ from src.api.v1.routers import api_router as api_v1_router
 from src.chesscom.client.client import ChessComClient
 from src.config import get_config
 from src.exception_handlers import register_exception_handlers
+from src.frontend import add_frontend
 from src.rate_limiting import limiter
 
 
@@ -61,13 +61,6 @@ app.add_middleware(
 )
 
 
-@app.get("/", tags=["root"], description='Redirects to "/health"')
-@limiter.limit("1/second")
-async def root(request: Request):
-    logger.debug("GET root route requested")
-    return RedirectResponse("/health")
-
-
 @app.get(
     "/health", tags=["health"], description="Returns server status if it's available."
 )
@@ -79,6 +72,9 @@ async def health(request: Request):
 
 logger.debug("Loading routers...")
 load_routers(app, api_v1_router)
+
+# the built frontend at "/" in the production image (last: it catches every other path)
+add_frontend(app, get_config().frontend_dist)
 
 
 # cd backend/app, uv run uvicorn src.main:app --port 8000 --reload | uv run pytest -v

@@ -2,26 +2,23 @@
 # Creates the Azure resources of Checkmate with the Azure CLI (docs/deployment-azure.md).
 #
 # Run it in Azure Cloud Shell (Bash), where `az` is installed and already signed in:
-#   bash azure-setup.sh setup   # now: regions, resource group, Static Web App, identity, environment
+#   bash azure-setup.sh setup   # now: region, resource group, identity, Container Apps environment
 #   bash azure-setup.sh app     # after the first main run published the image: the Container App
 #
-# Safe to run again: what already exists is kept. Regions are picked from the regions
-# your subscription allows (Azure for Students restricts them); to choose yourself:
-#   APP_REGION=swedencentral SWA_REGION=eastus2 bash azure-setup.sh setup
+# One Container App serves the site and the API. Safe to run again: what already exists is
+# kept. The region is picked from those your subscription allows (Azure for Students
+# restricts them); to choose yourself: APP_REGION=swedencentral bash azure-setup.sh setup
 set -euo pipefail
 
 RG=checkmate-rg
-SWA=checkmate-web
 ENV_NAME=checkmate-env
 APP=checkmate-api
 IDENTITY=checkmate-github
 GITHUB_REPO=mtu-sdh-agile-avengers/checkmate
 GITHUB_ENVIRONMENT=production
-IMAGE=ghcr.io/mtu-sdh-agile-avengers/checkmate-backend:latest
+IMAGE=ghcr.io/mtu-sdh-agile-avengers/checkmate:latest
 USER_AGENT="Checkmate/1.0 (MTU student project; contact: pavloautomation@gmail.com)"
 
-# Static Web Apps exists in these regions only; the site files are served globally anyway
-SWA_REGIONS="westeurope eastus2 centralus westus2 eastasia"
 # Closest to Ireland first
 APP_REGIONS="northeurope westeurope uksouth ukwest francecentral swedencentral germanywestcentral
   norwayeast switzerlandnorth polandcentral italynorth spaincentral eastus2 eastus centralus"
@@ -83,18 +80,16 @@ choose_regions() {
     echo "(no region policy found: every region is allowed)"
   fi
   APP_REGION=${APP_REGION:-$(pick_region "$APP_REGIONS" "$allowed")}
-  SWA_REGION=${SWA_REGION:-$(pick_region "$SWA_REGIONS" "$allowed")}
   if [ -z "$APP_REGION" ]; then
     echo "None of these regions is allowed: $APP_REGIONS"
     echo "Run again with APP_REGION=<one of the allowed regions above>"
     exit 1
   fi
-  echo "Backend (Container Apps): $APP_REGION"
-  echo "Frontend (Static Web Apps): ${SWA_REGION:-not allowed in any Static Web Apps region}"
+  echo "Container Apps (site + API): $APP_REGION"
 }
 
 setup() {
-  local subscription tenant principal client scope token host
+  local subscription tenant principal client scope
 
   az extension add --name containerapp --upgrade --yes --only-show-errors
   subscription=$(az account show --query id -o tsv)
@@ -103,7 +98,7 @@ setup() {
   choose_regions
 
   say "Resource providers"
-  for provider in Microsoft.App Microsoft.OperationalInsights Microsoft.Web Microsoft.ManagedIdentity; do
+  for provider in Microsoft.App Microsoft.OperationalInsights Microsoft.ManagedIdentity; do
     az provider register --namespace "$provider" --wait
     echo "$provider registered"
   done
@@ -116,18 +111,6 @@ setup() {
     echo "created in $APP_REGION"
   fi
   scope=$(az group show --name "$RG" --query id -o tsv)
-
-  if [ -n "$SWA_REGION" ]; then
-    say "Static Web App $SWA (Free, $SWA_REGION)"
-    if ! az staticwebapp show --name "$SWA" --resource-group "$RG" -o none 2>/dev/null; then
-      az staticwebapp create --name "$SWA" --resource-group "$RG" --location "$SWA_REGION" \
-        --sku Free -o none
-    fi
-    host=$(az staticwebapp show --name "$SWA" --resource-group "$RG" --query defaultHostname -o tsv)
-    token=$(az staticwebapp secrets list --name "$SWA" --resource-group "$RG" \
-      --query properties.apiKey -o tsv 2>/dev/null || true)
-    echo "https://$host"
-  fi
 
   say "Identity $IDENTITY for GitHub Actions"
   az identity create --name "$IDENTITY" --resource-group "$RG" --location "$APP_REGION" -o none
@@ -166,18 +149,13 @@ setup() {
   echo "AZURE_CLIENT_ID                  $client"
   echo "AZURE_TENANT_ID                  $tenant"
   echo "AZURE_SUBSCRIPTION_ID            $subscription"
-  if [ -n "$SWA_REGION" ]; then
-    echo "AZURE_STATIC_WEB_APPS_API_TOKEN  ${token:-portal: $SWA > Overview > Manage deployment token}"
-  fi
   echo
   echo "Do not add the variables yet: run 'bash azure-setup.sh app' after the merge."
 }
 
 app() {
-  local host fqdn registry=()
+  local fqdn registry=()
   az extension add --name containerapp --upgrade --yes --only-show-errors
-  host=$(az staticwebapp show --name "$SWA" --resource-group "$RG" --query defaultHostname -o tsv \
-    2>/dev/null || true)
   # a private image: GHCR_USER=<github user> GHCR_TOKEN=<token with read:packages>
   if [ -n "${GHCR_TOKEN:-}" ]; then
     registry=(--registry-server ghcr.io --registry-username "$GHCR_USER"
@@ -192,14 +170,13 @@ app() {
       --image "$IMAGE" "${registry[@]}" \
       --ingress external --target-port 8000 \
       --cpu 1 --memory 2Gi --min-replicas 0 --max-replicas 2 \
-      --env-vars "API_CHESSCOM_USER_AGENT=$USER_AGENT" \
-      "CORS_ORIGINS=[\"https://${host:-localhost}\"]" -o none
+      --env-vars "API_CHESSCOM_USER_AGENT=$USER_AGENT" -o none
   fi
   fqdn=$(az containerapp show --name "$APP" --resource-group "$RG" \
     --query properties.configuration.ingress.fqdn -o tsv)
 
   say "Checks (the first request wakes the app up)"
-  for attempt in $(seq 1 30); do
+  for _ in $(seq 1 30); do
     curl --silent --fail "https://$fqdn/health" && break
     sleep 5
   done
@@ -208,11 +185,12 @@ app() {
   echo "Chess.com from Azure: HTTP $(curl --silent --output /dev/null --write-out '%{http_code}' \
     "https://$fqdn/api/v1/players/hikaru/profile")  (200 = works, 503 = Chess.com blocks Azure)"
 
+  say "The site: https://$fqdn   (API docs: https://$fqdn/docs)"
+
   say "GitHub: Settings > Secrets and variables > Actions > Variables"
   echo "AZURE_RESOURCE_GROUP  $RG"
   echo "AZURE_CONTAINER_APP   $APP"
-  echo "BACKEND_URL           https://$fqdn"
-  echo "FRONTEND_URL          https://$host"
+  echo "APP_URL               https://$fqdn"
   echo
   echo "Then: Actions > CI/CD > the latest run on main > Re-run all jobs."
 }

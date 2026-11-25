@@ -7,7 +7,9 @@ game history with move analysis, and a game against the computer (Stockfish).
 
 | Folder | What it is |
 | --- | --- |
-| `backend/app` | FastAPI server (Python 3.14, uv), Dockerfile with Stockfish |
+| `backend/app` | FastAPI server (Python 3.14, uv) |
 | `frontend` | React 19 + Vite client |
-| `.github/workflows/ci-cd.yml` | CI/CD pipeline: tests, coverage, Docker image, deploy to Azure |
+| `Dockerfile` | production image: the built frontend + the backend + Stockfish in one container |
+| `.github/workflows/ci-cd.yml` | CI/CD pipeline: tests, coverage, Docker image, deploy to Azure Container Apps |
+| `infra/azure-setup.sh` | creates the Azure resources with the Azure CLI |
 | `docs` | [How to run](docs/how-to-run.md), [deployment on Azure](docs/deployment-azure.md), API notes, team workflow |

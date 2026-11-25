@@ -41,6 +41,14 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
         item.add_marker(getattr(pytest.mark, level))
 
 
+@pytest.fixture(autouse=True)
+def fresh_rate_limits() -> None:
+    """Every test starts with empty rate-limit counters (they live in the process)."""
+    from src.rate_limiting import limiter  # imported here, after the env defaults above
+
+    limiter.reset()
+
+
 @pytest.fixture
 def chesscom_fixture() -> Callable[[str], object]:
     """Loads a sample Chess.com response from `tests/fixtures/chesscom`.
