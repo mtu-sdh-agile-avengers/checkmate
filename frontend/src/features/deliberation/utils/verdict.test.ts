@@ -46,3 +46,37 @@ describe('verdict', () => {
     expect(unrated.rows.find((row) => row.key === 'currentRating')?.player2).toBe('—');
   });
 });
+
+describe('verdict, other outcomes', () => {
+  it('names the second player and gives reasons of every kind', () => {
+    // magnus: higher peak, more wins and more games; hikaru: everything else
+    const verdict = readVerdict(
+      comparison({ winner: 'MagnusCarlsen', winLikelihood: null }, { ...MAGNUS, currentRating: 2950, winRate: 70, losses: 100 }),
+    );
+    expect(verdict.winner).toBe('player2');
+    expect(verdict.summary).toBe('magnuscarlsen comes out ahead of hikaru in rapid.');
+    expect(verdict.reasons).toEqual([
+      'Rated 50 points higher (2,950 vs 2,900)',
+      'Wins more often (70% vs 67%)',
+      'Peaked 40 points higher (2,990 vs 2,950)',
+    ]);
+  });
+
+  it('counts wins and games when the ratings say nothing', () => {
+    const verdict = readVerdict(
+      comparison(
+        { winner: 'magnuscarlsen', metrics: compareMetrics({ ...HIKARU, currentRating: null, highestRating: null, winRate: 60 }, { ...MAGNUS, currentRating: null, highestRating: null }) },
+      ),
+    );
+    expect(verdict.reasons).toEqual(['More wins (900 vs 800)', 'More games played (1,500 vs 1,200)']);
+  });
+
+  it('ignores a winner the API names but who is not compared', () => {
+    expect(readVerdict(comparison({ winner: 'someone_else' })).winner).toBeNull();
+  });
+
+  it('gives no reasons without a rating to compare', () => {
+    const noRating = comparison({ winner: null, metrics: compareMetrics(HIKARU, MAGNUS).filter((m) => m.key !== 'currentRating') });
+    expect(readVerdict(noRating).reasons).toEqual([]);
+  });
+});

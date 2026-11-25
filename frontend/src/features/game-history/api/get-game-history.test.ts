@@ -118,3 +118,12 @@ describe('game-history api', () => {
     await expect(getGameHistory('notfound')).rejects.toThrow(/not in the demo data/);
   });
 });
+
+describe('game-history api without an archive month', () => {
+  it("takes each game's month from its end time", () => {
+    const page = toGameHistoryPage({ ...HIKARU_BLITZ_PAGE, year: null, month: null });
+
+    expect(page.archive).toBeNull();
+    expect(page.items[0]?.archive).toEqual({ year: 2026, month: 10 });
+  });
+});

@@ -73,3 +73,16 @@ describe('television signals', () => {
     expect(media.removeEventListener).toHaveBeenCalled();
   });
 });
+
+describe('television signals, number of sets', () => {
+  it('starts over when the number of sets changes', () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
+    const { result, rerender } = renderHook(({ count }) => useTvSignals(false, count), { initialProps: { count: 4 } });
+    expect(result.current).toHaveLength(4);
+
+    rerender({ count: 6 });
+
+    expect(result.current).toHaveLength(6);
+    expect(result.current.every((signal) => !signal.active)).toBe(true);
+  });
+});

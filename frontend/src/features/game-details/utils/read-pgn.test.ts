@@ -46,3 +46,19 @@ describe('read-pgn', () => {
     expect(readOpening({})).toBeNull();
   });
 });
+
+describe('openings and move numbers, edge cases', () => {
+  it('reads a broken opening link as no name', () => {
+    expect(readOpening({ ECO: 'B16', ECOUrl: 'https://www.chess.com/openings/%E0%A4%A' })).toBe('B16');
+    expect(readOpening({ ECO: '?' })).toBeNull();
+  });
+
+  it('starts the score sheet on a black move', () => {
+    const game = readPgn('[FEN "x"]\n\n12... Nf6 13. Bg5 Be7 1-0');
+    expect(game.firstMove).toEqual({ number: 12, black: true });
+    expect(toFullMoves(game)).toEqual([
+      { number: 12, white: null, black: 'Nf6' },
+      { number: 13, white: 'Bg5', black: 'Be7' },
+    ]);
+  });
+});
