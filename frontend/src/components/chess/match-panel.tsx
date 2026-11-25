@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useId, useRef, type ReactNode } from 'react';
 import { SidePanel } from '@/components/ui/side-panel';
+import { useFocusOnArrival } from '@/hooks/use-focus-on-arrival';
 import './match-panel.css';
 
 export type MatchSeat = { name: string; detail: string; color: 'white' | 'black' };
@@ -20,20 +21,8 @@ export function MatchPanel({ eyebrow, title, seats, note, actions, leaving = fal
 }) {
   const titleId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => {
-    // The panel stays hidden until it slides in, and a hidden heading cannot take focus:
-    // keep trying, a frame at a time, until it can (or give up after a couple of seconds).
-    const started = performance.now();
-    let frame = 0;
-    const focus = () => {
-      const element = heading.current;
-      if (!element) return;
-      element.focus({ preventScroll: true });
-      if (document.activeElement !== element && performance.now() - started < 2500) frame = requestAnimationFrame(focus);
-    };
-    focus();
-    return () => cancelAnimationFrame(frame);
-  }, []);
+  // The panel stays hidden until it slides in: focus its heading as soon as it can take it.
+  useFocusOnArrival(heading);
 
   return (
     <SidePanel labelledBy={titleId} leaving={leaving} delay={delay} className="match-panel">

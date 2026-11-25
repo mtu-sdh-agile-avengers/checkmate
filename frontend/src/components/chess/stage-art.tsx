@@ -102,6 +102,37 @@ export function SeatedPlayer() {
   </svg>;
 }
 
+/** A player seated in profile at the table, in either tone, facing `facing`: the guest's shape
+ *  (bare-headed, an arm resting on the table) on a chair, with the player's picture over the
+ *  head (`avatar`; their initial, `face`, when there is none or it fails to load). The picture
+ *  is never mirrored. Same box and heights as SeatedPlayer: 230 x 340, floor at y = 340, table
+ *  top at y = 156. */
+export function SeatedFigure({ tone, avatar = null, face = '?', facing = 'right' }: {
+  tone: 'ink' | 'ivory';
+  avatar?: string | null;
+  face?: string;
+  facing?: 'left' | 'right';
+}) {
+  const clip = `seated${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const [broken, setBroken] = useState<string | null>(null);
+  const picture = avatar && avatar !== broken ? avatar : null;
+  const ink = tone === 'ink';
+  const edge = ink ? IVORY : '#0b0b0c';
+  const headX = facing === 'left' ? 230 - 134 : 134; // the drawn head is at (134, 52), r 24
+  return <svg className="seated-figure" data-tone={tone} viewBox="0 0 230 340" aria-hidden="true" focusable="false">
+    <g transform={facing === 'left' ? 'translate(230 0) scale(-1 1)' : undefined}>
+      <Cutout shapes={PLAYER_CHAIR} fill={ink ? '#2c2c2e' : '#d9d5cc'} edge={edge} width={3.5} />
+      <Cutout shapes={GUEST} fill={ink ? INK : IVORY} edge={edge} width={5} />
+    </g>
+    {picture ? <g className="seated-figure__face">
+      <clipPath id={clip}><circle cx={headX} cy="52" r="27" /></clipPath>
+      <circle cx={headX} cy="52" r="27" fill={ink ? INK : IVORY} />
+      <image href={picture} x={headX - 27} y="25" width="54" height="54" preserveAspectRatio="xMidYMid slice" clipPath={`url(#${clip})`} onError={() => setBroken(picture)} />
+      <circle cx={headX} cy="52" r="27" fill="none" stroke={edge} strokeWidth="3" />
+    </g> : <text className="seated-figure__face" x={headX} y="64" textAnchor="middle" fontSize="30" fontWeight="900" fill={ink ? IVORY : INK}>{face}</text>}
+  </svg>;
+}
+
 const OPPONENT_CHAIR = [
   'M116 100 Q123 90 130 100 L120 238 H106 Z',
   'M107 100 Q121 85 135 100 L130 152 Q119 158 107 152 Z',

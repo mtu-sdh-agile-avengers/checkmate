@@ -1,0 +1,92 @@
+/* The verdict set: the same make as the VS set (cabinet, keys, glass and its keyframes come
+   from vs-tv.css), lowered on two cables beside the table once the spotlight has found the
+   winner. Its screen is paper with ink type; the better figure of each pair is set in ink.
+
+   Sequence (from the moment it appears; reduced motion skips all of it):
+     0–1.05s   it drops, lands with two bounces and swings on its cables
+     .95s      power on: two shutters open from the middle
+     1.25s     title, summary, meter, reasons and table tune in one after another */
+.verdict-rig {
+  --drop-at: 0s; --power-at: .95s;
+  position: absolute; z-index: 8; top: 64px; bottom: clamp(14px, 2.5vh, 30px); right: clamp(14px, 2.2vw, 30px);
+  width: var(--verdict-w, 480px); display: flex; flex-direction: column; justify-content: center; pointer-events: none;
+}
+.verdict-tv { position: relative; display: flex; flex-direction: column; min-height: 0; max-height: 100%; pointer-events: auto; animation: vs-drop 1.05s linear var(--drop-at) both; }
+.verdict-tv::before, .verdict-tv::after { content: ''; position: absolute; bottom: 100%; width: 3px; height: 100vh; background: linear-gradient(180deg, #19191b, #3c3b39); }
+.verdict-tv::before { left: 18%; }
+.verdict-tv::after { right: 18%; }
+.verdict-tv .vs-tv__cabinet { display: flex; flex-direction: column; min-height: 0; }
+/* The set is narrower than the VS set: the hint gets a line of its own above the keys. */
+.verdict-tv .vs-tv__controls { flex-wrap: wrap; row-gap: 8px; padding-top: 9px; }
+.verdict-tv .vs-tv__grille { display: none; }
+.verdict-tv .vs-tv__hint { flex-basis: 100%; text-align: center; }
+.verdict-tv .vs-tv__keys { width: 100%; }
+.verdict-tv .tv-key { flex: 1; min-width: 0; }
+.verdict-rig[data-leaving] .verdict-tv { animation: vs-rise .45s cubic-bezier(.55, 0, 1, .45) both; }
+
+.verdict-tv__screen {
+  position: relative; display: flex; min-height: 0; overflow: hidden;
+  border: 3px solid #0d0c0a; border-radius: 26px / 22px; box-shadow: 0 0 0 5px #1a1917, 0 0 0 6px #5f5e5c;
+  background: #f4f2ec; color: #1b1c1d;
+}
+.verdict-tv__scroll { flex: 1; min-height: 0; overflow: auto; display: grid; align-content: start; gap: 12px; padding: 16px 18px 16px; scrollbar-width: thin; scrollbar-color: #a7a5a0 transparent; }
+/* Power on: two shutters open from the middle, as on the VS set. */
+.verdict-tv__screen::before, .verdict-tv__screen::after {
+  content: ''; position: absolute; z-index: 3; left: 0; right: 0; height: 50.5%; pointer-events: none;
+  background: #0b0a08; transform: scaleY(0); animation: vs-shutter .4s cubic-bezier(.7, 0, .2, 1) var(--power-at) both;
+}
+.verdict-tv__screen::before { top: 0; transform-origin: 50% 0; }
+.verdict-tv__screen::after { bottom: 0; transform-origin: 50% 100%; }
+
+.verdict-tv__head { display: grid; justify-items: start; gap: 9px; }
+.verdict-tv__title { max-width: 100%; overflow-wrap: break-word; }
+.verdict-tv__title:focus { outline: none; }
+.verdict-tv__summary { margin: 0; font-size: 15px; font-weight: 650; line-height: 1.45; }
+/* The order things tune in. */
+.verdict-tv__summary { --n: 1; }
+.verdict-meter { --n: 2; }
+.verdict-reasons { --n: 3; }
+.verdict-table { --n: 4; }
+.verdict-tv__failure { --n: 1; }
+
+/* Expected score: both names with their share, and the split drawn as one bar. */
+.verdict-meter { display: grid; gap: 6px; }
+.verdict-meter__labels { display: flex; justify-content: space-between; gap: 12px; margin: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+.verdict-meter__labels span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #55514a; }
+.verdict-meter__labels [data-winner] { color: #1b1c1d; font-weight: 800; }
+.verdict-meter__labels b { color: #1b1c1d; }
+/* Player 1's share in ivory, Player 2's in ink: their tones at the table and on the VS set. */
+.verdict-meter__bar { height: 14px; border: 2px solid #0b0b0c; background: #1b1c1d; box-shadow: 3px 3px 0 #80796d; overflow: hidden; }
+.verdict-meter__bar span { display: block; height: 100%; background: #efece5; transform-origin: left; transform: scaleX(var(--share, .5)); animation: verdict-fill .9s cubic-bezier(.2, .8, .2, 1) calc(var(--power-at) + .55s) both; }
+@keyframes verdict-fill { from { transform: scaleX(0); } }
+
+.verdict-reasons h2 { margin: 0 0 6px; color: #45423c; font-size: 12px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; }
+.verdict-reasons ul { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.verdict-reasons li { display: grid; grid-template-columns: 9px minmax(0, 1fr); align-items: baseline; gap: 9px; font-size: 14px; font-weight: 650; line-height: 1.35; }
+.verdict-reasons li::before { content: ''; width: 9px; height: 9px; background: #1b1c1d; translate: 0 -1px; }
+
+/* Every statistic side by side; the better figure of each row is set in ink. */
+.verdict-table { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.verdict-table caption { margin-bottom: 6px; color: #45423c; font-size: 12px; font-weight: 800; letter-spacing: .8px; text-align: left; text-transform: uppercase; }
+.verdict-table caption span { color: #55514a; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.verdict-table th, .verdict-table td { padding: 4px 6px; border-bottom: 1px solid #d4d0c7; }
+.verdict-table thead th { max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #45423c; font-size: 12px; font-weight: 800; text-align: right; }
+.verdict-table thead th:first-child, .verdict-table tbody th { text-align: left; }
+.verdict-table tbody th { color: #45423c; font-weight: 700; }
+.verdict-table td { text-align: right; font-weight: 650; }
+.verdict-table td[data-better] > span:first-child { padding: 2px 7px; background: #1b1c1d; color: #f7f6f3; font-weight: 800; }
+
+.verdict-tv__failure { display: grid; justify-items: center; gap: 10px; padding: 18px 8px 12px; text-align: center; }
+.verdict-tv__failure p { max-width: 36ch; margin: 0; font-size: 14.5px; line-height: 1.5; }
+.verdict-tv__failure strong { display: block; margin-bottom: 4px; font-size: 16px; }
+
+/* Narrow screens: the set sits under the table in the page column and simply tunes in. */
+@media (max-width: 1099px) {
+  .verdict-rig { position: relative; inset: auto; order: 2; width: min(620px, 100% - 24px); pointer-events: auto; }
+  .verdict-tv { animation: verdict-appear .35s ease-out both; }
+  .verdict-tv::before, .verdict-tv::after { display: none; }
+}
+@keyframes verdict-appear { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .verdict-tv, .verdict-rig[data-leaving] .verdict-tv, .verdict-tv__screen::before, .verdict-tv__screen::after, .verdict-meter__bar span { animation: none; }
+}

@@ -134,6 +134,8 @@ const MOCK_GAME_MOVES =
   '1. e4 e5 2. Nf3 d6 3. d4 Bg4 4. dxe5 Bxf3 5. Qxf3 dxe5 6. Bc4 Nf6 7. Qb3 Qe7 ' +
   '8. Nc3 c6 9. Bg5 b5 10. Nxb5 cxb5 11. Bxb5+ Nbd7 12. O-O-O Rd8 13. Rxd7 Rxd7 ' +
   '14. Rd1 Qe6 15. Bxd7+ Nxd7 16. Qb8+ Nxb8 17. Rd8# 1-0';
+const MOCK_START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+const MOCK_FINAL_FEN = '1n1Rkb1r/p4ppp/4q3/4p1B1/4P3/8/PPP2PPP/2K5 b k - 1 17';
 
 export async function mockGetGame(
   username: string,
@@ -143,6 +145,29 @@ export async function mockGetGame(
   await mockDelay();
   ensureAvailable(username);
   if (gameId === '0') throw new Error('This game is not in the demo data. Try any other game id.');
+  // A game of the demo history list opens with that game's players, result and time control
+  // (the moves are always the same demo game).
+  const listed = archive ? mockMonthGames(username, archive).find((game) => game.id === gameId) : undefined;
+  if (listed) {
+    const [white, black] = listed.player.color === 'white' ? [listed.player, listed.opponent] : [listed.opponent, listed.player];
+    return {
+      id: listed.id,
+      url: listed.url,
+      timeClass: listed.timeClass,
+      timeControl: listed.timeControl,
+      endTime: listed.endTime,
+      date: listed.date,
+      rated: listed.rated,
+      rules: listed.rules,
+      result: listed.result,
+      player: listed.player,
+      opponent: listed.opponent,
+      averageRating: listed.averageRating,
+      pgn: `[White "${white.username}"]\n[Black "${black.username}"]\n\n${MOCK_GAME_MOVES}`,
+      initialFen: MOCK_START_FEN,
+      finalFen: MOCK_FINAL_FEN,
+    };
+  }
   const end = archive
     ? new Date(Date.UTC(archive.year, archive.month - 1, 15, 18, 30))
     : new Date('2026-11-03T18:30:00Z');
@@ -160,8 +185,8 @@ export async function mockGetGame(
     opponent: { username: 'mock_opponent', rating: 1488, color: 'black' },
     averageRating: 1500,
     pgn: `[White "${username}"]\n[Black "mock_opponent"]\n[Result "1-0"]\n\n${MOCK_GAME_MOVES}`,
-    initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-    finalFen: '1n1Rkb1r/p4ppp/4q3/4p1B1/4P3/8/PPP2PPP/2K5 b k - 1 17',
+    initialFen: MOCK_START_FEN,
+    finalFen: MOCK_FINAL_FEN,
   };
 }
 
