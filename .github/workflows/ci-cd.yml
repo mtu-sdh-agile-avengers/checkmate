@@ -127,9 +127,13 @@ jobs:
 
       - name: Unit tests
         run: npx vitest run --project unit --coverage --reporter=default --reporter=blob --outputFile.blob=.vitest-reports/blob-unit.json
+        env:
+          PARTIAL_COVERAGE: "1" # thresholds are checked on the merged coverage below
 
       - name: Integration tests
         run: npx vitest run --project integration --coverage --reporter=default --reporter=blob --outputFile.blob=.vitest-reports/blob-integration.json
+        env:
+          PARTIAL_COVERAGE: "1"
 
       - name: Coverage of both (fails below the thresholds in vite.config.ts)
         run: npx vitest run --merge-reports --coverage --reporter=default --reporter=junit --outputFile.junit=reports/vitest-junit.xml
@@ -249,15 +253,19 @@ jobs:
         run: |
           docker run --detach --name backend --publish 8000:8000 \
             --env API_CHESSCOM_USER_AGENT="checkmate-ci/1.0" checkmate-backend:ci
+          started=false
           for attempt in $(seq 1 30); do
-            curl --silent --fail http://127.0.0.1:8000/health && break
+            if curl --silent --fail http://127.0.0.1:8000/health; then started=true; break; fi
             sleep 1
           done
-          curl --silent --fail http://127.0.0.1:8000/health
-          reply=$(curl --silent --fail -X POST http://127.0.0.1:8000/api/v1/computer/move \
+          $started || { echo "The API did not start"; exit 1; }
+          # /health allows one request a second, so it is not called again here
+          status=$(curl --silent --output reply.json --write-out '%{http_code}' \
+            -X POST http://127.0.0.1:8000/api/v1/computer/move \
             -H 'Content-Type: application/json' -d '{"move":"e2e4","level":"expert"}')
-          echo "$reply"
-          echo "$reply" | grep -q '"computerMove":{"uci"'
+          cat reply.json; echo
+          [ "$status" = 200 ] || { echo "The computer move answered HTTP $status"; exit 1; }
+          grep -q '"computerMove":{"uci"' reply.json
           docker images checkmate-backend:ci --format '{{.Repository}}:{{.Tag}} {{.Size}}' | tee image.txt
           printf '### Backend image\n\n%s\n' "$(cat image.txt)" >> "$GITHUB_STEP_SUMMARY"
 
