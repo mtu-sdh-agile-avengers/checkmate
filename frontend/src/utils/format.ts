@@ -1,4 +1,16 @@
+import type { GameArchive, TimeClass } from '@/types/chess';
+
 export const formatNumber = (value: number): string => new Intl.NumberFormat('en-IE').format(value);
+
+/** A time class as a label, e.g. "Blitz". */
+export const formatTimeClass = (timeClass: TimeClass): string =>
+  timeClass.charAt(0).toUpperCase() + timeClass.slice(1);
+
+/** A month of a player's Chess.com archive, e.g. "November 2026". */
+export const formatMonth = ({ year, month }: GameArchive): string =>
+  new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
+    Date.UTC(year, month - 1, 1),
+  );
 
 export const signedNumber = (value: number): string => `${value > 0 ? '+' : ''}${value}`;
 

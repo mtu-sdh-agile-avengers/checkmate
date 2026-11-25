@@ -149,6 +149,18 @@
 .stats-tv .chart-panel.overall-chart--empty { display: flex; align-items: center; justify-content: center; min-height: 72px; text-align: center; }
 .stats-tv .overall-chart--empty p { max-width: 46ch; margin: 0; color: var(--tv-soft); font-size: 13px; line-height: 1.45; }
 .stats-tv .status-screen { margin: 8px 0; min-height: 150px; padding: 16px; border-radius: 8px; background: #fffefa; color: var(--tv-label); }
+/* On-screen buttons and links (paging, back to the list, Chess.com): outlined in ink on paper. */
+.stats-tv .tv-button {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 6px 12px;
+  border: 1.5px solid #1b1c1d; border-radius: 6px; background: #fffefa; color: #1b1c1d;
+  font-size: 12.5px; font-weight: 760; line-height: 1.2; text-decoration: none; white-space: nowrap; cursor: pointer;
+}
+.stats-tv .tv-button:hover:not(:disabled) { background: #ece9e2; }
+.stats-tv .tv-button:disabled { opacity: .4; cursor: default; }
+.stats-tv .tv-button:focus-visible { outline: 3px solid #80796d; outline-offset: 2px; }
+/* A side of the board (Games channel): a paper or an ink square, like the pieces. */
+.stats-tv .side-chip { flex: 0 0 auto; width: 11px; height: 11px; border: 1.5px solid #1b1c1d; border-radius: 2px; background: #fffefa; }
+.stats-tv .side-chip[data-color='black'] { background: #1b1c1d; }
 .stats-tv :is(.stat-value, .result-rate strong, .chart-current, .chart-scale) { font-variant-numeric: tabular-nums; }
 
 /* Profile column: each detail on one line, labels in one column and values in the next. */

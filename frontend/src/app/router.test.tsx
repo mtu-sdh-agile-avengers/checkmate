@@ -12,6 +12,14 @@ import { createQueryClient } from '@/lib/query-client';
 const SLOW = { timeout: 15_000 };
 const JOURNEY_TIMEOUT = 40_000;
 
+/** The newest game of the demo month on the Games channel. */
+async function findNewestGame() {
+  const list = await screen.findByRole('list', { name: 'Games of November 2026, newest first' }, SLOW);
+  const [newest] = within(list).getAllByRole('button');
+  if (!newest) throw new Error('no games listed');
+  return newest;
+}
+
 function renderApp(route: string) {
   render(
     <QueryClientProvider client={createQueryClient()}>
@@ -47,6 +55,34 @@ describe('app router', () => {
     await user.click(screen.getByRole('link', { name: /back to search/i }));
     expect(screen.queryByRole('group', { name: 'Statistics on the television' })).not.toBeInTheDocument();
     expect(screen.getByRole('searchbox')).toHaveFocus();
+  }, JOURNEY_TIMEOUT);
+
+  it('flicks to the Games channel, opens a game and goes back to the list', async () => {
+    const user = userEvent.setup();
+    renderApp('/players/hikaru');
+
+    const channels = await screen.findByRole('group', { name: 'Statistics on the television' }, SLOW);
+    await user.click(within(channels).getByRole('button', { name: 'Games' }));
+    expect(within(channels).getByRole('button', { name: 'Games' })).toHaveAttribute('aria-pressed', 'true');
+    const newest = await findNewestGame();
+    await user.click(newest);
+
+    // The game takes the list's place, and focus goes to it.
+    expect(await screen.findByRole('heading', { name: 'mock_opponent_5 vs hikaru' }, SLOW)).toHaveFocus();
+    expect(screen.queryByRole('heading', { name: 'Recent games' })).not.toBeInTheDocument();
+
+    // Back on the list, focus returns to the game that was open.
+    await user.click(screen.getByRole('button', { name: 'All games' }));
+    expect(await screen.findByRole('heading', { name: 'Recent games' }, SLOW)).toBeInTheDocument();
+    await waitFor(async () => expect(await findNewestGame()).toHaveFocus());
+  }, JOURNEY_TIMEOUT);
+
+  it('opens a game from a link', async () => {
+    renderApp('/players/hikaru?stats=games&game=202611060&month=2026-11');
+
+    expect(await screen.findByRole('heading', { name: 'mock_opponent_5 vs hikaru' }, SLOW)).toBeInTheDocument();
+    const channels = screen.getByRole('group', { name: 'Statistics on the television' });
+    expect(within(channels).getByRole('button', { name: 'Games' })).toHaveAttribute('aria-pressed', 'true');
   }, JOURNEY_TIMEOUT);
 
   it('sends the old statistics links to the player view', async () => {

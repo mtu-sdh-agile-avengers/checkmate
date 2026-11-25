@@ -2,7 +2,7 @@
 
 A functional **React + TypeScript + Vite** implementation of the CHECKMATE chess analytics Scholar mockups. Uses a simplified ivory/charcoal design system, feature-based architecture, angled chessboard artwork, accessible forms, responsive layouts, lazy routes, React Query and automated tests.
 
-> **Two data modes.** With `VITE_API_MODE=live` the player search, the profile and both statistics channels (Recent and Overall) show real Chess.com data through our backend API. Without it (the default), every page uses fictional demo data from `src/lib/mock-api.ts`.
+> **Two data modes.** With `VITE_API_MODE=live` the player search, the profile, the statistics channels (Recent and Overall) and the Games channel show real Chess.com data through our backend API. Without it (the default), every page uses fictional demo data from `src/lib/mock-api.ts`.
 
 ## Setup
 
@@ -30,7 +30,7 @@ Every screen is a view of one chess stage (`src/app/stage-layout.tsx`); moving b
 | Feature | Route | Behaviour |
 |---|---|---|
 | `player-search` | `/` | Validates usernames and Chess.com member URLs; the main menu sits right under the search |
-| `player-profile` + statistics | `/players/:username` (`?stats=overall`) | The camera pans to the television: profile beside the Recent (`summary-statistics`) or Overall (`overall-statistics`) channel |
+| `player-profile` + statistics + games | `/players/:username` (`?stats=overall`, `?stats=games`) | The camera pans to the television: profile beside the Recent (`summary-statistics`), Overall (`overall-statistics`) or Games (`game-history`) channel. Games lists a month of games, newest first; choosing one flickers to it (`game-details`: players, outcome, final position, moves), and `&game=<id>&month=YYYY-MM` links straight to it |
 | `play-computer` | `/play` | In-Game Chess: the camera looks straight down at the board on the table, difficulty panel (cosmetic until the game engine exists) |
 | `deliberation` | `/deliberation` | Player vs player: the table from above with a player at each end, the VS television dropping in to pick both players (looked up on Chess.com) |
 
@@ -41,7 +41,7 @@ Based on [Bulletproof React](https://github.com/alan2207/bulletproof-react), fol
 ```
 src/app            application root, providers, route configuration and global CSS
 src/components     shared stat cards, navigation, chart, the stage and its cut-out artwork, the top-down table and board, statuses
-src/features       player-search, summary-statistics, overall-statistics, player-profile, play-computer, deliberation
+src/features       player-search, summary-statistics, overall-statistics, player-profile, game-history, game-details, player-comparison, play-computer, deliberation
 src/lib            mock API data functions and configured React Query client
 src/config         routes, time-frame and time-class options
 src/types          shared player/stat domain types
@@ -64,6 +64,8 @@ The Vite dev server forwards every `/api` request to `http://localhost:8000` (`v
 | Profile | `GET /api/v1/players/{username}/profile` | `src/features/player-profile/api/get-player.ts` |
 | Recent statistics | `GET /api/v1/players/{username}/summary?period=&timeClass=` | `src/features/summary-statistics/api/get-summary.ts` |
 | Overall statistics | `GET /api/v1/players/{username}/summary?period=all&timeClass=` | `src/features/overall-statistics/api/get-overall.ts` |
+| Games channel (list) | `GET /api/v1/players/{username}/games/list?year=&month=&timeClass=&pagingLimit=&page=` | `src/features/game-history/api/get-game-history.ts` |
+| Games channel (one game) | `GET /api/v1/players/{username}/games/?search=&year=&month=` | `src/features/game-details/api/get-game.ts` |
 
 Each fetcher converts the API response into the page's own type (`Player`, `SummaryStats`), so components do not depend on the API format. Error messages from the API (for example an unknown player) are shown on the page as they are; `src/lib/api-client.ts` handles requests and errors.
 
