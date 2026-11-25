@@ -70,3 +70,19 @@ class MoveCategory(StrEnum):
     INACCURACY = "inaccuracy"
     MISS = "miss"
     BLUNDER = "blunder"
+
+
+class ComputerLevel(StrEnum):
+    """Playing strength of the computer on the In-Game Chess page (settings in stockfish.toml)."""
+
+    BEGINNER = "beginner"
+    INTERMEDIATE = "intermediate"
+    ADVANCED = "advanced"
+    EXPERT = "expert"
+
+
+class GameStatus(StrEnum):
+    PLAYING = "playing"
+    CHECKMATE = "checkmate"
+    STALEMATE = "stalemate"
+    DRAW = "draw"  # insufficient material, 50-move rule or threefold repetition

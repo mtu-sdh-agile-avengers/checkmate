@@ -24,8 +24,8 @@ from src.analysis.stockfish import (
 )
 from src.chesscom.parser.parser import parse_pgn_moves
 from src.config import get_config
-from src.enums import MoveCategory, PlayerColor
-from src.services.exceptions import GameAnalysisUnavailableError
+from src.enums import ComputerLevel, MoveCategory, PlayerColor
+from src.services.exceptions import ChessEngineUnavailableError
 
 FOOLS_MATE_PGN = "1. f3 e5 2. g4 Qh4# 0-1"
 
@@ -37,7 +37,9 @@ THRESHOLDS = CategoryThresholds(
     mate_score=10000,
 )
 CONFIG = StockfishConfig(
-    engine=EngineSettings(depth=10, threads=1, hash_mb=16), categories=THRESHOLDS
+    engine=EngineSettings(depth=10, threads=1, hash_mb=16),
+    categories=THRESHOLDS,
+    play=load_stockfish_config().play,
 )
 
 
@@ -70,6 +72,10 @@ def test_load_stockfish_config_from_repo_file():
     assert config.engine.threads == 1
     assert config.engine.hash_mb == 128
     assert config.categories == THRESHOLDS
+    # one strength per level of the In-Game Chess page, weakest first
+    skills = [config.play[level].skill_level for level in ComputerLevel]
+    assert skills == sorted(skills)
+    assert skills[0] == 0 and skills[-1] == 20
 
 
 def test_load_stockfish_config_rejects_unknown_keys(tmp_path):
@@ -78,6 +84,10 @@ def test_load_stockfish_config_rejects_unknown_keys(tmp_path):
         "[engine]\ndepth = 15\nthreads = 1\nhash_mb = 128\ndeph = 20\n"
         "[categories]\ngood_max_loss = 20\ninaccuracy_max_loss = 100\n"
         "blunder_min_loss = 300\nmiss_winning_advantage = 200\nmate_score = 10000\n"
+        + "".join(
+            f"[play.{level}]\nskill_level = 5\ndepth = 5\nmovetime_ms = 100\n"
+            for level in ("beginner", "intermediate", "advanced", "expert")
+        )
     )
 
     with pytest.raises(ValidationError):  # "deph" is a typo of "depth"
@@ -85,7 +95,7 @@ def test_load_stockfish_config_rejects_unknown_keys(tmp_path):
 
 
 def test_stockfish_engine_without_path_raises():
-    with pytest.raises(GameAnalysisUnavailableError, match="STOCKFISH_PATH"):
+    with pytest.raises(ChessEngineUnavailableError, match="STOCKFISH_PATH"):
         StockfishEngine(None, CONFIG.engine)
 
 

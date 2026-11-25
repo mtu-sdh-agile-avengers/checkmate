@@ -28,9 +28,9 @@ import chess.engine
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.chesscom.parser.models import ChessComGameMoves
-from src.enums import MoveCategory, PlayerColor
+from src.enums import ComputerLevel, MoveCategory, PlayerColor
 from src.schemas.games import MoveEvaluationResponse
-from src.services.exceptions import GameAnalysisUnavailableError
+from src.services.exceptions import ChessEngineUnavailableError
 
 # backend/app/stockfish.toml (this file is backend/app/src/analysis/stockfish.py)
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "stockfish.toml"
@@ -57,9 +57,18 @@ class CategoryThresholds(_FrozenModel):
     mate_score: int = Field(ge=1)
 
 
+class PlayLevelSettings(_FrozenModel):
+    """How strongly the computer plays at one level of the In-Game Chess page."""
+
+    skill_level: int = Field(ge=0, le=20)  # Stockfish "Skill Level": 0 weakest, 20 full
+    depth: int = Field(ge=1)  # plies searched per move
+    movetime_ms: int = Field(ge=1)  # time limit per move, whichever comes first
+
+
 class StockfishConfig(_FrozenModel):
     engine: EngineSettings
     categories: CategoryThresholds
+    play: dict[ComputerLevel, PlayLevelSettings]
 
 
 @lru_cache
@@ -91,7 +100,7 @@ class StockfishEngine:
 
     def __init__(self, path: str | None, settings: EngineSettings) -> None:
         if not path:
-            raise GameAnalysisUnavailableError(
+            raise ChessEngineUnavailableError(
                 "Stockfish is not configured: set STOCKFISH_PATH in .env"
             )
         self._path = path
@@ -109,7 +118,7 @@ class StockfishEngine:
             chess.engine.EngineError,
             chess.engine.EngineTerminatedError,
         ) as e:
-            raise GameAnalysisUnavailableError(f"Cannot start Stockfish: {e}") from e
+            raise ChessEngineUnavailableError(f"Cannot start Stockfish: {e}") from e
         return self
 
     async def __aexit__(
@@ -134,9 +143,24 @@ class StockfishEngine:
                 board, chess.engine.Limit(depth=self._settings.depth)
             )
         except (chess.engine.EngineError, chess.engine.EngineTerminatedError) as e:
-            raise GameAnalysisUnavailableError(f"Stockfish failed: {e}") from e
+            raise ChessEngineUnavailableError(f"Stockfish failed: {e}") from e
         pv = info.get("pv") or []
         return PositionAnalysis(score=info["score"], best_move=pv[0] if pv else None)
+
+    async def play(self, board: chess.Board, level: PlayLevelSettings) -> chess.Move:
+        """The computer's move in `board` at the given strength (In-Game Chess)."""
+        engine = self._require_engine()
+        try:
+            await engine.configure({"Skill Level": level.skill_level})
+            result = await engine.play(
+                board,
+                chess.engine.Limit(depth=level.depth, time=level.movetime_ms / 1000),
+            )
+        except (chess.engine.EngineError, chess.engine.EngineTerminatedError) as e:
+            raise ChessEngineUnavailableError(f"Stockfish failed: {e}") from e
+        if result.move is None:
+            raise ChessEngineUnavailableError("Stockfish returned no move")
+        return result.move
 
     def _require_engine(self) -> chess.engine.UciProtocol:
         if self._engine is None:
