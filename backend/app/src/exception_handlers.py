@@ -17,6 +17,11 @@ from src.chesscom.client.exceptions import (
     ChessAPITooManyRetriesError,
     ChessAPIUnavailableError,
     ChessComGameNotFoundError,
+    ChessComPlayersNotFoundError,
+)
+from src.services.exceptions import (
+    GAME_ANALYSIS_ERROR_MESSAGE,
+    GameAnalysisUnavailableError,
 )
 
 CHESS_API_UNAVAILABLE_MESSAGE = "Chess.com is not available right now, try again later"
@@ -36,7 +41,8 @@ def _not_found_message(request: Request) -> str:
 async def chess_api_error_handler(request: Request, exc: Exception) -> JSONResponse:
     """Converts a ChessAPIError (and its subclasses) into a JSON error response."""
     match exc:
-        case ChessComGameNotFoundError():  # before its base class ChessAPINotFoundError
+        # before their base class ChessAPINotFoundError: they carry their own message
+        case ChessComGameNotFoundError() | ChessComPlayersNotFoundError():
             status_code = status.HTTP_404_NOT_FOUND
             detail = str(exc)
         case ChessAPINotFoundError():
@@ -63,7 +69,20 @@ async def chess_api_error_handler(request: Request, exc: Exception) -> JSONRespo
     return JSONResponse(status_code=status_code, content={"detail": detail})
 
 
+async def game_analysis_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    """The chess engine could not analyse the game -> 503 (CMG4-18)."""
+    logger.warning(
+        f"{request.method} {request.url.path} -> 503: game analysis unavailable "
+        f"({type(exc).__name__}: {exc})"
+    )
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": GAME_ANALYSIS_ERROR_MESSAGE},
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Registers all custom exception handlers on the app."""
     # One handler for the base class also catches all of its subclasses.
     app.add_exception_handler(ChessAPIError, chess_api_error_handler)
+    app.add_exception_handler(GameAnalysisUnavailableError, game_analysis_error_handler)

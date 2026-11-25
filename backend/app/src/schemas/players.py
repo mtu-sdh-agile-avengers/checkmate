@@ -1,6 +1,13 @@
 from datetime import datetime
+from typing import Self
 
-from pydantic import Field, computed_field, field_validator
+from pydantic import (
+    Field,
+    ValidationInfo,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 from pydantic_core import PydanticCustomError
 
 from src.chesscom.parser.links import InvalidChessComInputError, parse_player_query
@@ -41,9 +48,38 @@ class PlayerSummaryQuery(QuerySchema):
 
 
 class PlayerComparisonQuery(QuerySchema):
-    p1: str = Field(examples=["hikaru"])
-    p2: str = Field(examples=["rezyd"])
-    time_class: TimeClass = Field(examples=[TimeClass.BLITZ])
+    """Two players to compare: GET /players/compare?p1=&p2=&timeClass= (CMG4-56)."""
+
+    p1: str = Field(
+        examples=["hikaru", "https://www.chess.com/member/Hikaru"],
+        description="Player 1: Chess.com username or member profile URL",
+    )
+    p2: str = Field(
+        examples=["magnuscarlsen"],
+        description="Player 2: Chess.com username or member profile URL",
+    )
+    time_class: TimeClass = Field(
+        examples=[TimeClass.BLITZ], description="Time class the players are compared in"
+    )
+
+    @field_validator("p1", "p2")
+    @classmethod
+    def _to_username(cls, value: str, info: ValidationInfo) -> str:
+        try:
+            return parse_player_query(value)
+        except InvalidChessComInputError as e:
+            number = 1 if info.field_name == "p1" else 2
+            raise PydanticCustomError(
+                "invalid_player_search", f"Player {number}: {e}"
+            ) from e
+
+    @model_validator(mode="after")
+    def _two_different_players(self) -> Self:
+        if self.p1 == self.p2:
+            raise PydanticCustomError(
+                "same_players", "Choose two different players to compare."
+            )
+        return self
 
 
 # Response Models ------------------------------------------------------------
@@ -151,9 +187,42 @@ class PlayerStatisticSummaryResponse(BaseSchema):
         )
 
 
+class WinLikelihoodResponse(BaseSchema):
+    """Elo expected score of each player against the other (CMG4-57)."""
+
+    player1: float = Field(
+        ge=0, le=1, examples=[0.6401], description="Player 1: 0..1 (show as %)"
+    )
+    player2: float = Field(
+        ge=0, le=1, examples=[0.3599], description="Player 2: 1 - player1"
+    )
+
+
 class PlayerComparisonResponse(BaseSchema):
+    """Two players side by side: all-time summary of both + win likelihood (CMG4-15)."""
+
     time_class: TimeClass
-    player1: PlayerStatisticSummaryResponse
-    player2: PlayerStatisticSummaryResponse
-    expected_score: float = Field(ge=0, le=1)
-    winner: str | None = Field(description="Strongest player username; null if equal")
+    player1: PlayerStatisticSummaryResponse = Field(
+        description="All-time summary of player 1 (same as /summary?period=all)"
+    )
+    player2: PlayerStatisticSummaryResponse = Field(
+        description="All-time summary of player 2"
+    )
+    win_likelihood: WinLikelihoodResponse | None = Field(
+        description=(
+            "Expected score of each player from their current ratings (a win counts 1, "
+            "a draw 0.5); null if a player has no rating in this time class"
+        )
+    )
+
+    @computed_field(
+        description="Username of the player more likely to win; null if even or unknown"
+    )
+    @property
+    def winner(self) -> str | None:
+        likelihood = self.win_likelihood
+        if likelihood is None or likelihood.player1 == likelihood.player2:
+            return None
+        if likelihood.player1 > likelihood.player2:
+            return self.player1.username
+        return self.player2.username

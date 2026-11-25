@@ -6,11 +6,19 @@ can be built and tested independently of the real implementation.
 Special usernames for testing frontend states:
 - "notfound": the player does not exist -> 404
 - "nogames": the player exists but has no games in the selected period
+- comparison: every username starting with "notfound" (e.g. "notfound2") does not
+  exist, so both players can be missing at once
+
+Comparison: player 1 gets the sample all-time statistics; player 2 the same sample
+with a lower rating, fewer wins and fewer losses, so both players have better fields.
 """
 
 from datetime import UTC, datetime, timedelta
 
-from src.chesscom.client.exceptions import ChessAPINotFoundError
+from src.chesscom.client.exceptions import (
+    ChessAPINotFoundError,
+    ChessComPlayersNotFoundError,
+)
 from src.enums import SummaryPeriod, TimeClass
 from src.schemas.players import (
     PlayerComparisonQuery,
@@ -22,6 +30,7 @@ from src.schemas.players import (
     RatingPointResponse,
     RatingSummaryResponse,
 )
+from src.services.processing.comparison import compare_summaries
 from src.services.protocols import PlayersService
 
 MOCK_NOT_FOUND_USERNAME = "notfound"
@@ -45,6 +54,15 @@ _MOCK_RESULTS: dict[SummaryPeriod, tuple[int, int, int, int | None]] = {
 }
 
 _MOCK_HISTORY_POINTS = 10
+
+# How much the second player of a comparison differs from the sample (fewer / lower)
+_MOCK_SECOND_PLAYER = {
+    "wins": 410,
+    "losses": 120,
+    "draws": 35,
+    "current": 64,
+    "highest": 40,
+}
 
 _MOCK_PROFILE = PlayerProfileResponse(
     username="mock_player",
@@ -84,6 +102,27 @@ def _mock_rating_history(
     return history
 
 
+def _mock_second_player(
+    summary: PlayerStatisticSummaryResponse,
+) -> PlayerStatisticSummaryResponse:
+    """The sample summary made a bit weaker, so the comparison has a favourite."""
+    rating = summary.rating
+    played = summary.total_games_played > 0  # "nogames" stays without games
+    return summary.model_copy(
+        update={
+            "wins": max(0, summary.wins - _MOCK_SECOND_PLAYER["wins"]),
+            "losses": max(0, summary.losses - _MOCK_SECOND_PLAYER["losses"]),
+            "draws": summary.draws + (_MOCK_SECOND_PLAYER["draws"] if played else 0),
+            "rating": rating.model_copy(
+                update={
+                    "current": rating.current - _MOCK_SECOND_PLAYER["current"],
+                    "highest": rating.highest - _MOCK_SECOND_PLAYER["highest"],
+                }
+            ),
+        }
+    )
+
+
 class MockPlayersService(PlayersService):
     async def search(self, username: str) -> PlayerSearchProfileResponse:
         if username.casefold() == MOCK_NOT_FOUND_USERNAME:
@@ -97,7 +136,20 @@ class MockPlayersService(PlayersService):
         )
 
     async def compare(self, query: PlayerComparisonQuery) -> PlayerComparisonResponse:
-        raise NotImplementedError("Mock player comparison is not implemented yet")
+        missing = [
+            username
+            for username in (query.p1, query.p2)
+            if username.casefold().startswith(MOCK_NOT_FOUND_USERNAME)
+        ]
+        if missing:
+            raise ChessComPlayersNotFoundError(missing)
+
+        all_time = PlayerSummaryQuery.model_validate(
+            {"period": SummaryPeriod.OVERALL, "timeClass": query.time_class}
+        )
+        player1 = await self.get_summary(query.p1, all_time)
+        player2 = _mock_second_player(await self.get_summary(query.p2, all_time))
+        return compare_summaries(query.time_class, player1, player2)
 
     async def get_profile(self, username: str) -> PlayerProfileResponse:
         if username.casefold() == MOCK_NOT_FOUND_USERNAME:

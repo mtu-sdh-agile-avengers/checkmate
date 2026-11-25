@@ -36,7 +36,10 @@ router = APIRouter(
     ),
     responses={
         404: {"model": ErrorResponse, "description": "Player does not exist"},
-        422: {"model": ErrorResponse, "description": "Invalid query parameters, or only one of `year` / `month`"},
+        422: {
+            "model": ErrorResponse,
+            "description": "Invalid query parameters, or only one of `year` / `month`",
+        },
     },
 )
 @limiter.limit("1/second")
@@ -80,7 +83,29 @@ async def get_game_board_details(
 
 
 # GET /api/v1/players/{username}/games/analyze?year={int}&month={int}&search={game_id|url}
-@router.get("/analyze", summary="Get game analysis details")
+@router.get(
+    "/analyze",
+    summary="Get game analysis",
+    description=(
+        "Analyses every move of one game of the player with a chess engine (Stockfish) "
+        "for the replay page: each half-move in SAN / UCI, the position after it (FEN), "
+        "its evaluation in centipawns (White's point of view), a forced mate if there "
+        "is one, the engine's best move and a category (best / good / inaccuracy / "
+        "miss / blunder). The game is found like in `GET .../games/` (`search` = game "
+        "id or URL, optional `year` / `month`). Analysis takes a few seconds."
+    ),
+    responses={
+        404: {
+            "model": ErrorResponse,
+            "description": "Player does not exist or the game is not in the archive",
+        },
+        422: {"description": "Invalid `search`, or only one of `year` / `month`"},
+        503: {
+            "model": ErrorResponse,
+            "description": 'Chess engine unavailable: "Error during loading a game. Please try again"',
+        },
+    },
+)
 @limiter.limit("1/second")
 async def analyze_game_board(
     request: Request,

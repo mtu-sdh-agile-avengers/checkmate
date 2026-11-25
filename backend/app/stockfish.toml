@@ -1,0 +1,20 @@
+# Fixed Stockfish configuration for move evaluation (CMG4-70).
+#
+# The path to the Stockfish program is machine-specific, so it is NOT here:
+# set STOCKFISH_PATH in `.env` instead.
+
+[engine]
+depth = 15     # plies the engine searches ahead for every position
+threads = 1    # CPU threads Stockfish may use
+hash_mb = 128  # memory for Stockfish's hash table, in MB
+
+[categories]
+# All values are centipawns (100 = one pawn), from the moving player's point of view.
+# "Loss" = evaluation of the engine's best move minus evaluation of the move played.
+good_max_loss = 50             # loss <= 50               -> good (not really a mistake)
+inaccuracy_max_loss = 100      # loss 51 - 100            -> inaccuracy (small but real)
+blunder_min_loss = 300         # loss >= 300              -> blunder
+                               # loss between 101 and 299 -> miss
+miss_winning_advantage = 200   # also a miss: a winning advantage (>= +200) was available
+                               # but the move played gave it away
+mate_score = 10000             # forced mate is scored as +/-10000 (minus moves to mate)
