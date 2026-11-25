@@ -15,6 +15,20 @@ The deploy jobs are **skipped** until the Azure resources and the GitHub setting
 Do the steps once, in this order. Names in `code` are suggestions; if you choose others, use
 yours everywhere.
 
+## Fastest: Azure CLI in Cloud Shell
+
+`infra/azure-setup.sh` does steps 1–4 and the Container App of step 3 with the Azure CLI, and
+picks regions your subscription allows (Azure for Students allows only some). In the portal,
+open **Cloud Shell** (the `>_` icon at the top) → **Bash** → *No storage account required*:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/mtu-sdh-agile-avengers/checkmate/refs/heads/main/infra/azure-setup.sh
+bash azure-setup.sh setup   # resource group, Static Web App, identity, Container Apps environment
+bash azure-setup.sh app     # after step 0: the Container App, health check, values for step 5
+```
+
+Each part prints the values to put into GitHub (step 5). The portal steps below do the same by hand.
+
 ## 0. Let the pipeline publish the first image
 
 1. Merge the DevOps pull request into `main`. The pipeline runs; the `Backend image` job pushes
