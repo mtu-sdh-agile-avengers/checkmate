@@ -181,6 +181,32 @@ async def test_basic_player_is_repeatable_and_legal():
 
 
 @pytest.mark.anyio
+async def test_basic_player_values_en_passant_and_promotion():
+    player = BasicPlayer()
+    # white pawn e5 can take d6 en passant (gain 1) or nothing else is worth more
+    en_passant = chess.Board("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 2")
+    # white pawn b7 promotes: to a queen is worth the most
+    promotion = chess.Board("4k3/1P6/8/8/8/8/8/4K3 w - - 0 1")
+
+    assert (
+        await player.choose_move(en_passant, ComputerLevel.BEGINNER)
+    ).uci() == "e5d6"
+    assert (
+        await player.choose_move(promotion, ComputerLevel.BEGINNER)
+    ).uci() == "b7b8q"
+
+
+@pytest.mark.anyio
+async def test_basic_player_needs_a_legal_move():
+    mated = chess.Board(
+        "r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4"
+    )
+
+    with pytest.raises(ChessEngineUnavailableError, match="No legal move"):
+        await BasicPlayer().choose_move(mated, ComputerLevel.BEGINNER)
+
+
+@pytest.mark.anyio
 async def test_stockfish_player_without_path_is_unavailable():
     with pytest.raises(ChessEngineUnavailableError, match="STOCKFISH_PATH"):
         await StockfishPlayer(None, load_stockfish_config()).choose_move(
@@ -192,6 +218,7 @@ STOCKFISH_PATH = get_config().stockfish_path or shutil.which("stockfish")
 
 
 @pytest.mark.anyio
+@pytest.mark.integration  # starts a real Stockfish process
 @pytest.mark.skipif(not STOCKFISH_PATH, reason="Stockfish is not installed")
 @pytest.mark.parametrize("level", list(ComputerLevel))
 async def test_real_stockfish_plays_every_level(level):

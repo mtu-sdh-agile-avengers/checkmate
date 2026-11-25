@@ -89,3 +89,9 @@ def test_parse_game_query_accepts_daily_game_url():
 def test_parse_game_query_rejects_invalid_input(value):
     with pytest.raises(InvalidChessComInputError):
         parse_game_query(value)
+
+
+def test_a_broken_link_is_rejected_with_a_readable_message():
+    # urlsplit cannot parse an unclosed IPv6 host
+    with pytest.raises(InvalidChessComInputError, match="The link is not valid"):
+        parse_player_query("https://[chess.com/member/hikaru")

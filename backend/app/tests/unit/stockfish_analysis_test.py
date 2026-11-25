@@ -5,14 +5,18 @@ The last test runs the real engine and is skipped unless STOCKFISH_PATH is set i
 `.env` (or `stockfish` is on PATH).
 """
 
+import asyncio
 import shutil
+import sys
 import threading
+from types import SimpleNamespace
 
 import chess
 import chess.engine
 import pytest
 from pydantic import ValidationError
 
+from src.analysis import stockfish
 from src.analysis.stockfish import (
     CategoryThresholds,
     EngineSettings,
@@ -127,6 +131,87 @@ async def test_run_with_engine_without_path_raises(monkeypatch, own_loop):
         )
 
 
+class BrokenProtocol:
+    """Stands in for a running Stockfish process that fails or has no move."""
+
+    def __init__(self, error: Exception | None = None, move=None) -> None:
+        self._error = error
+        self._move = move
+
+    async def configure(self, options: dict) -> None:
+        pass
+
+    async def analyse(self, board, limit):
+        raise self._error
+
+    async def play(self, board, limit):
+        if self._error is not None:
+            raise self._error
+        return SimpleNamespace(move=self._move)
+
+
+def engine_with(protocol: BrokenProtocol) -> StockfishEngine:
+    engine = StockfishEngine("stockfish", CONFIG.engine)
+    engine._engine = protocol  # white-box: as if __aenter__ had started the process
+    return engine
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "error",
+    [chess.engine.EngineError("bad option"), chess.engine.EngineTerminatedError()],
+)
+async def test_engine_failures_are_engine_errors(error):
+    engine = engine_with(BrokenProtocol(error))
+    level = CONFIG.play[ComputerLevel.BEGINNER]
+
+    with pytest.raises(ChessEngineUnavailableError, match="Stockfish failed"):
+        await engine.analyse(chess.Board())
+    with pytest.raises(ChessEngineUnavailableError, match="Stockfish failed"):
+        await engine.play(chess.Board(), level)
+
+
+@pytest.mark.anyio
+async def test_no_move_from_the_engine_is_an_engine_error():
+    engine = engine_with(BrokenProtocol(move=None))
+
+    with pytest.raises(ChessEngineUnavailableError, match="no move"):
+        await engine.play(chess.Board(), CONFIG.play[ComputerLevel.BEGINNER])
+
+
+@pytest.mark.anyio
+async def test_the_engine_is_only_usable_inside_async_with():
+    engine = StockfishEngine("stockfish", CONFIG.engine)
+
+    with pytest.raises(RuntimeError, match="async with"):
+        _ = engine.name
+    await engine.__aexit__(None, None, None)  # leaving without a process is fine
+
+
+@pytest.mark.anyio
+async def test_windows_selector_loop_cannot_start_processes(monkeypatch):
+    class ProactorEventLoop:  # stands in for the Windows-only class
+        pass
+
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(asyncio, "ProactorEventLoop", ProactorEventLoop, raising=False)
+
+    assert stockfish._loop_can_start_processes() is False
+    assert stockfish._process_loop_factory() is ProactorEventLoop
+
+
+@pytest.mark.anyio
+async def test_a_drawn_final_position_is_scored_without_the_engine():
+    stalemate = chess.Board("k7/8/1Q6/8/8/8/8/K7 b - - 0 1")
+    engine = FakeEngine({})  # would fail if asked
+
+    analysis = await stockfish._analyse_position(stalemate, engine)
+
+    assert analysis.score.white() == chess.engine.Cp(0)
+    assert analysis.best_move is None
+    assert engine.calls == []
+
+
 # Categories -------------------------------------------------------------------------
 
 
@@ -237,6 +322,7 @@ STOCKFISH_PATH = get_config().stockfish_path or shutil.which("stockfish")
 
 
 @pytest.mark.anyio
+@pytest.mark.integration  # starts a real Stockfish process
 @pytest.mark.skipif(not STOCKFISH_PATH, reason="Stockfish is not installed")
 async def test_real_stockfish_fools_mate(fools_mate):
     async with StockfishEngine(STOCKFISH_PATH, CONFIG.engine) as engine:
@@ -251,6 +337,7 @@ async def test_real_stockfish_fools_mate(fools_mate):
 
 
 @pytest.mark.anyio
+@pytest.mark.integration  # starts a real Stockfish process
 @pytest.mark.skipif(not STOCKFISH_PATH, reason="Stockfish is not installed")
 @pytest.mark.parametrize("own_loop", [False, True])
 async def test_run_with_engine_real_stockfish(monkeypatch, own_loop):

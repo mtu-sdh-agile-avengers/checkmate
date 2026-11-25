@@ -149,9 +149,9 @@ def _status(board: chess.Board) -> GameStatus:
         return GameStatus.CHECKMATE
     if board.is_stalemate():
         return GameStatus.STALEMATE
+    # the 75-move rule is covered by the 50-move claim; repetitions need the move
+    # history, which a position (FEN) does not have
     if board.is_insufficient_material() or board.can_claim_fifty_moves():
-        return GameStatus.DRAW
-    if board.is_seventyfive_moves() or board.is_fivefold_repetition():
         return GameStatus.DRAW
     return GameStatus.PLAYING
 
