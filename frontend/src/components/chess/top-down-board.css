@@ -22,3 +22,19 @@
 .td-board__piece { animation: td-piece-set .38s cubic-bezier(.2, 1.5, .4, 1) calc(var(--pieces-at, 1.25s) + var(--i, 0) * 22ms) both; }
 @keyframes td-piece-set { from { opacity: 0; transform: translateY(-34%) scale(.7); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .td-board__piece { animation: none; } }
+
+/* Playable board (In-Game Chess): the squares are buttons. Pieces appear at once after a move. */
+.td-board[data-interactive] .td-board__piece { animation: none; }
+button.td-board__square { border: 0; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; }
+button.td-board__square:focus-visible { outline: 3px solid #d29a2a; outline-offset: -3px; z-index: 1; }
+.td-board__square[data-last] { background: #a99a66; }
+.td-board__square[data-light='true'][data-last] { background: #efe3b8; }
+.td-board__square[data-selected] { box-shadow: inset 0 0 0 calc(var(--sq) * .07) #1b1c1d; }
+.td-board__square[data-target]::after {
+  content: ''; position: absolute; width: 26%; aspect-ratio: 1; border-radius: 50%;
+  background: rgb(27 28 29 / .38); pointer-events: none;
+}
+/* a capture: a ring around the piece instead of a dot */
+.td-board__square[data-target]:has(.td-board__piece)::after {
+  width: 88%; background: none; box-shadow: inset 0 0 0 calc(var(--sq) * .06) rgb(27 28 29 / .5);
+}

@@ -109,7 +109,8 @@ describe('app router', () => {
 
     expect(screen.getByRole('heading', { name: 'Your game' })).toHaveFocus();
     expect(screen.getByText('Advanced · Black')).toBeInTheDocument();
-    expect(screen.getByText(/moves will work once the game engine is connected/)).toBeInTheDocument();
+    // tests run in mock mode: playing needs the backend, and the panel says so
+    expect(await screen.findByText(/Playing needs the backend/, undefined, SLOW)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Back to menu' }));
     expect(await screen.findByRole('searchbox', undefined, SLOW)).toBeInTheDocument();
