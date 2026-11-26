@@ -5,9 +5,10 @@ export type TvChannel<T extends string> = { id: T; label: string };
 
 /* The big television beside the opponent's seat. It is plain, readable HTML dressed as a
    CRT: `side` stays on screen, `children` is whatever the current channel shows. Every
-   channel change replays the flicker: a burst of static while the picture tears in. The
-   picture is not remounted, so controls inside it keep their state between channels.
-   The channel buttons sit on the cabinet under the screen.
+   channel change replays the flicker: a burst of static while the picture tears in, and so
+   does a change of `scene`, for a channel that shows more than one thing (the Games
+   channel: its list, or one game). The picture is not remounted, so controls inside it
+   keep their state between channels. The channel buttons sit on the cabinet under the screen.
 
    Effects are one-shot, never looping: the set powers on when it arrives (two shutters
    open from a line), an on-screen channel label blinks in and fades, and the stylesheet
@@ -17,6 +18,7 @@ export function StatsTv<T extends string>({
   label,
   channels,
   channel,
+  scene,
   onChannel,
   side,
   children,
@@ -24,14 +26,15 @@ export function StatsTv<T extends string>({
   label: string;
   channels: readonly TvChannel<T>[];
   channel: T;
+  scene?: string;
   onChannel: (channel: T) => void;
   side: ReactNode;
   children: ReactNode;
 }) {
-  // Count channel changes: the parity picks one of two identical animations, which is what
-  // makes the browser restart the flicker each time.
-  const [seen, setSeen] = useState({ channel, flips: 0 });
-  if (seen.channel !== channel) setSeen({ channel, flips: seen.flips + 1 });
+  // Count channel (and scene) changes: the parity picks one of two identical animations,
+  // which is what makes the browser restart the flicker each time.
+  const [seen, setSeen] = useState({ channel, scene, flips: 0 });
+  if (seen.channel !== channel || seen.scene !== scene) setSeen({ channel, scene, flips: seen.flips + 1 });
   const [fresh, setFresh] = useState(true);
   useEffect(() => {
     const timer = setTimeout(() => setFresh(false), 1600);

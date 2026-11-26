@@ -377,3 +377,9 @@ def test_parse_pgn_moves_game_without_moves():
 def test_parse_pgn_moves_invalid_pgn_raises_parse_error(pgn):
     with pytest.raises(ChessAPIParseError):
         parse_pgn_moves(pgn)
+
+
+def test_a_summary_of_many_errors_names_the_first_three():
+    # an empty profile misses six required fields
+    with pytest.raises(ChessAPIParseError, match=r"; \.\.\. and 3 more$"):
+        parse_player_profile({})

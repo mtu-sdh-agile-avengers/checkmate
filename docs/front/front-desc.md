@@ -2,7 +2,7 @@
 
 A functional **React + TypeScript + Vite** implementation of the CHECKMATE chess analytics Scholar mockups. Uses a simplified ivory/charcoal design system, feature-based architecture, angled chessboard artwork, accessible forms, responsive layouts, lazy routes, React Query and automated tests.
 
-> **Two data modes.** With `VITE_API_MODE=live` the player search, the profile and both statistics channels (Recent and Overall) show real Chess.com data through our backend API. Without it (the default), every page uses fictional demo data from `src/lib/mock-api.ts`.
+> **Two data modes.** With `VITE_API_MODE=live` the player search, the profile, the statistics channels (Recent and Overall), the Games channel and Deliberation's comparison show real Chess.com data through our backend API. Without it (the default), every page uses fictional demo data from `src/lib/mock-api.ts`.
 
 ## Setup
 
@@ -30,9 +30,25 @@ Every screen is a view of one chess stage (`src/app/stage-layout.tsx`); moving b
 | Feature | Route | Behaviour |
 |---|---|---|
 | `player-search` | `/` | Validates usernames and Chess.com member URLs; the main menu sits right under the search |
-| `player-profile` + statistics | `/players/:username` (`?stats=overall`) | The camera pans to the television: profile beside the Recent (`summary-statistics`) or Overall (`overall-statistics`) channel |
+| `player-profile` + statistics + games | `/players/:username` (`?stats=overall`, `?stats=games`) | The camera pans to the television: profile beside the Recent (`summary-statistics`), Overall (`overall-statistics`) or Games (`game-history`) channel. Games lists a month of games, newest first; choosing one flickers to it (`game-details`: players, outcome, final position, moves), and `&game=<id>&month=YYYY-MM` links straight to it |
 | `play-computer` | `/play` | In-Game Chess: the camera looks straight down at the board on the table, difficulty panel (cosmetic until the game engine exists) |
-| `deliberation` | `/deliberation` | Player vs player: the table from above with a player at each end, the VS television dropping in to pick both players (looked up on Chess.com) |
+| `deliberation` (+ `player-comparison`) | `/deliberation` | Who would win? The VS television drops in to take both players (looked up on Chess.com) and a time class. On Confirm it rises; the board tips towards the viewer and the two play quick games at the table while the comparison runs (its steps and progress beside the table); then a beat, the camera drops to table level and the scene becomes a photograph of the likely winner in a spotlight, the loser's king toppling, and the verdict television drops with the expected scores, the reasons and every statistic compared. "New comparison" starts again (see "Deliberation scene" below) |
+
+### Deliberation scene
+
+Built like the landing page's stage: CSS 3D perspective and the cut-out artwork of `src/components/chess/stage-art.tsx`, in the ivory/charcoal palette. Player A (White) is ivory everywhere (pieces, figure, half of the VS set), Player B (Black) ink, and each figure wears the player's picture. Every timing, angle, tone and quality threshold is in one object, `src/features/deliberation/config/scene.ts`; the stylesheets read it through custom properties.
+
+| From | What happens | Where |
+|---|---|---|
+| Confirm | "Locked in", the VS set reels up (1.15 s) | `vs-tv.tsx` |
+| +1.15 s | Quick games: a move every 330 ms (scripted real miniatures), pieces slide, hop and take; the player to move reaches for the piece; the board tilts 16° and sways. At least 2.7 s, as long as the comparison takes | `use-rapid-games.ts`, `rapid-board.tsx`, `tabletop.css` |
+| Answer + steps | The beat: everything freezes, the table jolts closer (0.65 s) | `use-verdict-sequence.ts`, `tabletop.css` |
+| +0.65 s | The camera tips down towards table level (1.4 s) and the table dissolves into the photograph | `tabletop.css`, `photo-scene.css` |
+| +1.9 s | Spotlight beam and darkness on the winner | `photo-scene.css` |
+| +2.25 s | The loser's king topples, on the loser's half of the table, in frame | `photo-scene.css` |
+| +2.75 s | The verdict set drops (1.05 s), then tunes in | `verdict-tv.css` |
+
+Quality (`use-scene-quality.ts`): `full`; `lite` on a device with ≤ 2 cores or ≤ 2 GB, or measured under 45 fps while the games run: slower games, a flat board (the 2D fallback), no sway, blur, dust or rim light; `still` with reduced motion: nothing moves and every effect is simply there.
 
 ## Architecture
 
@@ -41,7 +57,7 @@ Based on [Bulletproof React](https://github.com/alan2207/bulletproof-react), fol
 ```
 src/app            application root, providers, route configuration and global CSS
 src/components     shared stat cards, navigation, chart, the stage and its cut-out artwork, the top-down table and board, statuses
-src/features       player-search, summary-statistics, overall-statistics, player-profile, play-computer, deliberation
+src/features       player-search, summary-statistics, overall-statistics, player-profile, game-history, game-details, player-comparison, play-computer, deliberation
 src/lib            mock API data functions and configured React Query client
 src/config         routes, time-frame and time-class options
 src/types          shared player/stat domain types
@@ -64,6 +80,9 @@ The Vite dev server forwards every `/api` request to `http://localhost:8000` (`v
 | Profile | `GET /api/v1/players/{username}/profile` | `src/features/player-profile/api/get-player.ts` |
 | Recent statistics | `GET /api/v1/players/{username}/summary?period=&timeClass=` | `src/features/summary-statistics/api/get-summary.ts` |
 | Overall statistics | `GET /api/v1/players/{username}/summary?period=all&timeClass=` | `src/features/overall-statistics/api/get-overall.ts` |
+| Games channel (list) | `GET /api/v1/players/{username}/games/list?year=&month=&timeClass=&pagingLimit=&page=` | `src/features/game-history/api/get-game-history.ts` |
+| Games channel (one game) | `GET /api/v1/players/{username}/games/?search=&year=&month=` | `src/features/game-details/api/get-game.ts` |
+| Deliberation (who would win) | `GET /api/v1/players/compare?p1=&p2=&timeClass=` | `src/features/player-comparison/api/compare-players.ts` (run by `src/app/deliberation-screen.tsx`) |
 
 Each fetcher converts the API response into the page's own type (`Player`, `SummaryStats`), so components do not depend on the API format. Error messages from the API (for example an unknown player) are shown on the page as they are; `src/lib/api-client.ts` handles requests and errors.
 
@@ -74,7 +93,7 @@ In mock mode, `src/lib/mock-api.ts` adds an artificial delay to demonstrate load
 ## Mockup fidelity and assumptions
 
 - Search/landing, Summary, Overall and Profile are the four screens retained from the latest Scholar designs; no login or publications were specified.
-- In-Game Chess and Deliberation are **cosmetic**: there is no game engine yet. The top-down board draws a FEN placement (the start position) in the stage's cut-out style, which the engine will drive later. Charts and controls are real HTML/SVG components.
+- In-Game Chess is **cosmetic**, and the game played at the Deliberation table while players are compared is a demonstration (a fixed opening): there is no game engine yet. The top-down board draws a FEN placement (the start position) in the stage's cut-out style, which the engine will drive later. Charts and controls are real HTML/SVG components.
 - No avatar, unavailable title/FIDE/streamer data, etc., use explicit fallbacks.
 - Ratings, win/loss counts, account data and date labels are clearly identified as illustrative examples; user input changes the demo profile handle, not live data.
 - The UI is keyboard navigable, uses accessible labels and focus states, respects reduced motion and provides error/loading feedback. A production integration should validate live API response schemas and add end-to-end tests.

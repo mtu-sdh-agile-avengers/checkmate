@@ -23,6 +23,14 @@ describe('top-down board', () => {
     expect(() => readPlacement('xnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR')).toThrow(/rank 8/i);
   });
 
+  it('turns the board round for Black, coordinates still along the bottom and up the left', () => {
+    const { container } = render(<TopDownBoard label="Board" orientation="black" />);
+    const text = (selector: string) => Array.from(container.querySelectorAll(selector), (element) => element.textContent);
+    expect(container.querySelector('.td-board__piece')).toHaveAttribute('data-square', 'h1');
+    expect(text('.td-board__file')).toEqual(['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a']);
+    expect(text('.td-board__rank')).toEqual(['1', '2', '3', '4', '5', '6', '7', '8']);
+  });
+
   it('draws the position as one labelled picture', () => {
     const { container } = render(<TopDownBoard label="Chess board, starting position" />);
     expect(screen.getByRole('img', { name: 'Chess board, starting position' })).toBeInTheDocument();

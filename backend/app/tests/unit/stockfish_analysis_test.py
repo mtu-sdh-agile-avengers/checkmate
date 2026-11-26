@@ -5,13 +5,18 @@ The last test runs the real engine and is skipped unless STOCKFISH_PATH is set i
 `.env` (or `stockfish` is on PATH).
 """
 
+import asyncio
 import shutil
+import sys
+import threading
+from types import SimpleNamespace
 
 import chess
 import chess.engine
 import pytest
 from pydantic import ValidationError
 
+from src.analysis import stockfish
 from src.analysis.stockfish import (
     CategoryThresholds,
     EngineSettings,
@@ -21,11 +26,12 @@ from src.analysis.stockfish import (
     categorize_move,
     evaluate_moves,
     load_stockfish_config,
+    run_with_engine,
 )
 from src.chesscom.parser.parser import parse_pgn_moves
 from src.config import get_config
-from src.enums import MoveCategory, PlayerColor
-from src.services.exceptions import GameAnalysisUnavailableError
+from src.enums import ComputerLevel, MoveCategory, PlayerColor
+from src.services.exceptions import ChessEngineUnavailableError
 
 FOOLS_MATE_PGN = "1. f3 e5 2. g4 Qh4# 0-1"
 
@@ -37,7 +43,9 @@ THRESHOLDS = CategoryThresholds(
     mate_score=10000,
 )
 CONFIG = StockfishConfig(
-    engine=EngineSettings(depth=10, threads=1, hash_mb=16), categories=THRESHOLDS
+    engine=EngineSettings(depth=10, threads=1, hash_mb=16),
+    categories=THRESHOLDS,
+    play=load_stockfish_config().play,
 )
 
 
@@ -70,6 +78,10 @@ def test_load_stockfish_config_from_repo_file():
     assert config.engine.threads == 1
     assert config.engine.hash_mb == 128
     assert config.categories == THRESHOLDS
+    # one strength per level of the In-Game Chess page, weakest first
+    skills = [config.play[level].skill_level for level in ComputerLevel]
+    assert skills == sorted(skills)
+    assert skills[0] == 0 and skills[-1] == 20
 
 
 def test_load_stockfish_config_rejects_unknown_keys(tmp_path):
@@ -78,6 +90,10 @@ def test_load_stockfish_config_rejects_unknown_keys(tmp_path):
         "[engine]\ndepth = 15\nthreads = 1\nhash_mb = 128\ndeph = 20\n"
         "[categories]\ngood_max_loss = 20\ninaccuracy_max_loss = 100\n"
         "blunder_min_loss = 300\nmiss_winning_advantage = 200\nmate_score = 10000\n"
+        + "".join(
+            f"[play.{level}]\nskill_level = 5\ndepth = 5\nmovetime_ms = 100\n"
+            for level in ("beginner", "intermediate", "advanced", "expert")
+        )
     )
 
     with pytest.raises(ValidationError):  # "deph" is a typo of "depth"
@@ -85,8 +101,115 @@ def test_load_stockfish_config_rejects_unknown_keys(tmp_path):
 
 
 def test_stockfish_engine_without_path_raises():
-    with pytest.raises(GameAnalysisUnavailableError, match="STOCKFISH_PATH"):
+    with pytest.raises(ChessEngineUnavailableError, match="STOCKFISH_PATH"):
         StockfishEngine(None, CONFIG.engine)
+
+
+@pytest.mark.anyio
+async def test_a_loop_that_cannot_start_processes_is_an_engine_error(monkeypatch):
+    # e.g. the SelectorEventLoop of `uvicorn --reload` on Windows
+    async def cannot_start(*args, **kwargs):
+        raise NotImplementedError
+
+    monkeypatch.setattr(chess.engine, "popen_uci", cannot_start)
+
+    with pytest.raises(ChessEngineUnavailableError, match="Cannot start Stockfish"):
+        async with StockfishEngine("stockfish", CONFIG.engine):
+            pass
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("own_loop", [False, True])
+async def test_run_with_engine_without_path_raises(monkeypatch, own_loop):
+    monkeypatch.setattr(
+        "src.analysis.stockfish._loop_can_start_processes", lambda: not own_loop
+    )
+
+    with pytest.raises(ChessEngineUnavailableError, match="STOCKFISH_PATH"):
+        await run_with_engine(
+            None, CONFIG.engine, lambda engine: engine.analyse(chess.Board())
+        )
+
+
+class BrokenProtocol:
+    """Stands in for a running Stockfish process that fails or has no move."""
+
+    def __init__(self, error: Exception | None = None, move=None) -> None:
+        self._error = error
+        self._move = move
+
+    async def configure(self, options: dict) -> None:
+        pass
+
+    async def analyse(self, board, limit):
+        raise self._error
+
+    async def play(self, board, limit):
+        if self._error is not None:
+            raise self._error
+        return SimpleNamespace(move=self._move)
+
+
+def engine_with(protocol: BrokenProtocol) -> StockfishEngine:
+    engine = StockfishEngine("stockfish", CONFIG.engine)
+    engine._engine = protocol  # white-box: as if __aenter__ had started the process
+    return engine
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "error",
+    [chess.engine.EngineError("bad option"), chess.engine.EngineTerminatedError()],
+)
+async def test_engine_failures_are_engine_errors(error):
+    engine = engine_with(BrokenProtocol(error))
+    level = CONFIG.play[ComputerLevel.BEGINNER]
+
+    with pytest.raises(ChessEngineUnavailableError, match="Stockfish failed"):
+        await engine.analyse(chess.Board())
+    with pytest.raises(ChessEngineUnavailableError, match="Stockfish failed"):
+        await engine.play(chess.Board(), level)
+
+
+@pytest.mark.anyio
+async def test_no_move_from_the_engine_is_an_engine_error():
+    engine = engine_with(BrokenProtocol(move=None))
+
+    with pytest.raises(ChessEngineUnavailableError, match="no move"):
+        await engine.play(chess.Board(), CONFIG.play[ComputerLevel.BEGINNER])
+
+
+@pytest.mark.anyio
+async def test_the_engine_is_only_usable_inside_async_with():
+    engine = StockfishEngine("stockfish", CONFIG.engine)
+
+    with pytest.raises(RuntimeError, match="async with"):
+        _ = engine.name
+    await engine.__aexit__(None, None, None)  # leaving without a process is fine
+
+
+@pytest.mark.anyio
+async def test_windows_selector_loop_cannot_start_processes(monkeypatch):
+    class ProactorEventLoop:  # stands in for the Windows-only class
+        pass
+
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(asyncio, "ProactorEventLoop", ProactorEventLoop, raising=False)
+
+    assert stockfish._loop_can_start_processes() is False
+    assert stockfish._process_loop_factory() is ProactorEventLoop
+
+
+@pytest.mark.anyio
+async def test_a_drawn_final_position_is_scored_without_the_engine():
+    stalemate = chess.Board("k7/8/1Q6/8/8/8/8/K7 b - - 0 1")
+    engine = FakeEngine({})  # would fail if asked
+
+    analysis = await stockfish._analyse_position(stalemate, engine)
+
+    assert analysis.score.white() == chess.engine.Cp(0)
+    assert analysis.best_move is None
+    assert engine.calls == []
 
 
 # Categories -------------------------------------------------------------------------
@@ -199,6 +322,7 @@ STOCKFISH_PATH = get_config().stockfish_path or shutil.which("stockfish")
 
 
 @pytest.mark.anyio
+@pytest.mark.integration  # starts a real Stockfish process
 @pytest.mark.skipif(not STOCKFISH_PATH, reason="Stockfish is not installed")
 async def test_real_stockfish_fools_mate(fools_mate):
     async with StockfishEngine(STOCKFISH_PATH, CONFIG.engine) as engine:
@@ -210,3 +334,25 @@ async def test_real_stockfish_fools_mate(fools_mate):
     assert by_san["g4"].category == MoveCategory.BLUNDER  # allows mate in 1
     assert by_san["Qh4#"].category == MoveCategory.BEST
     assert by_san["Qh4#"].eval_cp == -10000  # White is checkmated
+
+
+@pytest.mark.anyio
+@pytest.mark.integration  # starts a real Stockfish process
+@pytest.mark.skipif(not STOCKFISH_PATH, reason="Stockfish is not installed")
+@pytest.mark.parametrize("own_loop", [False, True])
+async def test_run_with_engine_real_stockfish(monkeypatch, own_loop):
+    # own_loop=True is the Windows dev server: the engine runs in a worker thread
+    monkeypatch.setattr(
+        "src.analysis.stockfish._loop_can_start_processes", lambda: not own_loop
+    )
+    board = chess.Board()
+    threads = []
+
+    async def play(engine: StockfishEngine) -> chess.Move:
+        threads.append(threading.get_ident())
+        return await engine.play(board, CONFIG.play[ComputerLevel.BEGINNER])
+
+    move = await run_with_engine(STOCKFISH_PATH, CONFIG.engine, play)
+
+    assert move in board.legal_moves
+    assert (threads[0] != threading.get_ident()) == own_loop

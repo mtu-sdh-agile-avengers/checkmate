@@ -90,10 +90,10 @@ class ChessComClient(ExternalChessComAPIClient):
         timeout: float,
         retry_interval: float,
     ) -> T:
-        for retry_num in range(0, max_retries):
+        for retry_num in range(max_retries):
             try:
                 return await asyncio.wait_for(coro(), timeout=timeout)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - any failure is retried
                 logger.warning(
                     f"Exception while waiting (tried {retry_num} times, retrying.",
                     exc_info=e,

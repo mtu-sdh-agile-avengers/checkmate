@@ -2,8 +2,10 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
+from src.analysis.stockfish import load_stockfish_config
 from src.chesscom.client.client import ExternalChessComAPIClient
 from src.config import RunMode, get_config
+from src.services.computer import BasicPlayer, ComputerPlayer, StockfishPlayer
 from src.services.games import ChessComGamesService
 from src.services.mocks.games import MockGamesService
 from src.services.mocks.players import MockPlayersService
@@ -36,3 +38,15 @@ def get_games_service(chess_client: ExternalApiChessClientDep) -> GamesService:
 
 
 GamesServiceDep = Annotated[GamesService, Depends(get_games_service)]
+
+
+def get_computer_player() -> ComputerPlayer:
+    """Stockfish when STOCKFISH_PATH is set (or always in prod: without it, 503);
+    the built-in BasicPlayer in dev mode without Stockfish."""
+    config = get_config()
+    if config.stockfish_path or config.run_mode == RunMode.PROD:
+        return StockfishPlayer(config.stockfish_path, load_stockfish_config())
+    return BasicPlayer()
+
+
+ComputerPlayerDep = Annotated[ComputerPlayer, Depends(get_computer_player)]

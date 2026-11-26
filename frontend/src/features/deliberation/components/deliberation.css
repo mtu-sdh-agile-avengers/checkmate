@@ -1,0 +1,61 @@
+/* Deliberation's scene around the shared table (components/chess/tabletop.css): the players
+   at play while the comparison runs, the panel beside them, the room left for the verdict
+   set, and the lighter versions of it all (data-quality). Timings and angles are custom
+   properties set from config/scene.ts. */
+
+/* Wide screens: the verdict set hangs on the right (verdict-tv.css), the photograph is
+   framed left of it (photo-scene.css). */
+@media (min-width: 1100px) {
+  .deliberation { --verdict-w: clamp(360px, 34vw, 480px); }
+}
+
+/* --- The players at play ----------------------------------------------------
+   While the games run, both players' heads move all the time (studying the board, glancing
+   up), and the player to move reaches for the piece with the hand on its side, then sits
+   back: data-reach names the hand, --reach-x how far across, data-beat (a or b, alternating
+   move by move) restarts the reach for every move. */
+.seat-actor { display: block; }
+.td-figure__arm, .td-figure__head { transform-box: fill-box; }
+.td-figure__arm { transform-origin: 50% 100%; }
+.td-figure__head { transform-origin: 50% 50%; }
+.deliberation[data-scene='deliberating'] .td-figure__head { animation: player-studies 1.7s ease-in-out infinite alternate; }
+.deliberation[data-scene='deliberating'] .tabletop__seat--far .td-figure__head { animation-delay: -.85s; }
+@keyframes player-studies { from { transform: translate(-2px, 1px) rotate(-5deg); } to { transform: translate(2px, -3px) rotate(5deg); } }
+.seat-actor[data-reach='left'][data-beat='a'] .td-figure__arm--left,
+.seat-actor[data-reach='right'][data-beat='a'] .td-figure__arm--right { animation: player-reach-a var(--ply-ms, 330ms) cubic-bezier(.3, .7, .3, 1) both; }
+.seat-actor[data-reach='left'][data-beat='b'] .td-figure__arm--left,
+.seat-actor[data-reach='right'][data-beat='b'] .td-figure__arm--right { animation: player-reach-b var(--ply-ms, 330ms) cubic-bezier(.3, .7, .3, 1) both; }
+@keyframes player-reach-a { 0%, 100% { transform: none; } 45% { transform: translate(calc(var(--reach-x, 0) * 26px), -34px) rotate(calc(var(--reach-x, 0) * 10deg)); } }
+@keyframes player-reach-b { 0%, 100% { transform: none; } 45% { transform: translate(calc(var(--reach-x, 0) * 26px), -34px) rotate(calc(var(--reach-x, 0) * 10deg)); } }
+/* The shoulders follow the reach a little. */
+.seat-actor[data-beat='a'] .td-figure__torso { animation: player-leans-a var(--ply-ms, 330ms) ease-in-out both; }
+.seat-actor[data-beat='b'] .td-figure__torso { animation: player-leans-b var(--ply-ms, 330ms) ease-in-out both; }
+.td-figure__torso { transform-box: fill-box; transform-origin: 50% 50%; }
+@keyframes player-leans-a { 0%, 100% { transform: none; } 45% { transform: translate(calc(var(--reach-x, 0) * 6px), -6px); } }
+@keyframes player-leans-b { 0%, 100% { transform: none; } 45% { transform: translate(calc(var(--reach-x, 0) * 6px), -6px); } }
+
+/* --- The panel's steps: a filled square once done, a turning ring for the current one --- */
+.deliberating__steps { display: grid; gap: 9px; margin: 2px 0 0; padding: 0; list-style: none; }
+.deliberating__steps li { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: center; gap: 10px; color: #77736b; font-size: 14px; font-weight: 650; }
+.deliberating__steps li:is([data-state='done'], [data-state='current']) { color: #1b1c1d; }
+.deliberating__steps li[data-state='current'] { font-weight: 850; }
+.deliberating__mark { display: grid; place-items: center; width: 18px; height: 18px; border: 2px solid currentColor; }
+.deliberating__steps li[data-state='done'] .deliberating__mark { background: #1b1c1d; color: #f7f6f3; border-color: #1b1c1d; }
+.deliberating__steps li[data-state='current'] .deliberating__mark { border-radius: 50%; border-top-color: transparent; animation: deliberating-turn .9s linear infinite; }
+@keyframes deliberating-turn { to { transform: rotate(1turn); } }
+.deliberating__progress { height: 12px; border: 2px solid #0b0b0c; background: #ece9e2; box-shadow: 3px 3px 0 #80796d; overflow: hidden; }
+.deliberating__progress span { display: block; height: 100%; background: #1b1c1d; transform-origin: left; transform: scaleX(var(--progress, 0)); transition: transform .45s cubic-bezier(.2, .8, .2, 1); }
+
+/* --- Lighter versions -------------------------------------------------------
+   lite (a slow device): a flat board seen straight down (the 2D fallback), no sway, no hop
+   shadows; the games run slower (config) and the photograph has no blur, dust or rim light
+   (photo-scene.css). still (reduced motion): nothing moves at all. */
+.deliberation[data-quality='lite'] .tabletop[data-phase='rapid'] .tabletop__camera { rotate: none; }
+.deliberation[data-quality='lite'] .tabletop__table { animation: none !important; }
+.deliberation[data-quality='lite'] .rapid-board__piece .rapid-board__shadow { animation: none; }
+.deliberation[data-quality='lite'] .td-figure__head { animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .deliberating__steps li[data-state='current'] .deliberating__mark, .td-figure__head, .td-figure__arm, .td-figure__torso { animation: none !important; }
+  .deliberating__progress span { transition: none; }
+}

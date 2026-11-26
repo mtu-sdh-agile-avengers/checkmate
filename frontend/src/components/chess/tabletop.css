@@ -67,6 +67,29 @@
 .tabletop__seat--far .td-figure { animation-delay: calc(var(--lean-at, 1.05s) + .12s); }
 @keyframes td-lean { from { transform: translateY(14%) scale(.96); } to { transform: none; } }
 
+/* --- Phases: the camera beyond looking down (Deliberation) -------------------------
+   rapid:   while games are played at speed, the board tips towards the viewer and sways.
+            rotate, translate and scale are their own properties, so they add to the
+            arrival's transform instead of replacing it.
+   resolve: the beat (--beat-ms): the sway stops dead and the table jolts a little closer;
+            then the camera tips down towards table level and pushes in (--descend-ms)
+            while the whole table fades, for the scene that follows to take over. */
+.tabletop__camera { transition: rotate .9s var(--topdown-ease, cubic-bezier(.65, 0, .2, 1)); }
+.tabletop[data-phase='rapid'] .tabletop__camera { rotate: x var(--rapid-tilt, 16deg); }
+.tabletop[data-phase='rapid'] .tabletop__table { animation: table-sway var(--sway-ms, 3.8s) ease-in-out infinite alternate; }
+@keyframes table-sway {
+  from { rotate: z calc(var(--sway, 1.4deg) * -1); translate: -.8% .4%; }
+  to { rotate: z var(--sway, 1.4deg); translate: .8% -.4%; }
+}
+.tabletop[data-phase='resolve'] .tabletop__table { scale: 1.035; transition: scale .28s cubic-bezier(.2, .8, .2, 1); }
+.tabletop[data-phase='resolve'] .tabletop__camera {
+  rotate: x var(--descend-tilt, 70deg); translate: 0 18%; scale: 1.3;
+  transition: rotate var(--descend-ms, 1.4s) var(--topdown-ease, cubic-bezier(.65, 0, .2, 1)) var(--beat-ms, .65s),
+    translate var(--descend-ms, 1.4s) var(--topdown-ease, cubic-bezier(.65, 0, .2, 1)) var(--beat-ms, .65s),
+    scale var(--descend-ms, 1.4s) var(--topdown-ease, cubic-bezier(.65, 0, .2, 1)) var(--beat-ms, .65s);
+}
+.tabletop[data-phase='resolve'] { opacity: 0; transition: opacity calc(var(--descend-ms, 1.4s) * .5) ease-in calc(var(--beat-ms, .65s) + var(--descend-ms, 1.4s) * .45); }
+
 /* Narrow screens: no room beside the board, so the view becomes a column the page scrolls:
    the table, then the panel (or the VS set) under it. */
 @media (max-width: 1099px) {
@@ -77,5 +100,8 @@
   .tabletop[data-mode='deliberation'] { --board: clamp(160px, min((100vw - 40px) / 1.5, (100svh - 240px) / 1.85), 440px); --scene-h: calc(var(--board) * 1.9 + 24px); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tabletop__camera, .tabletop[data-leaving] .tabletop__camera, .tabletop__seat .td-figure { animation: none; }
+  .tabletop__camera, .tabletop[data-leaving] .tabletop__camera, .tabletop__seat .td-figure, .tabletop__table { animation: none !important; }
+  /* No tilt, sway or camera move: each phase is simply there. */
+  .tabletop, .tabletop__camera, .tabletop__table { transition: none !important; }
+  .tabletop[data-phase] .tabletop__camera { rotate: none; translate: none; scale: none; }
 }

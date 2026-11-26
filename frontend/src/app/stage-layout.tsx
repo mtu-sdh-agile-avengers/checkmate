@@ -2,7 +2,6 @@ import { Suspense, lazy, useEffect, useLayoutEffect, useState, type ReactNode } 
 import { useLocation, useParams } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { usePlayer } from '@/features/player-profile/hooks/use-player';
-import { searchPlayer } from '@/features/player-search/api/search-player';
 import { SearchPage } from '@/features/player-search/components/search-page';
 import { afterMotion } from '@/utils/motion';
 import './stage-layout.css';
@@ -11,11 +10,11 @@ import './stage-layout.css';
 // load after the search itself is on screen.
 const loadPlayerView = () => import('@/app/player-view');
 const loadPlayComputer = () => import('@/features/play-computer/components/play-computer-view');
-const loadDeliberation = () => import('@/features/deliberation/components/deliberation-view');
+const loadDeliberation = () => import('@/app/deliberation-screen');
 const ChessStage = lazy(() => import('@/components/chess/chess-stage').then((m) => ({ default: m.ChessStage })));
 const PlayerView = lazy(() => loadPlayerView().then((m) => ({ default: m.PlayerView })));
 const PlayComputerView = lazy(() => loadPlayComputer().then((m) => ({ default: m.PlayComputerView })));
-const DeliberationView = lazy(() => loadDeliberation().then((m) => ({ default: m.DeliberationView })));
+const DeliberationScreen = lazy(() => loadDeliberation().then((m) => ({ default: m.DeliberationScreen })));
 
 type TopDownView = 'computer' | 'deliberation';
 export type StageView = 'search' | 'player' | TopDownView;
@@ -105,8 +104,9 @@ export function StageLayout() {
       {scene && (
         <Suspense fallback={null}>
           <Arrival key={scene} id={scene} onArrive={setArrived}>
-            {/* Deliberation finds its players with the same search as the search page. */}
-            {scene === 'computer' ? <PlayComputerView leaving={!topDown} /> : <DeliberationView findPlayer={searchPlayer} leaving={!topDown} />}
+            {/* Deliberation finds its players with the same search as the search page and
+                compares them with the player comparison (joined in app/deliberation-screen). */}
+            {scene === 'computer' ? <PlayComputerView leaving={!topDown} /> : <DeliberationScreen leaving={!topDown} />}
           </Arrival>
         </Suspense>
       )}

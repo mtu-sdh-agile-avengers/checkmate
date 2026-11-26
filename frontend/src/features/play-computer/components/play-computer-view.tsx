@@ -6,6 +6,9 @@ import { TopDownBoard } from '@/components/chess/top-down-board';
 import { ROUTES } from '@/config/routes';
 import { DifficultyPanel } from '@/features/play-computer/components/difficulty-panel';
 import { DEFAULT_DIFFICULTY, difficultyName, type DifficultyId } from '@/features/play-computer/config/difficulty-levels';
+import { useComputerGame } from '@/features/play-computer/hooks/use-computer-game';
+import { gameNote } from '@/features/play-computer/utils/game-note';
+import { moveBetween, targetsFrom } from '@/features/play-computer/utils/moves';
 import { useIntro } from '@/hooks/use-intro';
 import { afterMotion } from '@/utils/motion';
 
@@ -17,8 +20,8 @@ const RETURN_DELAY = '.12s';
 /**
  * In-Game Chess (player vs computer), at /play. The camera looks straight down at the board;
  * the side panel picks the computer's strength. "Start game" switches the panel to the game
- * (You as White, the computer as Black) — for now the board is a preview, as the game engine
- * is still to be built.
+ * (You as White, the computer as Black): click one of your pieces, then where it should go.
+ * The backend checks every move and plays the computer (Stockfish), see use-computer-game.
  */
 export function PlayComputerView({ leaving = false }: { leaving?: boolean }) {
   const navigate = useNavigate();
@@ -28,7 +31,27 @@ export function PlayComputerView({ leaving = false }: { leaving?: boolean }) {
   const [level, setLevel] = useState<DifficultyId>(DEFAULT_DIFFICULTY);
   const [started, setStarted] = useState(false);
   const [returned, setReturned] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
+  const computer = useComputerGame(level);
   const toMenu = () => navigate(ROUTES.search);
+  const game = computer.game;
+  const playable = started && game !== null && game.status === 'playing' && !computer.thinking;
+
+  // Pick up one of your pieces, then put it on one of its highlighted squares.
+  const onSquare = (square: string) => {
+    if (!playable) return;
+    const move = selected ? moveBetween(game.legalMoves, selected, square) : null;
+    if (move) {
+      setSelected(null);
+      computer.play(move);
+      return;
+    }
+    setSelected(targetsFrom(game.legalMoves, square).length > 0 ? square : null);
+  };
+  const newGame = () => {
+    setSelected(null);
+    computer.start();
+  };
 
   // Keyboard users land on the selected level once the panel is in.
   useEffect(() => {
@@ -51,9 +74,16 @@ export function PlayComputerView({ leaving = false }: { leaving?: boolean }) {
       onKeyDownCapture={intro.skip}
     >
       <Tabletop mode="computer" leaving={leaving}>
-        {/* TODO(engine): the board is a preview. Once the engine exists, start a game at `level`
-            from "Start game" and pass the position here as a FEN placement (`placement`). */}
-        <TopDownBoard label={started ? `Board for your game against the computer (${name}), starting position` : 'Chess board, starting position'} />
+        <TopDownBoard
+          placement={started && game ? game.placement : undefined}
+          label={started ? `Board for your game against the computer (${name})` : 'Chess board, starting position'}
+          interaction={started && game ? {
+            onSquare,
+            selected,
+            targets: selected ? targetsFrom(game.legalMoves, selected) : [],
+            lastMove: game.lastMove,
+          } : undefined}
+        />
       </Tabletop>
       {started ? (
         <MatchPanel
@@ -63,12 +93,16 @@ export function PlayComputerView({ leaving = false }: { leaving?: boolean }) {
             { name: 'You', detail: 'White', color: 'white' },
             { name: 'Computer', detail: `${name} · Black`, color: 'black' },
           ]}
-          note="Board preview: moves will work once the game engine is connected."
+          note={gameNote(game, computer.thinking, computer.error)}
+          toMove={game?.status === 'playing' ? game.turn : null}
           leaving={leaving}
           delay=".12s"
           actions={
             <>
-              <button type="button" className="panel-button panel-button--ghost" onClick={() => { setStarted(false); setReturned(true); }}>
+              <button type="button" className="panel-button panel-button--ghost" onClick={newGame}>
+                New game
+              </button>
+              <button type="button" className="panel-button panel-button--ghost" onClick={() => { setStarted(false); setReturned(true); setSelected(null); }}>
                 Change difficulty
               </button>
               <button type="button" className="panel-button" onClick={toMenu}>Back to menu</button>
@@ -79,7 +113,7 @@ export function PlayComputerView({ leaving = false }: { leaving?: boolean }) {
         <DifficultyPanel
           value={level}
           onChange={setLevel}
-          onStart={() => setStarted(true)}
+          onStart={() => { setStarted(true); newGame(); }}
           onBack={toMenu}
           leaving={leaving}
           delay={returned ? RETURN_DELAY : undefined}

@@ -1,0 +1,66 @@
+/* One game on the statistics television: the final position beside the players, the facts
+   and the moves. Ink, paper and stone only, like the other channels. The px sizes are the
+   narrow, scrolling set; above 900px they scale with the set (container units). */
+/* A long username breaks only when it cannot fit on a line of its own. */
+.game-details-page .page-title-row h2 { overflow-wrap: break-word; }
+.game-details-page .page-title-row h2:focus { outline: none; }
+.game-details__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.game-details__body { display: grid; gap: 14px; }
+
+.game-details__board { display: grid; justify-items: center; align-content: start; gap: 10px; margin: 0; }
+/* The pieces are set out as the picture tunes in, not after a camera move. */
+.game-details__board .td-board { --board: min(76vw, 300px); --pieces-at: calc(var(--tv-wake, 0s) + .15s); }
+.game-details__board figcaption { color: var(--tv-soft, #55514a); font-size: 12.5px; font-weight: 650; }
+.game-details__info { display: grid; align-content: start; gap: 12px; min-width: 0; }
+
+.game-players { padding: 2px 14px; }
+.game-player { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto 2em; align-items: center; gap: 10px; padding: 8px 0; }
+.game-player + .game-player { border-top: 1px solid var(--tv-rule, #d4d0c7); }
+.game-player__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 800; }
+.game-player__rating { color: var(--tv-soft, #55514a); font-size: 13px; font-variant-numeric: tabular-nums; }
+.game-player__score { text-align: right; font-size: 17px; font-weight: 850; font-variant-numeric: tabular-nums; }
+
+.game-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; margin: 0; }
+.game-facts > div { min-width: 0; }
+.game-facts .game-facts__wide { grid-column: 1 / -1; }
+.game-facts dt { margin: 0 0 2px; color: var(--tv-label, #45423c); font-size: 12px; font-weight: 760; letter-spacing: .5px; text-transform: uppercase; }
+.game-facts dd { margin: 0; color: #1b1c1d; font-size: 13.5px; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+
+.move-panel { display: flex; flex-direction: column; min-height: 0; padding: 10px 14px 12px; }
+.move-panel h3 { margin: 0 0 6px; color: var(--tv-label, #45423c); font-size: 12px; font-weight: 760; letter-spacing: .5px; text-transform: uppercase; }
+.move-list {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(10em, 1fr)); align-content: start; gap: 1px 16px;
+  max-height: 210px; margin: 0; padding: 0; overflow: auto; list-style: none;
+  font-size: 13px; font-variant-numeric: tabular-nums; scrollbar-width: thin; scrollbar-color: #a7a5a0 transparent;
+}
+.move-list li { display: grid; grid-template-columns: 2.4em 1fr 1fr; gap: 6px; padding: 2px 0; }
+.move-list__number { color: var(--tv-soft, #55514a); text-align: right; }
+.move-panel__none { margin: 0; color: var(--tv-soft, #55514a); font-size: 13px; }
+
+/* Tune-in: the board first, then the panels beside it. */
+.stats-tv .game-details__board, .stats-tv .game-details__info > * {
+  animation: tv-tune-in .5s ease-out calc(var(--tv-wake, 0s) + var(--row, 0) * 110ms) both;
+}
+.stats-tv .game-details__info > :nth-child(1) { --row: 1; }
+.stats-tv .game-details__info > :nth-child(2) { --row: 2; }
+.stats-tv .game-details__info > :nth-child(3) { --row: 3; }
+
+/* Wide sets: the board on the left at the height of the screen, the rest beside it; the move
+   list takes the height that is left and scrolls. */
+@media (min-width: 901px) {
+  .game-details__body { flex: 1; min-height: 0; grid-template-columns: auto minmax(0, 1fr); gap: 2.4cqh 2.6cqw; }
+  .game-details__board .td-board { --board: min(62cqh, 36cqw); }
+  .game-details__board figcaption { font-size: clamp(12px, 2cqh, 14px); }
+  .game-details__info { display: flex; flex-direction: column; gap: 1.7cqh; min-height: 0; }
+  .game-players { flex: 0 0 auto; padding: .4cqh 1.9cqh; }
+  .game-player { padding: 1cqh 0; }
+  .game-player__name { font-size: clamp(14px, 2.6cqh, 18px); }
+  .game-player__rating { font-size: clamp(12px, 2.1cqh, 14.5px); }
+  .game-player__score { font-size: clamp(15px, 2.9cqh, 20px); }
+  .game-facts { flex: 0 0 auto; gap: 1.5cqh 2cqw; }
+  .game-facts dt { font-size: clamp(11px, 1.9cqh, 13px); }
+  .game-facts dd { font-size: clamp(12.5px, 2.2cqh, 15px); }
+  .move-panel { flex: 1 1 0; min-height: 80px; padding: 1.4cqh 1.9cqh 1.6cqh; }
+  .move-panel h3 { font-size: clamp(11px, 1.9cqh, 13px); }
+  .move-list { flex: 1 1 0; min-height: 0; max-height: none; font-size: clamp(12.5px, 2.1cqh, 14.5px); }
+}
