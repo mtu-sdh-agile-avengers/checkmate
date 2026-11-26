@@ -73,7 +73,33 @@ export function GameBoard({ pieces, takenAt, plies, label, legalMoves, playable,
   };
   const pieceElement = (id: string) => board.current?.querySelector<HTMLElement>(`[data-piece-id="${id}"]`);
 
+  /**
+   * Ends the press in hand, whichever pointer it was: a drag is let go of at (x, y), or
+   * anywhere at all when `cancelled` (then the piece slides back where it came from).
+   */
+  const endPress = (x: number, y: number, cancelled: boolean) => {
+    const current = press.current;
+    press.current = null;
+    if (!current?.dragging) return; // a plain press: the click that follows does the rest
+    // The click this release may fire on the square is not a second move.
+    skipClick.current = true;
+    setTimeout(() => {
+      skipClick.current = false;
+    }, 0);
+    const to = cancelled ? null : squareAt(x, y);
+    // Let go: the piece slides from where it was dropped to its square, the new one if the move
+    // is played, back where it came from if not (the offset goes in the layout effect above).
+    released.current = current.id;
+    setDragged(null);
+    setOver(null);
+    onDrop(current.from, to);
+  };
+
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    // Never carry a press over: one the board never heard released (let go off the board
+    // before it became a drag, or a drag that could not capture the pointer) ends here, and a
+    // piece left in hand goes home. Even a press that picks nothing up ends it.
+    endPress(event.clientX, event.clientY, true);
     skipClick.current = false;
     if (event.button !== 0) return;
     const square = (event.target as Element).closest<HTMLElement>('[data-square]')?.dataset.square;
@@ -87,6 +113,12 @@ export function GameBoard({ pieces, takenAt, plies, label, legalMoves, playable,
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const current = press.current;
     if (!current || current.pointerId !== event.pointerId) return;
+    // No button held: the press was released somewhere the board did not hear about (a mouse
+    // keeps pointer id 1, so a later hover would otherwise pick the old press up again).
+    if (event.buttons === 0) {
+      endPress(event.clientX, event.clientY, true);
+      return;
+    }
     const dx = event.clientX - current.x;
     const dy = event.clientY - current.y;
     if (!current.dragging) {
@@ -110,22 +142,8 @@ export function GameBoard({ pieces, takenAt, plies, label, legalMoves, playable,
   };
 
   const finish = (event: PointerEvent<HTMLDivElement>, cancelled: boolean) => {
-    const current = press.current;
-    if (!current || current.pointerId !== event.pointerId) return;
-    press.current = null;
-    if (!current.dragging) return; // a plain press: the click that follows does the rest
-    // The click this release may fire on the square is not a second move.
-    skipClick.current = true;
-    setTimeout(() => {
-      skipClick.current = false;
-    }, 0);
-    const to = cancelled ? null : squareAt(event.clientX, event.clientY);
-    // Let go: the piece slides from where it was dropped to its square, the new one if the move
-    // is played, back where it came from if not (the offset goes in the layout effect above).
-    released.current = current.id;
-    setDragged(null);
-    setOver(null);
-    onDrop(current.from, to);
+    if (press.current?.pointerId !== event.pointerId) return;
+    endPress(event.clientX, event.clientY, cancelled);
   };
 
   return (

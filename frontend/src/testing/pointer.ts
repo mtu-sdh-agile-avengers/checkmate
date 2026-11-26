@@ -11,16 +11,25 @@ class TestPointerEvent extends MouseEvent {
   }
 }
 
-/** Fires a pointer event (pointerdown, pointermove, pointerup, pointercancel) on `target`. */
+type PointerType = 'pointerdown' | 'pointermove' | 'pointerup' | 'pointercancel';
+
+/**
+ * Fires a pointer event on `target`. `buttons` is what a browser reports: the main button held
+ * while the pointer is down and moving, none once it is up; a move with `buttons: 0` is a hover.
+ */
 export function pointer(
   target: Element,
-  type: 'pointerdown' | 'pointermove' | 'pointerup' | 'pointercancel',
+  type: PointerType,
   x: number,
   y: number,
-  { button = 0, pointerId = 1 }: { button?: number; pointerId?: number } = {},
+  {
+    button = 0,
+    pointerId = 1,
+    buttons = type === 'pointerdown' || type === 'pointermove' ? 1 : 0,
+  }: { button?: number; pointerId?: number; buttons?: number } = {},
 ) {
   act(() => {
-    target.dispatchEvent(new TestPointerEvent(type, { clientX: x, clientY: y, button, pointerId }));
+    target.dispatchEvent(new TestPointerEvent(type, { clientX: x, clientY: y, button, buttons, pointerId }));
   });
 }
 

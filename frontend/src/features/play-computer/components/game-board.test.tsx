@@ -106,6 +106,47 @@ describe('game board', () => {
     }
   });
 
+  it('forgets a press released off the board: a later hover picks nothing up', () => {
+    const { container, props } = renderBoard();
+    const knight = screen.getByRole('button', { name: 'g1, white knight' });
+    stubHitTest(screen.getByRole('button', { name: 'f3' }));
+    // Pressed on rank 1, moved less than the drag threshold, then let go off the board, where
+    // the board cannot hear it.
+    pointer(knight, 'pointerdown', 100, 100);
+    pointer(knight, 'pointermove', 103, 104);
+    // Back over the board later with no button held: a hover, which ends the old press...
+    pointer(knight, 'pointermove', 100, 30, { buttons: 0 });
+    // ...so nothing is dragged after it, even with a button held.
+    pointer(knight, 'pointermove', 100, 20);
+    expect(container.querySelector('[data-dragging]')).toBeNull();
+    expect(props.onPick).not.toHaveBeenCalled();
+    expect(props.onDrop).not.toHaveBeenCalled();
+  });
+
+  it('sends a drag whose release was never heard home, and never carries a press over', () => {
+    const { container, props } = renderBoard();
+    const pawn = screen.getByRole('button', { name: 'e2, white pawn' });
+    stubHitTest(screen.getByRole('button', { name: 'e4' }));
+
+    // A drag let go off the board without the board hearing it: the next button-less move
+    // over the board lets the piece go home.
+    pointer(pawn, 'pointerdown', 100, 100);
+    pointer(pawn, 'pointermove', 100, 40);
+    expect(container.querySelector('[data-piece-id="white-pawn-e"]')).toHaveAttribute('data-dragging', 'true');
+    pointer(pawn, 'pointermove', 100, 30, { buttons: 0 });
+    expect(props.onDrop).toHaveBeenLastCalledWith('e2', null);
+    expect(container.querySelector('[data-dragging]')).toBeNull();
+
+    // A new press ends the one before, even one on a square with nothing to pick up.
+    pointer(pawn, 'pointerdown', 100, 100);
+    pointer(pawn, 'pointermove', 100, 40);
+    pointer(screen.getByRole('button', { name: 'a1, white rook' }), 'pointerdown', 10, 10);
+    expect(props.onDrop).toHaveBeenLastCalledWith('e2', null);
+    expect(container.querySelector('[data-dragging]')).toBeNull();
+    pointer(pawn, 'pointermove', 100, 0);
+    expect(container.querySelector('[data-dragging]')).toBeNull();
+  });
+
   it('drops off the board as nowhere, and lets a cancelled drag go home', () => {
     const { props } = renderBoard();
     const from = screen.getByRole('button', { name: 'g1, white knight' });
