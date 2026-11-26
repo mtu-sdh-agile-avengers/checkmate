@@ -12,7 +12,11 @@ export function ProfilePage({ username: name }: { username?: string }) {
   const params = useParams<{ username: string }>();
   const username = name ?? params.username ?? '';
   const [copied, setCopied] = useState(false);
+  // A picture that fails to load (gone from Chess.com, out of reach) gives way to the
+  // silhouette, as having no picture does; a new picture gets its own try.
+  const [brokenAvatar, setBrokenAvatar] = useState<string | null>(null);
   const { data: player, isPending, error, refetch } = usePlayer(username);
+  const avatar = player?.avatar && player.avatar !== brokenAvatar ? player.avatar : null;
   async function copyProfile(url: string) {
     try { await navigator.clipboard.writeText(url); setCopied(true); }
     catch { setCopied(false); }
@@ -22,8 +26,12 @@ export function ProfilePage({ username: name }: { username?: string }) {
       {isPending ? <PageLoading label="Loading profile…" /> : error ? <PageError message={error.message} onRetry={() => void refetch()} /> : player ? (
         <>
           <div className="profile-identity">
-            <div className="profile-avatar" aria-label={player.avatar ? 'Player avatar' : 'No player avatar available'}>
-              {player.avatar ? <img src={player.avatar} alt={`${player.username} avatar`} /> : <span className="avatar-silhouette" aria-hidden="true" />}
+            <div className="profile-avatar" aria-label={avatar ? 'Player avatar' : 'No player avatar available'}>
+              {avatar ? (
+                <img src={avatar} alt={`${player.username} avatar`} onError={() => setBrokenAvatar(avatar)} />
+              ) : (
+                <span className="avatar-silhouette" aria-hidden="true" />
+              )}
             </div>
             <div className="identity-copy"><span className="eyebrow">PLAYER PROFILE</span><h2>{player.username}</h2>
               <a href={player.url} target="_blank" rel="noopener noreferrer">{player.url.replace(/^https?:\/\/(www\.)?/, '')} <ExternalLink size={14} aria-hidden="true" /></a>
