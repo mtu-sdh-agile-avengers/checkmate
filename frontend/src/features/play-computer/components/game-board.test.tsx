@@ -80,6 +80,32 @@ describe('game board', () => {
     expect(piece?.style.getPropertyValue('--dy')).toBe('');
   });
 
+  it('captures the pointer only once a press becomes a drag, so a plain click still picks a piece up', () => {
+    // In a browser, a captured pointer's click goes to the board, not to the square under it.
+    const capture = vi.fn();
+    HTMLElement.prototype.setPointerCapture = capture; // jsdom has none
+    try {
+      const { props } = renderBoard();
+      const from = screen.getByRole('button', { name: 'e2, white pawn' });
+      stubHitTest(screen.getByRole('button', { name: 'e4' }));
+      pointer(from, 'pointerdown', 100, 100);
+      expect(capture).not.toHaveBeenCalled();
+      pointer(from, 'pointermove', 100, 40);
+      expect(capture).toHaveBeenCalledWith(1);
+      pointer(from, 'pointerup', 100, 40);
+      expect(props.onDrop).toHaveBeenLastCalledWith('e2', 'e4');
+
+      // A pointer the browser no longer tracks cannot be captured: the drag goes on without.
+      capture.mockImplementation(() => {
+        throw new DOMException('No active pointer with the given id is found.', 'NotFoundError');
+      });
+      dragPiece(screen.getByRole('button', { name: 'g1, white knight' }), screen.getByRole('button', { name: 'f3' }));
+      expect(props.onDrop).toHaveBeenLastCalledWith('g1', 'f3');
+    } finally {
+      delete (HTMLElement.prototype as { setPointerCapture?: unknown }).setPointerCapture;
+    }
+  });
+
   it('drops off the board as nowhere, and lets a cancelled drag go home', () => {
     const { props } = renderBoard();
     const from = screen.getByRole('button', { name: 'g1, white knight' });

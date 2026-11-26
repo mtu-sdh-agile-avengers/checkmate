@@ -79,9 +79,9 @@ export function GameBoard({ pieces, takenAt, plies, label, legalMoves, playable,
     const square = (event.target as Element).closest<HTMLElement>('[data-square]')?.dataset.square;
     const piece = square ? standing.get(square) : undefined;
     if (!square || !piece || !movable(square)) return;
+    // No pointer capture yet: a captured pointer's click goes to the board, not to the square,
+    // and a plain click must still pick the piece up (click-to-move).
     press.current = { pointerId: event.pointerId, from: square, id: piece.id, x: event.clientX, y: event.clientY, dragging: false };
-    const element = board.current;
-    if (element && typeof element.setPointerCapture === 'function') element.setPointerCapture(event.pointerId);
   };
 
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
@@ -94,6 +94,13 @@ export function GameBoard({ pieces, takenAt, plies, label, legalMoves, playable,
       current.dragging = true;
       setDragged(current.id);
       onPick(current.from);
+      // Now it is a drag: keep the pointer's events coming here, even off the board.
+      const element = board.current;
+      try {
+        if (element && typeof element.setPointerCapture === 'function') element.setPointerCapture(event.pointerId);
+      } catch {
+        // A pointer the browser no longer tracks: the drag goes on without capture.
+      }
     }
     // The dragged piece follows the pointer: set directly, not through React, at pointer speed.
     pieceElement(current.id)?.style.setProperty('--dx', `${dx}px`);
