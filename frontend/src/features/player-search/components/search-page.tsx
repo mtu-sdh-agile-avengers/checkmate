@@ -14,8 +14,9 @@ import './search-page.css';
  * and the search itself is inert until the visitor comes back. `guestAvatar` is that
  * player's profile picture, if they have one: it becomes the guest's head.
  *
- * `topDown` names the top-down view the camera has moved to (In-Game Chess or Deliberation),
- * if any. The table set is out of view and inert meanwhile.
+ * `topDown` names the top-down view on screen (In-Game Chess or Deliberation), if any, also
+ * while it is still leaving. The table set is inert meanwhile; once the view has gone, the
+ * menu item that opened it takes focus (on narrow screens the menu is only back by then).
  */
 export function SearchPage({ guest, guestAvatar, topDown = null }: {
   guest?: string;

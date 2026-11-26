@@ -149,8 +149,12 @@
 .vs-rig:is([data-phase='locking'], [data-phase='rising']) .vs-slot { animation: vs-flash .45s steps(1, end) both; }
 @keyframes vs-stamp { 0% { opacity: 0; transform: rotate(-8deg) scale(1.7); } 30% { opacity: 1; } 60% { transform: rotate(-8deg) scale(.92); } 100% { opacity: 1; transform: rotate(-8deg); } }
 @keyframes vs-flash { 0%, 50% { opacity: .35; } 25%, 75%, 100% { opacity: 1; } }
-.vs-rig:is([data-phase='rising'], [data-leaving]) .vs-tv { animation: vs-rise .45s cubic-bezier(.55, 0, 1, .45) both; }
+.vs-rig[data-phase='rising'] .vs-tv { animation: vs-rise .45s cubic-bezier(.55, 0, 1, .45) both; }
 @keyframes vs-rise { from { transform: none; } to { transform: translateY(calc(-100vh - 100%)); } }
+/* Back to the menu, the set lifts a little on its cables as it fades and shrinks away, with the
+   panel, on the stage's ease (stage-layout.css has the whole sequence). The verdict set too. */
+.vs-rig[data-leaving] .vs-tv { animation: vs-leave .45s var(--topdown-ease, cubic-bezier(.65, 0, .2, 1)) both; }
+@keyframes vs-leave { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-40px) scale(.96); } }
 
 /* --- Narrow screens -----------------------------------------------------------
    Below 1100px the set hangs above the table in the page column; below 700px its two

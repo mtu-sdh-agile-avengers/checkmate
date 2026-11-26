@@ -11,22 +11,29 @@ const initial = (name: string) => name.charAt(0).toUpperCase();
 
 /**
  * The resolution of Deliberation, shot like a photograph: the camera has come down from above
- * the board to the height of the table and looks up at the winner, seated in profile at their
- * end of the table (Player A on the left, Player B on the right, each in their tone and with
- * their picture). A spotlight beam falls on the winner and the rest of the frame goes dark;
- * the loser's king topples on the loser's end of the table, where it stays in frame. With no
- * winner, both stay seated and the light falls on the table between them.
+ * the board to the height of the table and looks up at it, the two players seated in profile
+ * at its ends (Player A on the left, Player B on the right, each in their tone and with their
+ * picture). One spotlight, centred on the table, lights all of it and fades softly into the
+ * dark at the edges of the frame; the winner rises a little in it with a rim of light, and the
+ * loser's king topples on the loser's end of the table. With no winner, both stay seated and
+ * both kings stand.
  *
  * Built from the landing page's own cut-outs and stage treatment (photo-scene.css): the dark
  * back wall, the chessboard floor in perspective, haze, a blurred beam with drifting dust.
- * Decorative: the verdict set says the result in words.
+ * Decorative: the verdict set says the result in words. `leaving`: back to the menu, it pulls
+ * back and fades with the table.
  */
-export function PhotoScene({ players, winner, quality }: { players: PlayerPair; winner: PhotoWinner; quality: SceneQuality }) {
+export function PhotoScene({ players, winner, quality, leaving = false }: {
+  players: PlayerPair;
+  winner: PhotoWinner;
+  quality: SceneQuality;
+  leaving?: boolean;
+}) {
   const [a, b] = players;
   const dust = quality === 'full' ? DELIBERATION_SCENE.quality.dust.full : DELIBERATION_SCENE.quality.dust.lite;
   const { a: lookA, b: lookB } = DELIBERATION_SCENE.players;
   return (
-    <div className="photo-scene" data-winner={winner ?? 'none'} data-quality={quality} aria-hidden="true">
+    <div className="photo-scene" data-winner={winner ?? 'none'} data-quality={quality} data-leaving={leaving || undefined} aria-hidden="true">
       <div className="photo-scene__backdrop" />
       <div className="photo-scene__frame">
         <div className="photo-set">

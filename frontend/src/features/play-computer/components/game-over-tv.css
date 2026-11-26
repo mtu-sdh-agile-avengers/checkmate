@@ -1,0 +1,41 @@
+/* The game-over set (game-over-tv.tsx): the statistics set's make (game-tv.css: cabinet, ivory
+   screen, glass, grille and knobs), hanging on two cables. It drops in from above the screen
+   over the dimmed table, lands with two bounces and swings a little, then the screen powers
+   on with the result. Reduced motion: it is simply there. */
+.game-over { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; }
+.game-over__backdrop { position: absolute; inset: 0; background: rgb(9 9 10 / .58); animation: game-over-dim .35s ease-out both; }
+@keyframes game-over-dim { from { opacity: 0; } to { opacity: 1; } }
+
+.game-over__rig { position: relative; width: min(380px, 100%); animation: game-over-drop 1s linear both; }
+/* The cables it hangs from, up out of the frame. */
+.game-over__rig::before, .game-over__rig::after {
+  content: ''; position: absolute; bottom: 100%; width: 3px; height: 100vh; background: linear-gradient(180deg, #19191b, #3c3b39);
+}
+.game-over__rig::before { left: 22%; }
+.game-over__rig::after { right: 22%; }
+@keyframes game-over-drop {
+  0% { transform: translateY(calc(-100vh - 100%)); animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
+  55% { transform: translateY(14px); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  72% { transform: translateY(-6px); animation-timing-function: ease-in-out; }
+  86% { transform: translateY(2px); animation-timing-function: ease-in-out; }
+  100% { transform: none; }
+}
+.game-over__cabinet { transform-origin: 50% -60%; animation: game-over-swing .9s ease-out .55s both; }
+@keyframes game-over-swing { 0% { transform: rotate(1.2deg); } 35% { transform: rotate(-.7deg); } 65% { transform: rotate(.25deg); } 100% { transform: none; } }
+/* The screen powers on once the set has landed. */
+.game-over .game-over__screen::before, .game-over .game-over__screen::after { animation-delay: .75s; }
+
+.game-over__picture { display: grid; justify-items: center; gap: 8px; padding: 22px 20px 20px; text-align: center; }
+.game-over__title { margin: 2px 0 0; font-size: clamp(36px, 7vw, 48px); line-height: 1; letter-spacing: -1.5px; font-weight: 900; }
+.game-over__reason { margin: 0; color: #45423c; font-size: 16px; font-weight: 750; }
+.game-over__actions { display: flex; gap: 10px; width: 100%; margin-top: 10px; }
+/* Won: the title stamped like the VS badge, slightly askew. */
+.game-over[data-outcome='win'] .game-over__title { rotate: -2deg; text-shadow: .05em .05em 0 #a7a5a0; }
+
+/* Back to the menu: the set fades away with the view. */
+.game-over[data-leaving] { opacity: 0; transition: opacity .3s ease-in; }
+
+@media (prefers-reduced-motion: reduce) {
+  .game-over__backdrop, .game-over__rig, .game-over__cabinet { animation: none; }
+  .game-over[data-leaving] { transition: none; }
+}

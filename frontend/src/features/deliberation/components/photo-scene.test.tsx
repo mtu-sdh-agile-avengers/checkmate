@@ -21,6 +21,12 @@ describe('photo scene', () => {
 
     expect(container.querySelectorAll('.photo-set__king')).toHaveLength(2);
     expect(container.querySelectorAll('.photo-scene__dust')).toHaveLength(9);
+    expect(scene).not.toHaveAttribute('data-leaving');
+  });
+
+  it('is marked leaving on the way back to the menu, to fade with the table', () => {
+    const { container } = render(<PhotoScene players={PLAYERS} winner="a" quality="full" leaving />);
+    expect(container.querySelector('.photo-scene')).toHaveAttribute('data-leaving', 'true');
   });
 
   it('falls back to the initial when a picture fails, and drops the dust on a lighter device', () => {

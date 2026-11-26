@@ -9,7 +9,7 @@ import './verdict-tv.css';
 
 /**
  * The verdict set: a television of the same make as the VS set, lowered on its cables beside
- * the table once the spotlight has found the winner. It names the winner, their expected
+ * the table once the spotlight is up and the king is down. It names the winner, their expected
  * score and why they won (the statistics they are better at), with every statistic compared
  * below. Given `failure` instead, it says the players could not be compared, with Try again.
  * Focus goes to its title when it lands; `leaving` raises it.

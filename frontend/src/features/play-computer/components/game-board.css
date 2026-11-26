@@ -1,0 +1,60 @@
+/* The board of a game against the computer (game-board.tsx), on TopDownBoard's squares and
+   frame (components/chess/top-down-board.css).
+
+   The pieces sit on a layer of their own, each placed by translate from its file and row, so
+   a move is one transition: 0.3s on an ease-in-out, for the player's moves and the computer's,
+   the castling rook beside its king. A piece being dragged follows the pointer (--dx, --dy, set
+   from the pointer events) with no transition; let go, it slides from there to its square, the
+   new one or back home. A piece taken shrinks and fades. The layer takes no clicks: the squares
+   under it stay usable while anything moves, so no animation holds the next move up. */
+.game-board {
+  position: relative; --move-ms: .3s; --move-ease: cubic-bezier(.65, 0, .35, 1);
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.game-board__pieces { position: absolute; inset: 0; pointer-events: none; }
+.game-board__piece {
+  position: absolute; left: 0; top: 0; display: grid; place-items: center; width: var(--sq); height: var(--sq);
+  translate: calc(var(--file) * var(--sq) + var(--dx, 0px)) calc(var(--row) * var(--sq) + var(--dy, 0px));
+  transition: translate var(--move-ms) var(--move-ease);
+}
+/* The piece that just moved passes over the others; the one in hand over everything. */
+.game-board__piece[data-moving] { z-index: 2; }
+.game-board__piece[data-dragging] { z-index: 3; transition: none; }
+.game-board__art { position: relative; z-index: 1; display: block; width: 74%; height: 88%; transition: scale .15s ease-out; }
+.game-board__art svg { display: block; width: 100%; height: 100%; overflow: visible; }
+/* Lifted while in hand: a little larger, its shadow left on the board below. */
+.game-board__piece[data-dragging] .game-board__art { scale: 1.14; }
+.game-board__shadow {
+  position: absolute; left: 20%; right: 20%; bottom: 6%; height: 18%; border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(9 9 10 / .5), rgb(9 9 10 / .18) 60%, transparent);
+}
+.game-board__piece[data-dragging] .game-board__shadow { opacity: .55; scale: 1.25; translate: 0 18%; }
+
+/* Taken: it shrinks and fades where it stood as the capturing piece arrives. */
+.game-board__piece[data-taken] .game-board__art { animation: piece-captured var(--move-ms) var(--move-ease) both; }
+.game-board__piece[data-taken] .game-board__shadow { opacity: 0; transition: opacity .15s; }
+@keyframes piece-captured { from { opacity: 1; scale: 1; } to { opacity: 0; scale: .35; } }
+
+/* The squares: grab your pieces (and no page scroll while a finger drags one); a ring for a
+   target with a piece on it (a capture), as the dot would hide under it; a stronger mark on
+   the target under the piece in hand. */
+.game-board .td-board__square[data-draggable] { cursor: grab; touch-action: none; }
+.game-board[data-dragging], .game-board[data-dragging] .td-board__square { cursor: grabbing; }
+.game-board .td-board__square[data-target][data-occupied]::after {
+  width: 92%; background: none; box-shadow: inset 0 0 0 calc(var(--sq) * .07) rgb(27 28 29 / .55);
+}
+.game-board .td-board__square[data-over] { box-shadow: inset 0 0 0 calc(var(--sq) * .09) #1b1c1d; }
+
+/* A king in check: its square glows red while the check lasts. The one red in the app,
+   chosen for this (chess convention: the king under attack). */
+.game-board .td-board__square[data-check] {
+  background: radial-gradient(circle, #f05a48 0, #d33a2c 42%, #9c2219 100%);
+  animation: check-glow 1.2s ease-in-out infinite alternate;
+}
+@keyframes check-glow { from { box-shadow: inset 0 0 0 0 rgb(255 240 236 / 0); } to { box-shadow: inset 0 0 calc(var(--sq) * .28) 0 rgb(255 240 236 / .45); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .game-board__piece, .game-board__art { transition: none; }
+  .game-board__piece[data-taken] { display: none; }
+  .game-board .td-board__square[data-check] { animation: none; }
+}

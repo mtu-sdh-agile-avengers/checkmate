@@ -5,6 +5,7 @@ export function gameNote(
   game: ComputerGameState | null,
   thinking: boolean,
   error: Error | null,
+  repetition = false,
 ): string {
   if (error) return error.message;
   if (!game) return 'Setting up the board…';
@@ -13,6 +14,7 @@ export function gameNote(
     return game.winner === 'white' ? 'Checkmate — you win!' : 'Checkmate — the computer wins.';
   if (game.status === 'stalemate') return 'Stalemate — the game is a draw.';
   if (game.status === 'draw') return 'The game is a draw.';
+  if (repetition) return 'Draw by threefold repetition — the same position came up three times.';
   const reply = game.computerMove ? `The computer played ${game.computerMove.san}. ` : '';
   return `${reply}Your move${game.check ? ' — you are in check' : ''}.`;
 }

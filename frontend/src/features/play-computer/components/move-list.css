@@ -1,0 +1,23 @@
+/* The move list in the side panel (move-list.tsx): a score sheet on paper, two moves to a
+   numbered row, scrolling inside itself; the newest move inked in. Its classes are
+   .score-sheet: .move-list is the Games channel's game details (game-details-page.css).
+   It keeps its own height in the panel's column (side-panel.css): the list inside scrolls,
+   and the panel scrolls if the window is too short for all of it. */
+.score-sheet { display: grid; gap: 6px; flex: none; }
+.score-sheet__title { margin: 0; color: #45423c; font-size: 11.5px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; }
+.score-sheet__empty { margin: 0; padding: 9px 10px; border: 1px dashed #c9c5bc; color: #6f6b64; font-size: 13px; }
+.score-sheet__moves {
+  max-height: 138px; margin: 0; padding: 4px 0; overflow-y: auto; overscroll-behavior: contain; list-style: none;
+  border: 2px solid #0b0b0c; background: #fffefa; box-shadow: 4px 4px 0 #80796d;
+  scrollbar-width: thin; scrollbar-color: #a7a5a0 transparent;
+}
+.score-sheet__moves:focus-visible { outline: 3px solid #80796d; outline-offset: 3px; }
+.score-sheet__pair {
+  display: grid; grid-template-columns: 2.6em minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 4px;
+  padding: 2px 10px; font-size: 14px; font-variant-numeric: tabular-nums;
+}
+.score-sheet__pair:nth-child(even) { background: #f1eee8; }
+.score-sheet__number { color: #6f6b64; font-weight: 700; }
+.score-sheet__move { justify-self: start; padding: 1px 6px; font-weight: 700; }
+.score-sheet__move[data-latest] { background: var(--ink, #1b1c1d); color: var(--paper, #f7f6f3); }
+.score-sheet__move[data-pending] { background: #d8d4cb; color: #1b1c1d; }

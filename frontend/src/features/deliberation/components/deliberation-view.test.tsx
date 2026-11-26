@@ -8,7 +8,7 @@ import type { PlayerComparison } from '@/types/chess';
 import { compareMetrics } from '@/utils/comparison';
 import { DeliberationView } from './deliberation-view';
 
-const SLOW = { timeout: 5000 };
+const SLOW = { timeout: 15_000 };
 
 const findPlayer = vi.fn(async (username: string): Promise<FoundPlayer> => ({
   username,
@@ -50,7 +50,8 @@ async function confirmPlayers(user: ReturnType<typeof userEvent.setup>, timeClas
   await user.click(screen.getByRole('button', { name: 'Confirm' }));
 }
 
-describe('Deliberation', () => {
+// Full scenes with lazy parts: generous limits, as the whole suite runs in parallel (see app/router.test.tsx).
+describe('Deliberation', { timeout: 30_000 }, () => {
   it('compares two players, deliberates, then puts the winner in the spotlight with the verdict', async () => {
     const { user, onCompare, onReset, container, show } = setup();
     await confirmPlayers(user);

@@ -27,5 +27,8 @@ describe('game note', () => {
     );
     expect(gameNote({ ...game, status: 'stalemate' }, false, null)).toContain('draw');
     expect(gameNote({ ...game, status: 'draw' }, false, null)).toBe('The game is a draw.');
+    expect(gameNote(game, false, null, true)).toBe(
+      'Draw by threefold repetition — the same position came up three times.',
+    );
   });
 });

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { playMove, RAPID_GAMES, startingPieces, type BoardPiece, type PlayedMove } from '@/features/deliberation/utils/rapid-games';
+import { playMove, startingPieces, type BoardPiece, type PlayedMove } from '@/components/chess/board-pieces';
+import { RAPID_GAMES } from '@/features/deliberation/utils/rapid-games';
 
 type Table = {
   pieces: BoardPiece[];

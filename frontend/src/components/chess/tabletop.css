@@ -10,7 +10,9 @@
   perspective: 1400px; perspective-origin: 50% 42%;
   --seat-w: calc(var(--board) * .56);
 }
-.tabletop[data-mode='computer'] { --board: clamp(240px, min((100svh - 150px) / 1.22, 100vw - 2 * (var(--panel-w) + 96px)), 640px); }
+/* In-Game Chess leaves room above and below the table for the two players, a little smaller
+   than Deliberation's, so the board stays as large as it can. */
+.tabletop[data-mode='computer'] { --board: clamp(240px, min((100svh - 150px) / 1.5, 100vw - 2 * (var(--panel-w) + 96px)), 600px); --seat-w: calc(var(--board) * .46); }
 /* Deliberation leaves room above and below the table for the two seated players. Its table is wider (players at both ends), so the width limit keeps the whole table clear of the panel. */
 .tabletop[data-mode='deliberation'] { --board: clamp(220px, min((100svh - 150px) / 1.85, (100vw - 2 * (var(--panel-w) + 54px)) / 1.46), 520px); }
 
@@ -18,12 +20,13 @@
    Arriving, the table starts as the side view saw it, low in the frame and tipped back like
    the floor, then tilts up, turns square and settles until the camera looks straight down.
    It starts while the stage is still rising out of view (stage-layout.css) and shares its
-   ease, so the two read as one move. Leaving plays it backwards. */
+   ease, so the two read as one move. Leaving plays it backwards, on the same ease, while the
+   stage settles back: the table has faded by 85% of the way, cross-fading with the stage. */
 .tabletop__camera {
   position: absolute; inset: 0; display: grid; place-items: center;
   animation: tabletop-arrive 1.1s var(--topdown-ease, cubic-bezier(.65, 0, .2, 1)) .3s both;
 }
-.tabletop[data-leaving] .tabletop__camera { animation: tabletop-depart .75s cubic-bezier(.55, 0, 1, .45) both; }
+.tabletop[data-leaving] .tabletop__camera { animation: tabletop-depart .8s var(--topdown-ease, cubic-bezier(.65, 0, .2, 1)) both; }
 @keyframes tabletop-arrive {
   from { opacity: 0; transform: translateY(20%) rotateX(52deg) rotateZ(-8deg) scale(1.3); }
   40% { opacity: 1; }
@@ -31,6 +34,7 @@
 }
 @keyframes tabletop-depart {
   from { opacity: 1; transform: none; }
+  85% { opacity: 0; }
   to { opacity: 0; transform: translateY(20%) rotateX(52deg) rotateZ(-8deg) scale(1.3); }
 }
 
@@ -91,17 +95,21 @@
 .tabletop[data-phase='resolve'] { opacity: 0; transition: opacity calc(var(--descend-ms, 1.4s) * .5) ease-in calc(var(--beat-ms, .65s) + var(--descend-ms, 1.4s) * .45); }
 
 /* Narrow screens: no room beside the board, so the view becomes a column the page scrolls:
-   the table, then the panel (or the VS set) under it. */
+   the table, then the panel (or the VS set) under it. Leaving, it stays where it is in the
+   column while it goes (the stage holds its layout meanwhile: stage-layout.css). */
 @media (max-width: 1099px) {
   .topdown-view { position: relative; inset: auto; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 6px 0 12px; }
-  .topdown-view[data-leaving] { position: absolute; inset: 0; }
   .tabletop { position: relative; inset: auto; width: 100%; height: var(--scene-h); flex: 0 0 auto; }
-  .tabletop[data-mode='computer'] { --board: clamp(200px, min(100vw - 72px, 100svh - 330px), 560px); --scene-h: calc(var(--board) * 1.3 + 24px); }
+  .tabletop[data-mode='computer'] { --board: clamp(200px, min(100vw - 72px, (100svh - 200px) / 1.5), 560px); --scene-h: calc(var(--board) * 1.66 + 24px); }
   .tabletop[data-mode='deliberation'] { --board: clamp(160px, min((100vw - 40px) / 1.5, (100svh - 240px) / 1.85), 440px); --scene-h: calc(var(--board) * 1.9 + 24px); }
 }
 @media (prefers-reduced-motion: reduce) {
+  /* Leaving, the whole view simply fades out (0.3s, RETURN_FADE_MS in stage-layout.tsx): the
+     one animation kept with reduced motion (important, over the switch-off in styles.css). */
+  .topdown-view[data-leaving] { animation: topdown-fade-out .3s ease-out both !important; }
   .tabletop__camera, .tabletop[data-leaving] .tabletop__camera, .tabletop__seat .td-figure, .tabletop__table { animation: none !important; }
   /* No tilt, sway or camera move: each phase is simply there. */
   .tabletop, .tabletop__camera, .tabletop__table { transition: none !important; }
   .tabletop[data-phase] .tabletop__camera { rotate: none; translate: none; scale: none; }
 }
+@keyframes topdown-fade-out { to { opacity: 0; } }

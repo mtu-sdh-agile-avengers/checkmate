@@ -36,7 +36,7 @@ export const DELIBERATION_SCENE = {
     beatMs: 650,
     /** The camera tips down from overhead to table level, after the beat. */
     descendMs: 1400,
-    /** From the start of the resolution: the spotlight comes up on the winner... */
+    /** From the start of the resolution: the spotlight comes up on the table and the winner rises in it... */
     spotlightAtMs: 1900,
     /** ...the loser's king falls... */
     kingAtMs: 2250,
