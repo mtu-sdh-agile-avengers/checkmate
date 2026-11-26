@@ -2,7 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { AppRouter } from '@/app/router';
 import { createQueryClient } from '@/lib/query-client';
 import { stubMotion } from '@/testing/motion';
@@ -23,13 +23,23 @@ function renderStage(route = '/') {
 async function leaveInGameChess() {
   const user = userEvent.setup();
   const { container } = renderStage('/play');
-  await user.click(await screen.findByRole('button', { name: 'Back' }, { timeout: 40_000 }));
+  // Wait with a cheap text query, not a role query: with motion allowed the stage behind keeps
+  // changing (its televisions flicker), every change re-runs the query, and a role query over
+  // the whole scene each time can starve the test long enough for the view never to arrive.
+  await user.click(await screen.findByText('Back', { selector: 'button' }, { timeout: 40_000 }));
   const stage = container.querySelector('.stage-screen');
   if (!stage) throw new Error('no stage');
   return { container, stage };
 }
 
 describe('the way back to the menu', () => {
+  // The app loads these views while the browser is idle (stage-layout.tsx; not in tests). Load
+  // them first here as well, so opening /play never waits on their first, cold load, which
+  // under coverage, with the stage flickering behind, now and then took past the time limit.
+  beforeAll(async () => {
+    await Promise.all([import('@/components/chess/chess-stage'), import('@/features/play-computer/components/play-computer-view')]);
+  }, 60_000);
+
   it('keeps the stage returning while the table view leaves, then until it has settled', async () => {
     stubMotion(false);
     const { container, stage } = await leaveInGameChess();
