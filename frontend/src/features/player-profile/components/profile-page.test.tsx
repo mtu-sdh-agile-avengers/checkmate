@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { HIKARU_PROFILE } from '@/features/player-profile/api/get-player.fixtures';
@@ -62,6 +62,20 @@ describe('player-profile', () => {
     await user.click(screen.getByRole('button', { name: 'Copy profile URL' }));
     expect(writeText).toHaveBeenCalledWith(HIKARU_PROFILE.url);
     expect(await screen.findByRole('button', { name: 'Profile URL copied' })).toBeInTheDocument();
+  });
+
+  it('shows the silhouette when the picture fails to load, as for a player without one', async () => {
+    vi.stubEnv('VITE_API_MODE', 'live');
+    mockFetchJson({ ...HIKARU_PROFILE, avatar: 'https://images.chesscomfiles.com/uploads/v1/user/gone.png' });
+    renderWithProviders(<ProfilePage username="hikaru" />);
+
+    const picture = await screen.findByRole('img', { name: 'hikaru avatar' });
+    expect(screen.getByLabelText('Player avatar')).toBeInTheDocument();
+
+    fireEvent.error(picture);
+
+    expect(screen.queryByRole('img', { name: 'hikaru avatar' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('No player avatar available')).toBeInTheDocument();
   });
 
   it('keeps the copy button as it was when the clipboard is blocked', async () => {

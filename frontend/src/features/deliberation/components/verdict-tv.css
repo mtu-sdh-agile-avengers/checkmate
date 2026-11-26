@@ -1,6 +1,6 @@
 /* The verdict set: the same make as the VS set (cabinet, keys, glass and its keyframes come
-   from vs-tv.css), lowered on two cables beside the table once the spotlight has found the
-   winner. Its screen is paper with ink type; the better figure of each pair is set in ink.
+   from vs-tv.css), lowered on two cables beside the table once the spotlight is up and the
+   king is down. Its screen is paper with ink type; the better figure of each pair is set in ink.
 
    Sequence (from the moment it appears; reduced motion skips all of it):
      0–1.05s   it drops, lands with two bounces and swings on its cables
@@ -22,7 +22,10 @@
 .verdict-tv .vs-tv__hint { flex-basis: 100%; text-align: center; }
 .verdict-tv .vs-tv__keys { width: 100%; }
 .verdict-tv .tv-key { flex: 1; min-width: 0; }
+/* Raised on its cables for a new comparison; back to the menu (the whole view leaving), it
+   fades and lifts away with the rest instead (vs-tv.css). */
 .verdict-rig[data-leaving] .verdict-tv { animation: vs-rise .45s cubic-bezier(.55, 0, 1, .45) both; }
+.deliberation[data-leaving] .verdict-rig .verdict-tv { animation: vs-leave .45s var(--topdown-ease, cubic-bezier(.65, 0, .2, 1)) both; }
 
 .verdict-tv__screen {
   position: relative; display: flex; min-height: 0; overflow: hidden;
@@ -88,5 +91,6 @@
 }
 @keyframes verdict-appear { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
-  .verdict-tv, .verdict-rig[data-leaving] .verdict-tv, .verdict-tv__screen::before, .verdict-tv__screen::after, .verdict-meter__bar span { animation: none; }
+  .verdict-tv, .verdict-rig[data-leaving] .verdict-tv, .deliberation[data-leaving] .verdict-rig .verdict-tv,
+  .verdict-tv__screen::before, .verdict-tv__screen::after, .verdict-meter__bar span { animation: none; }
 }

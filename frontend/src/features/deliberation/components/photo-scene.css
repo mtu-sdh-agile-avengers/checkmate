@@ -6,7 +6,7 @@
    Timeline, from the start of the resolution (custom properties from config/scene.ts):
      0                      the beat (the top-down table freezes; tabletop.css)
      --beat-ms + 45%        the photograph lands: it fades in while the camera settles
-     --spot-at              the beam and the darkness come up on the winner
+     --spot-at              the spotlight comes up on the whole table, the dark around it
      --king-at              the loser's king topples; a puff of dust where it lands
    Every element's resting state is its end state, and the animations play into it: with
    reduced motion (no animations) the photograph is simply there, king already down. */
@@ -16,6 +16,15 @@
   animation: photo-land calc(var(--descend-ms, 1.4s) * .8) var(--topdown-ease, cubic-bezier(.65, 0, .2, 1)) var(--land-at) both;
 }
 @keyframes photo-land { from { opacity: 0; transform: translateY(5%) scale(1.14); } to { opacity: 1; transform: none; } }
+/* Back to the menu (data-leaving), the photograph goes the way it came, with the table and on
+   the stage's ease (stage-layout.css has the whole sequence): it pulls back and fades. These
+   are transitions on properties the landing does not animate (translate and scale add to its
+   transform; the fade is on the layers inside), so leaving before it has landed cannot
+   flash it up first. Reduced motion: the whole view fades instead (tabletop.css). */
+@media (prefers-reduced-motion: no-preference) {
+  .photo-scene[data-leaving] { translate: 0 5%; scale: 1.14; transition: translate .7s var(--topdown-ease, cubic-bezier(.65, 0, .2, 1)), scale .7s var(--topdown-ease, cubic-bezier(.65, 0, .2, 1)); }
+  .photo-scene[data-leaving] > * { opacity: 0; transition: opacity .7s var(--topdown-ease, cubic-bezier(.65, 0, .2, 1)); }
+}
 
 /* --- The stage around the table ------------------------------------------- */
 .photo-scene__backdrop {
@@ -34,10 +43,10 @@
   opacity: .55;
 }
 
-/* --- The frame: the camera, low and looking up at the winner ---------------
-   The set is drawn at a fixed shape (16:10) and fitted to the frame; the camera then moves
-   in on the winner's end of the table (translate and scale about their seat) and tips back
-   (rotateX: the table edge comes towards the lens, the figures recede: looking up). */
+/* --- The frame: the camera, low and looking up at the table ----------------
+   The set is drawn at a fixed shape (16:10) and fitted to the frame; the camera holds the
+   whole table, centred, a little closer, and tips back (rotateX: the table edge comes towards
+   the lens, the figures recede: looking up). */
 .photo-scene__frame { position: absolute; inset: 0; display: grid; place-items: center; perspective: 1100px; container-type: size; overflow: hidden; }
 /* Wide screens: the verdict set hangs on the right, so the photograph is framed left of it. */
 @media (min-width: 1100px) {
@@ -47,9 +56,9 @@
   --seat-h: 80%; position: relative; width: min(100cqw, 160cqh); aspect-ratio: 16 / 10;
   transform: rotateX(7deg); transform-origin: 50% 68%;
 }
-.photo-scene[data-winner='a'] .photo-set { transform-origin: 19% 60%; translate: 16% 4%; scale: 1.14; }
-.photo-scene[data-winner='b'] .photo-set { transform-origin: 81% 60%; translate: -16% 4%; scale: 1.14; }
-.photo-scene[data-winner='none'] .photo-set { translate: 0 4%; scale: 1.04; }
+/* Framed on the table, whoever won: the one spotlight below lights all of it, both ends and
+   both players included. */
+.photo-scene .photo-set { translate: 0 4%; scale: 1.06; }
 
 /* The players, seated in profile at each end: the table top line (y = 156 of their 340) on the
    table's. Their box is 230 x 340, so --seat-h of the set's height is 33.8% of its width. */
@@ -115,32 +124,28 @@
 @keyframes king-dust { 0% { opacity: 0; scale: .4; } 25% { opacity: 1; } 100% { opacity: 0; scale: 1.6; } }
 
 /* --- The spotlight ----------------------------------------------------------
-   Darkness everywhere but a pool on the winner (--spot-x: where the camera has put them), a
-   beam falling on them from the rig, and dust turning in it. The winner gets a soft rim of
-   light and rises a little in it. */
-.photo-scene { --spot-x: 50%; --spot-y: 52%; --spot-w: 30%; --fall-x: 50%; }
-.photo-scene[data-winner='a'] { --spot-x: 35%; --spot-y: 46%; --spot-w: 24%; --fall-x: 78%; }
-.photo-scene[data-winner='b'] { --spot-x: 65%; --spot-y: 46%; --spot-w: 24%; --fall-x: 22%; }
-/* Two holes in the dark: the pool on the winner, and a softer one where the loser's king lies
-   (the two masks are intersected, so either one lets the scene through). */
+   One spotlight over the whole table, centred on it: a broad pool of light on the table, the
+   two kings and the players at its ends, falling off softly and slowly into the dark at the
+   edges of the frame, and one wide beam from the rig above it with dust turning in it. The
+   winner gets a soft rim of light and rises a little in it; the loser's king lies in the same
+   light, on their half of the table. */
 .photo-scene__dim {
-  position: absolute; inset: 0; z-index: 3; background: rgb(9 9 10 / .86);
-  mask-image:
-    radial-gradient(ellipse var(--spot-w) 52% at var(--spot-x) var(--spot-y), transparent 0 42%, rgb(0 0 0 / .7) 72%, #000 100%),
-    radial-gradient(ellipse 12% 13% at var(--fall-x) 57%, rgb(0 0 0 / .35) 0 35%, #000 100%);
-  mask-composite: intersect;
+  position: absolute; inset: 0; z-index: 3;
+  background: radial-gradient(ellipse 48% 54% at 50% 58%, transparent 0 38%, rgb(9 9 10 / .3) 56%, rgb(9 9 10 / .68) 76%, rgb(9 9 10 / .88) 100%);
   animation: spot-up .7s ease-out var(--spot-at, 1.9s) both;
 }
 .photo-scene__beam {
-  position: absolute; z-index: 4; top: -4%; bottom: 18%; left: calc(var(--spot-x) - 22%); width: 44%;
-  clip-path: polygon(44% 0, 56% 0, 88% 100%, 12% 100%);
-  background: linear-gradient(180deg, rgb(255 251 238 / .34), rgb(255 251 238 / .1) 70%, transparent);
+  position: absolute; z-index: 4; top: -4%; bottom: 24%; left: 14%; width: 72%;
+  clip-path: polygon(41% 0, 59% 0, 97% 100%, 3% 100%);
+  /* It comes out of the dark at the top (no hard edge where the frame cuts it off) and dies
+     away towards the floor. */
+  background: linear-gradient(180deg, transparent, rgb(255 251 238 / .3) 14%, rgb(255 251 238 / .1) 70%, transparent);
   mix-blend-mode: screen; animation: spot-up .8s ease-out var(--spot-at, 1.9s) both;
 }
 .photo-scene[data-quality='full'] .photo-scene__beam { filter: blur(10px); }
 @keyframes spot-up { from { opacity: 0; } to { opacity: 1; } }
 .photo-scene__dust {
-  position: absolute; left: calc(30% + var(--i) * 4.6%); top: calc(12% + var(--i) * 7%); width: 4px; height: 4px; border-radius: 50%;
+  position: absolute; left: calc(22% + var(--i) * 7%); top: calc(12% + var(--i) * 7%); width: 4px; height: 4px; border-radius: 50%;
   background: radial-gradient(closest-side, rgb(255 251 238 / .9), transparent);
   animation: dust-drift calc(5s + var(--i) * .7s) ease-in-out calc(var(--i) * -.9s) infinite alternate;
 }

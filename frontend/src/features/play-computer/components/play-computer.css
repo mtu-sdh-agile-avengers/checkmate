@@ -1,0 +1,32 @@
+/* In-Game Chess around the shared table (components/chess/tabletop.css).
+
+   The players' entrance when a game starts (use-arrival.ts): You (the ivory figure in the hat)
+   walk in from the left edge of the screen, the computer (ink) from the right, each to their
+   end of the table, then sit down: a slight settle as they lower into the seat. A few steps of
+   sway on the way; the computer sets off a beat later. About 2.6s in all, on the stage's ease,
+   and only while data-arrival="walking": skipping removes it and they are simply seated.
+
+   The far seat is turned round, so the same move in its own frame brings it from the right. */
+.play-computer { --walk-ms: 2400ms; }
+/* The board, the panel and the TV, wrapped only to make them inert under the game-over set:
+   the wrapper draws no box, so the layout is the view's (tabletop.css, side-panel.css). */
+.play-computer__game { display: contents; }
+.seat-walk { display: block; }
+.play-computer[data-arrival='walking'] .seat-walk { animation: seat-walk-in var(--walk-ms) cubic-bezier(.22, .8, .3, 1) both; }
+.play-computer[data-arrival='walking'] .tabletop__seat--far .seat-walk { animation-delay: .2s; }
+@keyframes seat-walk-in {
+  0% { translate: -75vw 0; rotate: 0deg; scale: 1.08; }
+  14% { rotate: -4deg; }
+  28% { rotate: 4deg; }
+  42% { rotate: -4deg; }
+  56% { rotate: 3deg; }
+  72% { translate: 0 0; rotate: 0deg; scale: 1.08; }
+  86% { scale: .97; }
+  100% { translate: 0 0; rotate: 0deg; scale: 1; }
+}
+/* The walk ends in the seat, so the tabletop's own lean-in is not needed here. */
+.play-computer .tabletop__seat .td-figure { animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .play-computer[data-arrival='walking'] .seat-walk { animation: none; }
+}

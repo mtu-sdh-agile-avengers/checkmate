@@ -68,7 +68,10 @@ _MOCK_PROFILE = PlayerProfileResponse(
     username="mock_player",
     player_id=15448422,
     url="https://www.chess.com/member/mock_player",
-    avatar="https://images.chesscomfiles.com/uploads/v1/user/15448422.png",
+    # No picture: a made-up Chess.com image link does not exist (the image server refuses
+    # it), so every mock player would show a broken picture. Without one, the frontend
+    # shows its own stand-in (silhouette or initial), as for a real player with no avatar.
+    avatar=None,
     name="Mock Player",
     title="GM",
     followers=1000,

@@ -3,7 +3,7 @@ import { useLocation, useParams } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { usePlayer } from '@/features/player-profile/hooks/use-player';
 import { SearchPage } from '@/features/player-search/components/search-page';
-import { afterMotion } from '@/utils/motion';
+import { afterTransition } from '@/utils/motion';
 import './stage-layout.css';
 
 // The 3D stage is decoration, and the other views are only needed once opened: all of them
@@ -22,8 +22,15 @@ export type StageView = 'search' | 'player' | TopDownView;
 /** The camera move between views (--cam-time in stage-layout.css): a closing view stays on
  *  screen this long, to be seen leaving. */
 const CAMERA_MS = 700;
-/** The top-down views keep their own, longer move: the table tilts away over 0.75s. */
+/** The top-down views keep their own, longer move: the table tilts away over 0.8s. */
 const TOP_DOWN_LEAVE_MS = 800;
+/** The return to the menu lasts until the stage has settled back (stage-layout.css): 1.15s
+ *  after the view starts leaving on wide screens; narrow screens bring the stage back once
+ *  the view has gone, so 0.8s + 0.9s there. */
+const RETURN_MS = 2000;
+/** With reduced motion the return is a simple fade of this length (stage-layout.css): on
+ *  wide screens the view and the stage cross-fade, on narrow ones one after the other. */
+const RETURN_FADE_MS = 300;
 
 /** Says when `children` are on screen (and when they go): a view loaded on demand is only
  *  committed once its code has arrived, so this is the moment the camera can start moving
@@ -36,15 +43,16 @@ function Arrival({ id, onArrive, children }: { id: string; onArrive: (id: string
   return children;
 }
 
-/** `value`, kept for `ms` after it turns null: long enough for an exit animation. */
-function useLingering<T>(value: T | null, ms: number): T | null {
+/** `value`, kept for `ms` after it turns null: long enough for an exit animation (`fadeMs`
+ *  with reduced motion, where the exit is a fade or nothing). */
+function useLingering<T>(value: T | null, ms: number, fadeMs = 0): T | null {
   const [kept, setKept] = useState(value);
   if (value !== null && value !== kept) setKept(value);
   useEffect(() => {
     if (value !== null) return;
-    const timer = setTimeout(() => setKept(null), afterMotion(ms));
+    const timer = setTimeout(() => setKept(null), afterTransition(ms, fadeMs));
     return () => clearTimeout(timer);
-  }, [value, ms]);
+  }, [value, ms, fadeMs]);
   return value ?? kept;
 }
 
@@ -57,12 +65,20 @@ function useLingering<T>(value: T | null, ms: number): T | null {
  *   table; the stage rises out of view, fades and sleeps meanwhile.
  * The view is a data attribute; the stylesheets turn it into the camera moves. A view that
  * closes stays mounted for the length of the move, so it is seen leaving rather than cut.
+ *
+ * Back from a top-down view to the menu, `data-return` runs the stage's way back: "leaving"
+ * while the view is still on screen on its way out, then "settling" until the stage and the
+ * table set are back in place; the transitions all hang off it, so none is cut short.
  */
 export function StageLayout() {
   const { username } = useParams<{ username: string }>();
   const { pathname } = useLocation();
   const topDown: TopDownView | null = pathname === ROUTES.play ? 'computer' : pathname === ROUTES.deliberation ? 'deliberation' : null;
-  const scene = useLingering(topDown, TOP_DOWN_LEAVE_MS);
+  const scene = useLingering(topDown, TOP_DOWN_LEAVE_MS, RETURN_FADE_MS);
+  // The way back to the menu (data-return below). With reduced motion, on narrow screens the
+  // view fades out, then the menu fades in: two fades, and room so the second is not cut short.
+  const returning = useLingering(topDown, RETURN_MS, RETURN_FADE_MS * 3);
+  const back = !topDown && !username && returning !== null;
   const shownPlayer = useLingering(username ?? null, CAMERA_MS);
   // The camera moves to a view once that view is there (see Arrival); until then it holds.
   const [arrived, setArrived] = useState<string | null>(null);
@@ -90,10 +106,11 @@ export function StageLayout() {
   }, []);
 
   return (
-    // data-leaving-view: a top-down view is on its way out, so the stage returns its own way (stage-layout.css).
-    <div className="stage-screen" data-view={view} data-leaving-view={!topDown && scene ? scene : undefined}>
-      {/* First in the markup, so reading and tab order start with the search. */}
-      <SearchPage guest={username} guestAvatar={player?.avatar} topDown={topDown} />
+    // data-return: back from a top-down view, the stage returns its own way (stage-layout.css).
+    <div className="stage-screen" data-view={view} data-return={back ? (scene ? 'leaving' : 'settling') : undefined}>
+      {/* First in the markup, so reading and tab order start with the search. It stays inert
+          until the top-down view has gone, then the menu item that opened it takes focus. */}
+      <SearchPage guest={username} guestAvatar={player?.avatar} topDown={scene} />
       {shownPlayer && (
         <Suspense fallback={null}>
           <Arrival key={shownPlayer} id={`player:${shownPlayer}`} onArrive={setArrived}>

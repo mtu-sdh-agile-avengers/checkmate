@@ -15,7 +15,7 @@ import { useSceneQuality } from '@/features/deliberation/hooks/use-scene-quality
 import { useVerdictSequence } from '@/features/deliberation/hooks/use-verdict-sequence';
 import type { ComparisonState, FindPlayer, FoundPlayer } from '@/features/deliberation/types';
 import { oneAtATime } from '@/features/deliberation/utils/one-at-a-time';
-import type { PlayedMove, Side } from '@/features/deliberation/utils/rapid-games';
+import type { PlayedMove, Side } from '@/components/chess/board-pieces';
 import { readVerdict } from '@/features/deliberation/utils/verdict';
 import { useIntro } from '@/hooks/use-intro';
 import type { TimeClass } from '@/types/chess';
@@ -47,8 +47,9 @@ const pieceTone = (side: Side) => pieceToneOf(side === 'white' ? DELIBERATION_SC
  *    another (`useRapidGames`): each reaches for the piece they move, the pieces slide, hop and
  *    take; the panel beside them shows each step;
  * 3. the answer: a beat in which everything freezes, then the camera drops to table level and
- *    the scene becomes a photograph of the winner in a spotlight (`PhotoScene`), the loser's
- *    king toppling on their end of the table; then the verdict set drops with the breakdown
+ *    the scene becomes a photograph of the table under one spotlight (`PhotoScene`), the
+ *    winner rising in it and the loser's king toppling on their end of the table; then the
+ *    verdict set drops with the breakdown
  *    (`readVerdict`). If the comparison failed, the set says so instead.
  * "New comparison" raises the set and drops the VS set again with the same players. How much
  * of it plays depends on the device (`useSceneQuality`). The comparison itself is the app's.
@@ -149,7 +150,7 @@ export function DeliberationView({ findPlayer, comparison, onCompare, onReset, l
           label={players ? `Board for ${players[0].username} (White) against ${players[1].username} (Black)` : 'Chess board, starting position'}
         />
       </Tabletop>
-      {resolved && <PhotoScene players={players} winner={winner} quality={quality} />}
+      {resolved && <PhotoScene players={players} winner={winner} quality={quality} leaving={leaving} />}
       {scene === 'choosing' && (
         <VsTv
           key={round}
