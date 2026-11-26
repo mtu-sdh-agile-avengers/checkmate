@@ -88,8 +88,21 @@ choose_regions() {
   echo "Container Apps (site + API): $APP_REGION"
 }
 
+# Lets GitHub Actions tokens with this subject sign in as the identity
+add_federated_credential() {
+  local name=$1 subject=$2
+  if ! az identity federated-credential show --name "$name" \
+    --identity-name "$IDENTITY" --resource-group "$RG" -o none 2>/dev/null; then
+    az identity federated-credential create --name "$name" \
+      --identity-name "$IDENTITY" --resource-group "$RG" \
+      --issuer https://token.actions.githubusercontent.com \
+      --subject "$subject" --audiences api://AzureADTokenExchange -o none
+  fi
+  echo "trusts $subject"
+}
+
 setup() {
-  local subscription tenant principal client scope
+  local subscription tenant principal client scope repo_ids
 
   az extension add --name containerapp --upgrade --yes --only-show-errors
   subscription=$(az account show --query id -o tsv)
@@ -116,17 +129,18 @@ setup() {
   az identity create --name "$IDENTITY" --resource-group "$RG" --location "$APP_REGION" -o none
   principal=$(az identity show --name "$IDENTITY" --resource-group "$RG" --query principalId -o tsv)
   client=$(az identity show --name "$IDENTITY" --resource-group "$RG" --query clientId -o tsv)
-  if ! az identity federated-credential show --name github-production \
-    --identity-name "$IDENTITY" --resource-group "$RG" -o none 2>/dev/null; then
-    az identity federated-credential create --name github-production \
-      --identity-name "$IDENTITY" --resource-group "$RG" \
-      --issuer https://token.actions.githubusercontent.com \
-      --subject "repo:$GITHUB_REPO:environment:$GITHUB_ENVIRONMENT" \
-      --audiences api://AzureADTokenExchange -o none
+  # GitHub names the repository in the token's subject as org/repo, or, in organisations
+  # that use immutable IDs (ours does), as org@<org id>/repo@<repo id>: trust both forms
+  add_federated_credential github-production "repo:$GITHUB_REPO:environment:$GITHUB_ENVIRONMENT"
+  repo_ids=$(curl --silent --fail "https://api.github.com/repos/$GITHUB_REPO" |
+    jq -r '"\(.owner.login)@\(.owner.id)/\(.name)@\(.id)"' || true)
+  if [ -n "$repo_ids" ]; then
+    add_federated_credential github-production-ids \
+      "repo:$repo_ids:environment:$GITHUB_ENVIRONMENT"
   fi
-  echo "trusts repo:$GITHUB_REPO:environment:$GITHUB_ENVIRONMENT"
-  if [ -z "$(az role assignment list --assignee "$principal" --scope "$scope" \
-    --role Contributor --query '[].id' -o tsv)" ]; then
+  # filtered here, not with --assignee, which needs a Microsoft Graph sign-in
+  if [ -z "$(az role assignment list --scope "$scope" --fill-principal-name false \
+    --query "[?principalId=='$principal' && roleDefinitionName=='Contributor'].id" -o tsv)" ]; then
     # a new identity takes a moment to appear in the directory
     for attempt in 1 2 3 4 5 6; do
       az role assignment create --assignee-object-id "$principal" \
