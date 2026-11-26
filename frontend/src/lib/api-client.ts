@@ -20,12 +20,27 @@ export class ApiError extends Error {
  */
 export async function apiGet<T>(path: string, params?: Record<string, string>): Promise<T> {
   const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+  return request<T>(`${path}${query}`, { headers: { Accept: 'application/json' } });
+}
 
+/**
+ * POST a JSON body to the Checkmate backend API and read the JSON response.
+ *
+ * @param path path after the base URL, e.g. `/computer/move`
+ * @throws ApiError with a user-facing message when the request fails
+ */
+export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  return request<T>(path, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+async function request<T>(path: string, init: RequestInit): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${getApiBaseUrl()}${path}${query}`, {
-      headers: { Accept: 'application/json' },
-    });
+    response = await fetch(`${getApiBaseUrl()}${path}`, init);
   } catch {
     throw new ApiError('Cannot reach the Checkmate server. Make sure the backend is running.', 0);
   }

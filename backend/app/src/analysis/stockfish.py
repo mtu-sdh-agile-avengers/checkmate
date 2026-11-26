@@ -3,12 +3,15 @@
 Takes the moves produced by the PGN parser (`parse_pgn_moves`, CMG4-72) and gives every
 move a centipawn evaluation and a category (best / good / inaccuracy / miss / blunder).
 
-Usage in a service:
+Usage in a service (`run_with_engine` starts and stops the engine, also on Windows):
 
     moves = parse_pgn_moves(game.pgn)
     config = load_stockfish_config()
-    async with StockfishEngine(get_config().stockfish_path, config.engine) as engine:
-        evaluations = await evaluate_moves(moves, engine, config)
+    evaluations = await run_with_engine(
+        get_config().stockfish_path,
+        config.engine,
+        lambda engine: evaluate_moves(moves, engine, config),
+    )
 
 How a move is categorised: every position is analysed once. For a move, the position
 BEFORE it says how good the engine's best move was; the position AFTER it says how good
@@ -16,7 +19,10 @@ the played move was. The difference (from the mover's point of view) is the
 centipawn loss, compared against the thresholds in `stockfish.toml`.
 """
 
+import asyncio
+import sys
 import tomllib
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -28,9 +34,9 @@ import chess.engine
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.chesscom.parser.models import ChessComGameMoves
-from src.enums import MoveCategory, PlayerColor
+from src.enums import ComputerLevel, MoveCategory, PlayerColor
 from src.schemas.games import MoveEvaluationResponse
-from src.services.exceptions import GameAnalysisUnavailableError
+from src.services.exceptions import ChessEngineUnavailableError
 
 # backend/app/stockfish.toml (this file is backend/app/src/analysis/stockfish.py)
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "stockfish.toml"
@@ -57,9 +63,18 @@ class CategoryThresholds(_FrozenModel):
     mate_score: int = Field(ge=1)
 
 
+class PlayLevelSettings(_FrozenModel):
+    """How strongly the computer plays at one level of the In-Game Chess page."""
+
+    skill_level: int = Field(ge=0, le=20)  # Stockfish "Skill Level": 0 weakest, 20 full
+    depth: int = Field(ge=1)  # plies searched per move
+    movetime_ms: int = Field(ge=1)  # time limit per move, whichever comes first
+
+
 class StockfishConfig(_FrozenModel):
     engine: EngineSettings
     categories: CategoryThresholds
+    play: dict[ComputerLevel, PlayLevelSettings]
 
 
 @lru_cache
@@ -91,7 +106,7 @@ class StockfishEngine:
 
     def __init__(self, path: str | None, settings: EngineSettings) -> None:
         if not path:
-            raise GameAnalysisUnavailableError(
+            raise ChessEngineUnavailableError(
                 "Stockfish is not configured: set STOCKFISH_PATH in .env"
             )
         self._path = path
@@ -106,10 +121,11 @@ class StockfishEngine:
             )
         except (
             OSError,
+            NotImplementedError,  # the event loop cannot start processes
             chess.engine.EngineError,
             chess.engine.EngineTerminatedError,
         ) as e:
-            raise GameAnalysisUnavailableError(f"Cannot start Stockfish: {e}") from e
+            raise ChessEngineUnavailableError(f"Cannot start Stockfish: {e!r}") from e
         return self
 
     async def __aexit__(
@@ -134,14 +150,66 @@ class StockfishEngine:
                 board, chess.engine.Limit(depth=self._settings.depth)
             )
         except (chess.engine.EngineError, chess.engine.EngineTerminatedError) as e:
-            raise GameAnalysisUnavailableError(f"Stockfish failed: {e}") from e
+            raise ChessEngineUnavailableError(f"Stockfish failed: {e}") from e
         pv = info.get("pv") or []
         return PositionAnalysis(score=info["score"], best_move=pv[0] if pv else None)
+
+    async def play(self, board: chess.Board, level: PlayLevelSettings) -> chess.Move:
+        """The computer's move in `board` at the given strength (In-Game Chess)."""
+        engine = self._require_engine()
+        try:
+            await engine.configure({"Skill Level": level.skill_level})
+            result = await engine.play(
+                board,
+                chess.engine.Limit(depth=level.depth, time=level.movetime_ms / 1000),
+            )
+        except (chess.engine.EngineError, chess.engine.EngineTerminatedError) as e:
+            raise ChessEngineUnavailableError(f"Stockfish failed: {e}") from e
+        if result.move is None:
+            raise ChessEngineUnavailableError("Stockfish returned no move")
+        return result.move
 
     def _require_engine(self) -> chess.engine.UciProtocol:
         if self._engine is None:
             raise RuntimeError("StockfishEngine must be used inside 'async with'")
         return self._engine
+
+
+async def run_with_engine[T](
+    path: str | None,
+    settings: EngineSettings,
+    task: Callable[[StockfishEngine], Awaitable[T]],
+) -> T:
+    """Starts Stockfish, runs `task(engine)` and stops the engine again.
+
+    Use this instead of `async with StockfishEngine(...)` in request handlers. Starting the
+    engine needs an event loop that can run processes, and on Windows the dev server
+    (`fastapi dev` / `uvicorn --reload`) runs a SelectorEventLoop that cannot
+    (NotImplementedError). There the engine runs in a worker thread on its own
+    ProactorEventLoop instead.
+    """
+
+    async def session() -> T:
+        async with StockfishEngine(path, settings) as engine:
+            return await task(engine)
+
+    if _loop_can_start_processes():
+        return await session()
+    return await asyncio.to_thread(
+        asyncio.run, session(), loop_factory=_process_loop_factory()
+    )
+
+
+def _loop_can_start_processes() -> bool:
+    """False on Windows when the running loop is not a ProactorEventLoop."""
+    if sys.platform != "win32":
+        return True
+    return isinstance(asyncio.get_running_loop(), asyncio.ProactorEventLoop)
+
+
+def _process_loop_factory() -> Callable[[], asyncio.AbstractEventLoop] | None:
+    """The Windows loop that can start processes; None (the default loop) elsewhere."""
+    return getattr(asyncio, "ProactorEventLoop", None)
 
 
 # Evaluation ------------------------------------------------------------------------

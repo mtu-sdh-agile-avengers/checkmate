@@ -8,6 +8,7 @@ from fastapi import status
 
 from src.chesscom.client.exceptions import (
     ChessAPINotFoundError,
+    ChessAPIParseError,
     ChessComGameNotFoundError,
 )
 from src.chesscom.parser.models import STANDARD_START_FEN
@@ -220,3 +221,21 @@ def test_game_details_endpoint_player_not_found(api_client):
     assert response.json() == {
         "detail": "ghost player data is not available / does not exist"
     }
+
+
+def test_a_game_without_moves_cannot_be_shown(october_games):
+    game = parse_monthly_games({"games": october_games})[0].model_copy(
+        update={"pgn": None}
+    )
+
+    with pytest.raises(ChessAPIParseError, match="no PGN"):
+        to_game_board_details(game, "hikaru")
+
+
+@pytest.mark.anyio
+async def test_real_game_analysis_is_not_wired_yet(fake_client):
+    # CMG4-88: the analysis endpoint answers from mocks until Stockfish is wired in
+    with pytest.raises(NotImplementedError):
+        await ChessComGamesService(fake_client).analyze_game_board(
+            "hikaru", search("1", year=None)
+        )

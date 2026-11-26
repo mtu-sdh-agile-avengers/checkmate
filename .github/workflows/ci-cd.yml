@@ -1,0 +1,331 @@
+# Checkmate CI/CD pipeline (GitHub Actions)
+#
+# CI - every push to any branch and every pull request to main:
+#   backend   ruff lint + format check, pytest unit / integration / acceptance, coverage
+#   frontend  typecheck, ESLint, Vitest unit / integration, coverage, production build
+#   e2e       acceptance tests of the built app in Chromium (Playwright) against the backend
+#   docker    builds the app image (frontend + backend + Stockfish) and smoke-tests it
+# CD - only after a push to main:
+#   docker    pushes the tested image to GitHub Container Registry (ghcr.io)
+#   deploy    when every CI job passed, Azure Container Apps runs the new image
+# The deploy job is skipped until the Azure variables exist (docs/deployment-azure.md).
+
+name: CI/CD
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  STOCKFISH_PATH: /usr/games/stockfish
+  IMAGE: ghcr.io/${{ github.repository_owner }}/checkmate
+  DEPLOY: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend/app
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Stockfish
+        run: sudo apt-get update && sudo apt-get install --yes stockfish
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: backend/app/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Lint (ruff)
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Unit tests
+        run: uv run pytest -m unit --junitxml=reports/unit.xml --cov --cov-report=
+
+      - name: Integration tests
+        run: uv run pytest -m integration --junitxml=reports/integration.xml --cov --cov-append --cov-report=
+
+      - name: Acceptance tests (speed, accuracy, memory, limits)
+        run: >-
+          uv run pytest -m acceptance --junitxml=reports/acceptance.xml
+          --cov --cov-append --cov-fail-under=98
+          --cov-report=term --cov-report=xml:reports/coverage.xml --cov-report=html:reports/coverage-html
+
+      - name: Test summary
+        if: always()
+        run: |
+          uv run python - >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          print("### Backend tests\n\n| Level | Tests | Failed | Skipped | Time (s) |\n|---|---|---|---|---|")
+          for level in ("unit", "integration", "acceptance"):
+              path = Path(f"reports/{level}.xml")
+              if not path.exists():
+                  continue
+              suite = ET.parse(path).getroot().find("testsuite")
+              failed = int(suite.get("failures")) + int(suite.get("errors"))
+              print(f"| {level} | {suite.get('tests')} | {failed} | {suite.get('skipped')} | {float(suite.get('time')):.1f} |")
+          coverage = Path("reports/coverage.xml")
+          if coverage.exists():
+              root = ET.parse(coverage).getroot()
+              lines, branches = float(root.get("line-rate")) * 100, float(root.get("branch-rate")) * 100
+              print(f"\nCoverage: **{lines:.1f}% lines, {branches:.1f}% branches**")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-reports
+          path: backend/app/reports/
+
+  frontend:
+    name: Frontend tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Unit tests
+        run: npx vitest run --project unit --coverage --reporter=default --reporter=blob --outputFile.blob=.vitest-reports/blob-unit.json
+        env:
+          PARTIAL_COVERAGE: "1" # thresholds are checked on the merged coverage below
+
+      - name: Integration tests
+        run: npx vitest run --project integration --coverage --reporter=default --reporter=blob --outputFile.blob=.vitest-reports/blob-integration.json
+        env:
+          PARTIAL_COVERAGE: "1"
+
+      - name: Coverage of both (fails below the thresholds in vite.config.ts)
+        run: npx vitest run --merge-reports --coverage --reporter=default --reporter=junit --outputFile.junit=reports/vitest-junit.xml
+
+      - name: Test summary
+        if: always()
+        run: |
+          node -e "
+            const fs = require('fs');
+            const xml = fs.existsSync('reports/vitest-junit.xml') ? fs.readFileSync('reports/vitest-junit.xml', 'utf8') : '';
+            const count = (re) => (xml.match(re) || []).length;
+            const total = count(/<testcase /g), failed = count(/<failure/g);
+            let out = '### Frontend tests\n\n| Level | Test files |\n|---|---|\n';
+            const files = (pattern) => fs.readdirSync('src', { recursive: true }).filter((f) => pattern.test(f)).length;
+            out += '| unit (*.test.ts) | ' + files(/\.test\.ts$/) + ' |\n| integration (*.test.tsx) | ' + files(/\.test\.tsx$/) + ' |\n';
+            out += '\nTests: **' + total + '**, failed: **' + failed + '**\n';
+            if (fs.existsSync('coverage/coverage-summary.json')) {
+              const t = require('./coverage/coverage-summary.json').total;
+              out += '\nCoverage: **' + t.lines.pct + '% lines, ' + t.branches.pct + '% branches, ' + t.functions.pct + '% functions**\n';
+            }
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, out);
+          "
+
+      - name: Build (production bundle)
+        run: npm run build
+        env:
+          VITE_API_MODE: live
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-test-reports
+          path: |
+            frontend/reports/
+            frontend/coverage/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+
+  e2e:
+    name: Acceptance tests in a browser
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      CI: true
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Stockfish
+        run: sudo apt-get update && sudo apt-get install --yes stockfish
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: backend/app/uv.lock
+
+      - name: Install backend
+        working-directory: backend/app
+        run: uv sync --locked
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend and Chromium
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Build (as deployed)
+        run: npm run build
+        env:
+          VITE_API_MODE: live
+
+      - name: Playwright acceptance tests (loading time, page weight, response time, memory)
+        run: npx playwright test
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+
+  docker:
+    name: App image
+    needs: [backend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: checkmate:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test (prod mode, real Stockfish, the site)
+        run: |
+          docker run --detach --name app --publish 8000:8000 \
+            --env API_CHESSCOM_USER_AGENT="checkmate-ci/1.0" checkmate:ci
+          started=false
+          for _ in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:8000/health; then started=true; break; fi
+            sleep 1
+          done
+          $started || { echo "The API did not start"; exit 1; }
+          # /health allows one request a second, so it is not called again here
+          status=$(curl --silent --output reply.json --write-out '%{http_code}' \
+            -X POST http://127.0.0.1:8000/api/v1/computer/move \
+            -H 'Content-Type: application/json' -d '{"move":"e2e4","level":"expert"}')
+          cat reply.json; echo
+          [ "$status" = 200 ] || { echo "The computer move answered HTTP $status"; exit 1; }
+          grep -q '"computerMove":{"uci"' reply.json
+          # the site: a page of the app (client-side route) gets index.html
+          curl --silent --fail http://127.0.0.1:8000/players/hikaru | grep -q '<div id="root">'
+          docker images checkmate:ci --format '{{.Repository}}:{{.Tag}} {{.Size}}' | tee image.txt
+          printf '### App image\n\n%s\n' "$(cat image.txt)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Container logs
+        if: always()
+        run: docker logs app || true
+
+      - name: Log in to GitHub Container Registry
+        if: env.DEPLOY == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push the image
+        if: env.DEPLOY == 'true'
+        run: |
+          docker tag checkmate:ci "$IMAGE:${{ github.sha }}"
+          docker tag checkmate:ci "$IMAGE:latest"
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"
+
+  deploy:
+    name: Deploy (Azure Container Apps)
+    needs: [backend, frontend, e2e, docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AZURE_CONTAINER_APP != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: ${{ vars.APP_URL }}
+    permissions:
+      contents: read
+      id-token: write # sign in to Azure with GitHub's OIDC token, no password stored
+    steps:
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run the new image
+        run: |
+          az extension add --name containerapp --upgrade --yes --only-show-errors
+          az containerapp update \
+            --name "${{ vars.AZURE_CONTAINER_APP }}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --image "$IMAGE:${{ github.sha }}" \
+            --output table
+
+      - name: Check the deployed site and API
+        run: |
+          for _ in $(seq 1 30); do
+            if curl --silent --fail "${{ vars.APP_URL }}/health"; then
+              curl --silent --fail "${{ vars.APP_URL }}/" | grep -q '<div id="root">'
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1

@@ -18,3 +18,26 @@ blunder_min_loss = 300         # loss >= 300              -> blunder
 miss_winning_advantage = 200   # also a miss: a winning advantage (>= +200) was available
                                # but the move played gave it away
 mate_score = 10000             # forced mate is scored as +/-10000 (minus moves to mate)
+
+# Strength of the computer on the In-Game Chess page (POST /api/v1/computer/move).
+# skill_level: Stockfish "Skill Level" 0 (weakest) - 20 (full strength); the engine stops at
+# depth or movetime_ms, whichever comes first.
+[play.beginner]
+skill_level = 0
+depth = 1
+movetime_ms = 50
+
+[play.intermediate]
+skill_level = 5
+depth = 5
+movetime_ms = 150
+
+[play.advanced]
+skill_level = 12
+depth = 10
+movetime_ms = 400
+
+[play.expert]
+skill_level = 20
+depth = 16
+movetime_ms = 1000

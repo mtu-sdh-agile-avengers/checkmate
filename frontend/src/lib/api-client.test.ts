@@ -73,4 +73,20 @@ describe('api-client', () => {
       message: expect.stringContaining('Cannot reach'),
     });
   });
+
+  it('falls back to a plain message when the error body says nothing useful', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('<h1>Bad gateway</h1>', { status: 502 })),
+    );
+    await expect(apiGet('/players/hikaru/profile')).rejects.toThrow(
+      'The server returned an error (502)',
+    );
+
+    mockFetchJson({ detail: [{ loc: ['query', 'search'] }] }, 422);
+    await expect(apiGet('/players/')).rejects.toThrow('The request was not valid');
+
+    mockFetchJson({ detail: { reason: 'unknown' } }, 500);
+    await expect(apiGet('/players/')).rejects.toThrow('The server returned an error (500)');
+  });
 });

@@ -10,7 +10,7 @@ export type MatchSeat = { name: string; detail: string; color: 'white' | 'black'
  * next (`actions`). `note` says what the board can do; until the game engine exists, that
  * it is a preview. Focus moves to its heading when it appears.
  */
-export function MatchPanel({ eyebrow, title, seats, note, actions, leaving = false, delay }: {
+export function MatchPanel({ eyebrow, title, seats, note, actions, leaving = false, delay, toMove = 'white' }: {
   eyebrow: string;
   title: string;
   seats: readonly [MatchSeat, MatchSeat];
@@ -18,6 +18,8 @@ export function MatchPanel({ eyebrow, title, seats, note, actions, leaving = fal
   actions: ReactNode;
   leaving?: boolean;
   delay?: string;
+  /** Whose move it is ("To move" tag); null once the game is over. */
+  toMove?: 'white' | 'black' | null;
 }) {
   const titleId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
@@ -36,11 +38,11 @@ export function MatchPanel({ eyebrow, title, seats, note, actions, leaving = fal
               <strong>{seat.name}</strong>
               <small>{seat.detail}</small>
             </span>
-            {seat.color === 'white' && <span className="match-panel__turn">To move</span>}
+            {seat.color === toMove && <span className="match-panel__turn">To move</span>}
           </li>
         ))}
       </ul>
-      <p className="match-panel__note">{note}</p>
+      <p className="match-panel__note" aria-live="polite">{note}</p>
       <div className="panel-actions">{actions}</div>
     </SidePanel>
   );

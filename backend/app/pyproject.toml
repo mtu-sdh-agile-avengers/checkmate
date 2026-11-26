@@ -18,7 +18,9 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "psutil>=7.2.2",
     "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
     "ruff==0.17.5",
 ]
 
@@ -31,3 +33,21 @@ entrypoint = "src.main:app" # allows `fastapi` command  where to find FastAPI in
 [tool.pytest.ini_options]
 pythonpath = [".", "src"]   # required in order for imports to work (adds root  and .src folders to sys.path)
 testpaths = ["tests"]       # specifies tests directory location for pytest
+addopts = ["--strict-markers"]
+markers = [
+    "unit: black-box test of one function or class (tests/unit)",
+    "integration: black-box test through the HTTP API or a real Stockfish process",
+    "acceptance: white-box test of a non-functional requirement: speed, accuracy, memory (tests/acceptance)",
+]
+
+# coverage configuration (`uv run pytest --cov`)
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_also = [
+    'if __name__ == "__main__":', # manual start of the dev server
+]

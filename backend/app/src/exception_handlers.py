@@ -19,10 +19,7 @@ from src.chesscom.client.exceptions import (
     ChessComGameNotFoundError,
     ChessComPlayersNotFoundError,
 )
-from src.services.exceptions import (
-    GAME_ANALYSIS_ERROR_MESSAGE,
-    GameAnalysisUnavailableError,
-)
+from src.services.exceptions import ChessEngineUnavailableError
 
 CHESS_API_UNAVAILABLE_MESSAGE = "Chess.com is not available right now, try again later"
 CHESS_API_BAD_RESPONSE_MESSAGE = "Chess.com returned an unexpected response"
@@ -69,15 +66,19 @@ async def chess_api_error_handler(request: Request, exc: Exception) -> JSONRespo
     return JSONResponse(status_code=status_code, content={"detail": detail})
 
 
-async def game_analysis_error_handler(request: Request, exc: Exception) -> JSONResponse:
-    """The chess engine could not analyse the game -> 503 (CMG4-18)."""
+async def chess_engine_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    """The chess engine could not play or analyse -> 503 with the error's message."""
+    message = (
+        exc.user_message
+        if isinstance(exc, ChessEngineUnavailableError)
+        else ChessEngineUnavailableError.user_message
+    )
     logger.warning(
-        f"{request.method} {request.url.path} -> 503: game analysis unavailable "
+        f"{request.method} {request.url.path} -> 503: chess engine unavailable "
         f"({type(exc).__name__}: {exc})"
     )
     return JSONResponse(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        content={"detail": GAME_ANALYSIS_ERROR_MESSAGE},
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content={"detail": message}
     )
 
 
@@ -85,4 +86,5 @@ def register_exception_handlers(app: FastAPI) -> None:
     """Registers all custom exception handlers on the app."""
     # One handler for the base class also catches all of its subclasses.
     app.add_exception_handler(ChessAPIError, chess_api_error_handler)
-    app.add_exception_handler(GameAnalysisUnavailableError, game_analysis_error_handler)
+    # Also catches its subclass GameAnalysisUnavailableError (with its own message).
+    app.add_exception_handler(ChessEngineUnavailableError, chess_engine_error_handler)

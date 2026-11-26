@@ -1,0 +1,22 @@
+# The image needs only frontend/ (sources) and backend/app (pyproject, uv.lock, src, stockfish.toml)
+.git
+.github
+docs
+infra
+**/node_modules
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/.env
+**/.coverage
+frontend/dist
+frontend/coverage
+frontend/reports
+frontend/playwright-report
+frontend/test-results
+frontend/.vitest-reports
+backend/app/tests
+backend/app/reports
+backend/app/htmlcov
+Dockerfile
