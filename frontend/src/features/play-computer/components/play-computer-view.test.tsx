@@ -1,38 +1,135 @@
-import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { configure, screen, waitFor, within } from '@testing-library/react';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import type { ComputerMoveDto } from '@/features/play-computer/api/play-move';
 import { AFTER_E4_E5, GAME_START } from '@/features/play-computer/api/play-move.fixtures';
 import { PlayComputerView } from '@/features/play-computer/components/play-computer-view';
+import { dragPiece } from '@/testing/pointer';
 import { renderWithProviders } from '@/testing/render-with-providers';
+
+// Whole games against a mocked server: generous limits, as the whole suite runs in parallel
+// (see app/router.test.tsx), for every lookup here and for each test.
+configure({ asyncUtilTimeout: 10_000 });
+const GAME_TIMEOUT = 30_000;
+
+const json = (body: object, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
 /** The backend answers each POST with the next of these responses. */
 function mockGameResponses(...bodies: object[]) {
   const fetchMock = vi.fn();
-  for (const body of bodies) {
-    fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } }),
-    );
-  }
+  for (const body of bodies) fetchMock.mockResolvedValueOnce(json(body));
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
 }
 
-describe('play-computer view', () => {
+const played = (uci: string, san: string) => ({ uci, san, fromSquare: uci.slice(0, 2), toSquare: uci.slice(2, 4) });
+/** 1. Nf3 Nf6: both knights out. */
+const KNIGHTS_OUT: ComputerMoveDto = {
+  ...GAME_START,
+  fen: 'rnbqkb1r/pppppppp/5n2/8/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 2 2',
+  playerMove: played('g1f3', 'Nf3'),
+  computerMove: played('g8f6', 'Nf6'),
+  legalMoves: ['f3g1', 'f3e5', 'e2e4'],
+};
+/** 2. Ng1 Ng8: back where the game started (only the move counters differ). */
+const KNIGHTS_BACK: ComputerMoveDto = {
+  ...GAME_START,
+  fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 4 3',
+  playerMove: played('f3g1', 'Ng1'),
+  computerMove: played('f6g8', 'Ng8'),
+};
+/** 1. e4 e5 2. d4 Bb4+: your king is in check; only a block or Ke2 will do. */
+const BISHOP_CHECK: ComputerMoveDto = {
+  fen: 'rnbqk1nr/pppp1ppp/8/4p3/1b1PP3/8/PPP2PPP/RNBQKBNR w KQkq - 1 3',
+  playerMove: played('d2d4', 'd4'),
+  computerMove: played('f8b4', 'Bb4+'),
+  turn: 'white',
+  legalMoves: ['b1c3', 'b1d2', 'c1d2', 'c2c3', 'd1d2', 'e1e2'],
+  check: true,
+  status: 'playing',
+  winner: null,
+};
+/** 1. e4 f6: the diagonal to the black king is open (2. Qh5+). */
+const AFTER_E4_F6: ComputerMoveDto = {
+  fen: 'rnbqkbnr/ppppp1pp/5p2/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2',
+  playerMove: played('e2e4', 'e4'),
+  computerMove: played('f7f6', 'f6'),
+  turn: 'white',
+  legalMoves: ['d1h5', 'd2d4', 'g1f3'],
+  check: false,
+  status: 'playing',
+  winner: null,
+};
+/** 2. Qh5+ g6: the computer blocks. */
+const AFTER_QH5_G6: ComputerMoveDto = {
+  fen: 'rnbqkbnr/ppppp2p/5pp1/7Q/4P3/8/PPPP1PPP/RNB1KBNR w KQkq - 0 3',
+  playerMove: played('d1h5', 'Qh5+'),
+  computerMove: played('g7g6', 'g6'),
+  turn: 'white',
+  legalMoves: ['h5g6', 'h5h7', 'd2d4'],
+  check: false,
+  status: 'playing',
+  winner: null,
+};
+/** 1. f3 e5: on the way to the fool's mate. */
+const AFTER_F3_E5: ComputerMoveDto = {
+  fen: 'rnbqkbnr/pppp1ppp/8/4p3/8/5P2/PPPPP1PP/RNBQKBNR w KQkq - 0 2',
+  playerMove: played('f2f3', 'f3'),
+  computerMove: played('e7e5', 'e5'),
+  turn: 'white',
+  legalMoves: ['g2g4', 'e2e4', 'g1h3'],
+  check: false,
+  status: 'playing',
+  winner: null,
+};
+/** 2. g4 Qh4#: the computer mates. */
+const FOOLS_MATE: ComputerMoveDto = {
+  fen: 'rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3',
+  playerMove: played('g2g4', 'g4'),
+  computerMove: played('d8h4', 'Qh4#'),
+  turn: 'white',
+  legalMoves: [],
+  check: true,
+  status: 'checkmate',
+  winner: 'black',
+};
+
+const renderGame = () => renderWithProviders(<PlayComputerView />, { route: '/play', path: '/play' });
+const notifications = () => screen.getByRole('log', { name: 'Game notifications' });
+const moveRows = () => within(screen.getByRole('list', { name: 'Moves' })).getAllByRole('listitem').map((row) => row.textContent);
+
+async function startGame(user: UserEvent) {
+  await user.click(await screen.findByRole('button', { name: 'Start game' }));
+  await screen.findByText('Your move.');
+}
+/** Click-to-move: the piece, then its square. */
+async function clickMove(user: UserEvent, from: string, to: string) {
+  await user.click(await screen.findByRole('button', { name: new RegExp(`^${from}, white `) }));
+  await user.click(screen.getByRole('button', { name: `${to}, move here` }));
+}
+/** 1. f3 e5 2. g4 Qh4#. */
+async function walkIntoFoolsMate(user: UserEvent) {
+  await startGame(user);
+  await clickMove(user, 'f2', 'f3');
+  await screen.findByText('The computer played e5. Your move.');
+  await clickMove(user, 'g2', 'g4');
+  return screen.findByRole('dialog', { name: 'You Lose' });
+}
+
+describe('play-computer view', { timeout: GAME_TIMEOUT }, () => {
   it('plays a move against the computer in live mode', async () => {
     vi.stubEnv('VITE_API_MODE', 'live');
     const fetchMock = mockGameResponses(GAME_START, AFTER_E4_E5);
     const user = userEvent.setup();
-    renderWithProviders(<PlayComputerView />, { route: '/play', path: '/play' });
+    renderGame();
 
-    await user.click(await screen.findByRole('button', { name: 'Start game' }));
-    expect(await screen.findByText('Your move.')).toBeInTheDocument();
+    await startGame(user);
+    expect(screen.getByText(/No moves yet/)).toBeInTheDocument();
 
     // pick up the e2 pawn: e3 and e4 light up
     await user.click(screen.getByRole('button', { name: 'e2, white pawn' }));
-    expect(screen.getByRole('button', { name: 'e2, white pawn' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    expect(screen.getByRole('button', { name: 'e2, white pawn' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'e4, move here' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'e3, move here' })).toBeInTheDocument();
 
@@ -41,18 +138,64 @@ describe('play-computer view', () => {
     expect(await screen.findByText('The computer played e5. Your move.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'e4, white pawn' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'e5, black pawn' })).toBeInTheDocument();
+    expect(moveRows()).toEqual(['1.e4e5']);
     const body = JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string) as { move: string };
     expect(body.move).toBe('e2e4');
+  });
+
+  it('plays a move by dragging the piece to its square', async () => {
+    vi.stubEnv('VITE_API_MODE', 'live');
+    const fetchMock = mockGameResponses(GAME_START, AFTER_E4_E5);
+    const user = userEvent.setup();
+    renderGame();
+    await startGame(user);
+
+    dragPiece(screen.getByRole('button', { name: 'e2, white pawn' }), screen.getByRole('button', { name: 'e4' }));
+
+    expect(await screen.findByText('The computer played e5. Your move.')).toBeInTheDocument();
+    expect(moveRows()).toEqual(['1.e4e5']);
+    expect(JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string)).toMatchObject({ move: 'e2e4' });
+  });
+
+  it('shows your move at once, takes it back if the server cannot answer, and tries it again', async () => {
+    vi.stubEnv('VITE_API_MODE', 'live');
+    let answer: (response: Response) => void = () => undefined;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(json(GAME_START))
+      .mockImplementationOnce(() => new Promise<Response>((resolve) => { answer = resolve; }))
+      .mockResolvedValueOnce(json(AFTER_E4_E5));
+    vi.stubGlobal('fetch', fetchMock);
+    const user = userEvent.setup();
+    renderGame();
+    await startGame(user);
+
+    await clickMove(user, 'e2', 'e4');
+
+    // Before the server answers: the pawn is on e4, listed, and the computer is to move.
+    expect(screen.getByRole('button', { name: 'e4, white pawn' })).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Moves' })).getByText('e4')).toHaveAttribute('data-pending', 'true');
+    expect(screen.getByText('The computer is thinking…')).toBeInTheDocument();
+    expect(screen.getByText('To move').closest('li')).toHaveTextContent('Computer');
+
+    answer(json({ detail: 'The computer can’t play right now. Please try again' }, 503));
+
+    expect(await screen.findByText('The computer can’t play right now. Please try again')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'e2, white pawn' })).toBeInTheDocument(); // back home
+    expect(screen.getByText(/No moves yet/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByText('The computer played e5. Your move.')).toBeInTheDocument();
+    expect(fetchMock.mock.calls[2]?.[1]?.body).toBe(fetchMock.mock.calls[1]?.[1]?.body);
   });
 
   it('ignores squares without a legal move', async () => {
     vi.stubEnv('VITE_API_MODE', 'live');
     const fetchMock = mockGameResponses(GAME_START);
     const user = userEvent.setup();
-    renderWithProviders(<PlayComputerView />, { route: '/play', path: '/play' });
+    renderGame();
 
-    await user.click(await screen.findByRole('button', { name: 'Start game' }));
-    await screen.findByText('Your move.');
+    await startGame(user);
     await user.click(screen.getByRole('button', { name: 'e8, black king' }));
     await user.click(screen.getByRole('button', { name: 'e5' }));
 
@@ -60,9 +203,149 @@ describe('play-computer view', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1); // only the start of the game
   });
 
+  it('says why a move is refused, and the piece stays where it was', async () => {
+    vi.stubEnv('VITE_API_MODE', 'live');
+    const fetchMock = mockGameResponses(GAME_START);
+    const user = userEvent.setup();
+    renderGame();
+    await startGame(user);
+
+    await user.click(screen.getByRole('button', { name: 'g1, white knight' }));
+    await user.click(screen.getByRole('button', { name: 'g3' }));
+    expect(within(notifications()).getByText(/^A knight moves in an L/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'g1, white knight' })).toHaveAttribute('aria-pressed', 'false');
+
+    await user.click(screen.getByRole('button', { name: 'a1, white rook' }));
+    expect(within(notifications()).getByText('That rook can’t move right now.')).toBeInTheDocument();
+
+    dragPiece(screen.getByRole('button', { name: 'e2, white pawn' }), screen.getByRole('button', { name: 'e5' }));
+    expect(within(notifications()).getByText('A pawn moves straight ahead and takes diagonally.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'e2, white pawn' })).toBeInTheDocument();
+
+    // Another of your pieces switches the selection; the same one again puts it down.
+    await user.click(screen.getByRole('button', { name: 'b1, white knight' }));
+    await user.click(screen.getByRole('button', { name: 'g1, white knight' }));
+    expect(screen.getByRole('button', { name: 'g1, white knight' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: 'g1, white knight' }));
+    expect(screen.getByRole('button', { name: 'g1, white knight' })).toHaveAttribute('aria-pressed', 'false');
+    // Dropped back where it came from, a piece makes no move.
+    dragPiece(screen.getByRole('button', { name: 'e2, white pawn' }), screen.getByRole('button', { name: 'e2, white pawn' }));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('warns of check, marks your king and says why a move does not get it out', async () => {
+    vi.stubEnv('VITE_API_MODE', 'live');
+    mockGameResponses(GAME_START, AFTER_E4_E5, BISHOP_CHECK);
+    const user = userEvent.setup();
+    renderGame();
+    await startGame(user);
+    await clickMove(user, 'e2', 'e4');
+    await screen.findByText('The computer played e5. Your move.');
+    await clickMove(user, 'd2', 'd4');
+
+    expect(await within(notifications()).findByText('Check! Your king is in check.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'e1, white king, in check' })).toHaveAttribute('data-check', 'true');
+    expect(moveRows()).toEqual(['1.e4e5', '2.d4Bb4+']);
+
+    await user.click(screen.getByRole('button', { name: 'c2, white pawn' }));
+    await user.click(screen.getByRole('button', { name: 'c4' }));
+    expect(within(notifications()).getByText('Your king is in check, and that move doesn’t get it out.')).toBeInTheDocument();
+  });
+
+  it('marks the computer’s king in check while it thinks about your checking move', async () => {
+    vi.stubEnv('VITE_API_MODE', 'live');
+    let answer: (response: Response) => void = () => undefined;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(json(GAME_START))
+      .mockResolvedValueOnce(json(AFTER_E4_F6))
+      .mockImplementationOnce(() => new Promise<Response>((resolve) => { answer = resolve; }));
+    vi.stubGlobal('fetch', fetchMock);
+    const user = userEvent.setup();
+    renderGame();
+    await startGame(user);
+    await clickMove(user, 'e2', 'e4');
+    await screen.findByText('The computer played f6. Your move.');
+
+    await clickMove(user, 'd1', 'h5');
+
+    expect(await within(notifications()).findByText('Check! The computer’s king is in check.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'e8, black king, in check' })).toBeInTheDocument();
+    expect(moveRows()).toEqual(['1.e4f6', '2.Qh5+']);
+
+    answer(json(AFTER_QH5_G6));
+    expect(await screen.findByText('The computer played g6. Your move.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'e8, black king' })).not.toHaveAttribute('data-check');
+  });
+
+  it('brings the game-over set down at checkmate; Play Again starts a new game', async () => {
+    vi.stubEnv('VITE_API_MODE', 'live');
+    const fetchMock = mockGameResponses(GAME_START, AFTER_F3_E5, FOOLS_MATE, GAME_START);
+    const user = userEvent.setup();
+    renderGame();
+
+    const dialog = await walkIntoFoolsMate(user);
+    expect(dialog).toHaveAccessibleDescription('by checkmate');
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Play Again/ })).toHaveFocus());
+    expect(screen.getByRole('button', { name: 'e1, white king, in check' })).toBeInTheDocument();
+    expect(moveRows()).toEqual(['1.f3e5', '2.g4Qh4#']);
+
+    await user.click(screen.getByRole('button', { name: /^Play Again/ }));
+
+    expect(await screen.findByText('Your move.')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'e2, white pawn' })).toBeInTheDocument();
+    expect(JSON.parse(fetchMock.mock.calls[3]?.[1]?.body as string)).toMatchObject({ move: null });
+  });
+
+  it('puts the game-over set away with Escape, and Go Back leaves for the menu', async () => {
+    vi.stubEnv('VITE_API_MODE', 'live');
+    mockGameResponses(GAME_START, AFTER_F3_E5, FOOLS_MATE);
+    const user = userEvent.setup();
+    const first = renderGame();
+
+    await walkIntoFoolsMate(user);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('Checkmate — the computer wins.')).toBeInTheDocument();
+    first.unmount();
+
+    mockGameResponses(GAME_START, AFTER_F3_E5, FOOLS_MATE);
+    renderGame();
+    await walkIntoFoolsMate(user);
+    await user.click(screen.getByRole('button', { name: /^Go Back/ }));
+    await waitFor(() => expect(screen.queryByRole('group', { name: /Board for your game/ })).not.toBeInTheDocument());
+  });
+
+  it('calls a draw when the same position comes up a third time', async () => {
+    vi.stubEnv('VITE_API_MODE', 'live');
+    const fetchMock = mockGameResponses(GAME_START, KNIGHTS_OUT, KNIGHTS_BACK, KNIGHTS_OUT, KNIGHTS_BACK);
+    const user = userEvent.setup();
+    renderGame();
+
+    await startGame(user);
+    await clickMove(user, 'g1', 'f3');
+    await clickMove(user, 'f3', 'g1');
+    await clickMove(user, 'g1', 'f3');
+    await clickMove(user, 'f3', 'g1'); // the starting position, for the third time
+
+    expect(
+      await screen.findByText('Draw by threefold repetition — the same position came up three times.'),
+    ).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Draw' })).toHaveAccessibleDescription('by threefold repetition');
+    await user.keyboard('{Escape}');
+    // The game is over: no more moves are taken, and the statistics set says so.
+    await user.click(screen.getByRole('button', { name: 'g1, white knight' }));
+    expect(screen.queryByRole('button', { name: /move here/ })).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    const stats = screen.getByRole('complementary', { name: 'Game stats' });
+    expect(within(stats).getByText('CH 2 · FINAL')).toBeInTheDocument();
+    expect(within(stats).getByText('Half-moves', { selector: 'dt' }).nextElementSibling).toHaveTextContent('8');
+  });
+
   it('explains that playing needs the backend in mock mode', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<PlayComputerView />, { route: '/play', path: '/play' });
+    renderGame();
 
     await user.click(await screen.findByRole('button', { name: 'Start game' }));
 

@@ -7,10 +7,12 @@
   background: var(--paper); color: var(--ink); border: 3px solid #0b0b0c; box-shadow: 9px 9px 0 #80796d;
   animation: side-panel-in .45s cubic-bezier(.2, .8, .2, 1) var(--panel-delay, 1.05s) both;
 }
-.side-panel[data-leaving] { animation: side-panel-out .25s ease-in both; }
+/* Leaving (back to the menu), it goes first: it fades and shrinks a little towards its edge,
+   on the stage's ease, while the table tilts away (stage-layout.css has the whole sequence). */
+.side-panel[data-leaving] { animation: side-panel-out .45s var(--topdown-ease, cubic-bezier(.65, 0, .2, 1)) both; }
 /* Hidden (not just transparent) until it arrives, so nothing in it can be clicked or focused early. */
 @keyframes side-panel-in { from { opacity: 0; visibility: hidden; transform: translateX(36px) rotate(1.5deg); } to { opacity: 1; visibility: visible; transform: none; } }
-@keyframes side-panel-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(36px) rotate(1.5deg); } }
+@keyframes side-panel-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(24px) scale(.96); } }
 
 .side-panel__eyebrow { color: #6f6b64; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
 .side-panel__title { margin: -6px 0 0; font-size: 28px; line-height: 1.05; letter-spacing: -1px; font-weight: 850; }

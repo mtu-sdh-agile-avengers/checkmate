@@ -27,8 +27,8 @@ const REVEAL_MS = DELIBERATION_SCENE.timing.revealMs;
 /**
  * - choosing: the VS set takes the two players;
  * - deliberating: the comparison runs; the players play at the table, the steps go by;
- * - revealing: a beat, then the camera drops to table level: the winner in a spotlight, the
- *   loser's king falling;
+ * - revealing: a beat, then the camera drops to table level: the table in a spotlight, the
+ *   winner rising in it, the loser's king falling;
  * - verdict: the verdict set drops with the breakdown;
  * - failed: the comparison failed; the verdict set drops with the error.
  */

@@ -1,0 +1,23 @@
+/* Notifications (toast-stack.tsx): ink cards with the stone sticker shadow, stacked at the top
+   of the screen under the header, centred. They drop in a little and fade out; they never
+   take a click, so whatever is under them stays usable. */
+.toast-stack {
+  position: fixed; z-index: 40; top: 70px; left: 50%; translate: -50% 0;
+  display: grid; justify-items: center; gap: 8px; width: min(420px, 100% - 32px); pointer-events: none;
+}
+.toast-stack[data-leaving] { opacity: 0; transition: opacity .25s ease-in; }
+.toast {
+  margin: 0; padding: 10px 14px 10px 12px; border: 2px solid #0b0b0c; border-left-width: 6px;
+  background: var(--ink, #1b1c1d); color: var(--paper, #f7f6f3); box-shadow: 5px 5px 0 #80796d;
+  font-size: 14px; font-weight: 650; line-height: 1.35; text-align: left;
+  animation: toast-in .28s cubic-bezier(.2, .8, .2, 1) both;
+}
+/* A king in check: a paper card with an ink edge, so it reads apart from the usual. */
+.toast[data-tone='alert'] { background: var(--paper, #f7f6f3); color: var(--ink, #1b1c1d); border-color: #0b0b0c; font-weight: 800; }
+.toast[data-closing] { opacity: 0; translate: 0 -6px; transition: opacity .2s ease-in, translate .2s ease-in; }
+@keyframes toast-in { from { opacity: 0; translate: 0 -12px; } to { opacity: 1; translate: 0 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+  .toast[data-closing], .toast-stack[data-leaving] { transition: none; }
+}

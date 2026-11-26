@@ -7,10 +7,10 @@ export type MatchSeat = { name: string; detail: string; color: 'white' | 'black'
 
 /**
  * The panel once a game is set up: who plays which colour, whose move it is, and where to go
- * next (`actions`). `note` says what the board can do; until the game engine exists, that
- * it is a preview. Focus moves to its heading when it appears.
+ * next (`actions`). `note` says what is happening on the board; `children` (e.g. the move list)
+ * go between the players and the note. Focus moves to its heading when it appears.
  */
-export function MatchPanel({ eyebrow, title, seats, note, actions, leaving = false, delay, toMove = 'white' }: {
+export function MatchPanel({ eyebrow, title, seats, note, actions, leaving = false, delay, toMove = 'white', children }: {
   eyebrow: string;
   title: string;
   seats: readonly [MatchSeat, MatchSeat];
@@ -20,6 +20,7 @@ export function MatchPanel({ eyebrow, title, seats, note, actions, leaving = fal
   delay?: string;
   /** Whose move it is ("To move" tag); null once the game is over. */
   toMove?: 'white' | 'black' | null;
+  children?: ReactNode;
 }) {
   const titleId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
@@ -42,6 +43,7 @@ export function MatchPanel({ eyebrow, title, seats, note, actions, leaving = fal
           </li>
         ))}
       </ul>
+      {children}
       <p className="match-panel__note" aria-live="polite">{note}</p>
       <div className="panel-actions">{actions}</div>
     </SidePanel>
