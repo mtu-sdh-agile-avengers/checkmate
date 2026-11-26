@@ -95,6 +95,30 @@ const FOOLS_MATE: ComputerMoveDto = {
   winner: 'black',
 };
 
+/** A reply of the server: your move, the computer's, and the position after both. */
+const reply = (fen: string, yours: [string, string], computers: [string, string], legalMoves: string[]): ComputerMoveDto => ({
+  fen,
+  playerMove: played(...yours),
+  computerMove: played(...computers),
+  turn: 'white',
+  legalMoves,
+  check: false,
+  status: 'playing',
+  winner: null,
+});
+/**
+ * Your knight goes out and comes back by another road (g1-f3-h4-f3-h4-f3) while the computer's
+ * knights come and go: the position after your Nf3 (Black to move) comes up three times, each
+ * time answered differently, and no position with White to move comes up a third time.
+ */
+const KNIGHT_ROAD = [
+  reply('r1bqkbnr/pppppppp/2n5/8/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 2 2', ['g1f3', 'Nf3'], ['b8c6', 'Nc6'], ['f3h4', 'f3g1', 'e2e4']),
+  reply('rnbqkbnr/pppppppp/8/8/7N/8/PPPPPPPP/RNBQKB1R w KQkq - 4 3', ['f3h4', 'Nh4'], ['c6b8', 'Nb8'], ['h4f3', 'h4g6', 'e2e4']),
+  reply('rnbqkb1r/pppppppp/5n2/8/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 6 4', ['h4f3', 'Nf3'], ['g8f6', 'Nf6'], ['f3h4', 'f3g1', 'e2e4']),
+  reply('rnbqkbnr/pppppppp/8/8/7N/8/PPPPPPPP/RNBQKB1R w KQkq - 8 5', ['f3h4', 'Nh4'], ['f6g8', 'Ng8'], ['h4f3', 'h4g6', 'e2e4']),
+  reply('r1bqkbnr/pppppppp/2n5/8/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 10 6', ['h4f3', 'Nf3'], ['b8c6', 'Nc6'], ['f3h4', 'f3g1', 'e2e4']),
+];
+
 const renderGame = () => renderWithProviders(<PlayComputerView />, { route: '/play', path: '/play' });
 const notifications = () => screen.getByRole('log', { name: 'Game notifications' });
 const moveRows = () => within(screen.getByRole('list', { name: 'Moves' })).getAllByRole('listitem').map((row) => row.textContent);
@@ -341,6 +365,29 @@ describe('play-computer view', { timeout: GAME_TIMEOUT }, () => {
     const stats = screen.getByRole('complementary', { name: 'Game stats' });
     expect(within(stats).getByText('CH 2 · FINAL')).toBeInTheDocument();
     expect(within(stats).getByText('Half-moves', { selector: 'dt' }).nextElementSibling).toHaveTextContent('8');
+  });
+
+  it('calls a draw when your move brings a position back a third time, before the computer replies', async () => {
+    vi.stubEnv('VITE_API_MODE', 'live');
+    const fetchMock = mockGameResponses(GAME_START, ...KNIGHT_ROAD);
+    const user = userEvent.setup();
+    renderGame();
+    await startGame(user);
+
+    for (const [from, to, answer] of [['g1', 'f3', 'Nc6'], ['f3', 'h4', 'Nb8'], ['h4', 'f3', 'Nf6'], ['f3', 'h4', 'Ng8']] as const) {
+      await clickMove(user, from, to);
+      await screen.findByText(`The computer played ${answer}. Your move.`);
+    }
+    await clickMove(user, 'h4', 'f3'); // the position after it, for the third time
+
+    expect(await screen.findByRole('dialog', { name: 'Draw' })).toHaveAccessibleDescription('by threefold repetition');
+    // Drawn on your move: the computer's reply (the server played Nc6) is never shown.
+    expect(moveRows()).toEqual(['1.Nf3Nc6', '2.Nh4Nb8', '3.Nf3Nf6', '4.Nh4Ng8', '5.Nf3']);
+    expect(screen.getByRole('button', { name: 'f3, white knight' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'b8, black knight' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'c6' })).toBeInTheDocument();
+    expect(screen.getByText('Draw by threefold repetition — the same position came up three times.')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 
   it('explains that playing needs the backend in mock mode', async () => {

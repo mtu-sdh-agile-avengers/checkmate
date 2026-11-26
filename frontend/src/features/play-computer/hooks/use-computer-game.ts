@@ -31,8 +31,12 @@ const pause = (ms: number) =>
  *   in SAN, e.g. ["e4", "e5", "Nf3"];
  * - `check` is the side whose king is in check in the position shown, `checkSquare` its king;
  * - `repetition`: the server sees one position at a time, so threefold repetition is counted
- *   here, over the positions the player faces (a repeating cycle always passes through one of
- *   them); the game is then drawn and no more moves are sent;
+ *   here, over every position of the game: the server's (after the computer's reply, White to
+ *   move) and the one after each of the player's moves (Black to move), built on the page. A
+ *   cycle can repeat on either side: the computer may answer one position differently each
+ *   time. The game is then drawn and no more moves are sent; when the player's move is the one
+ *   that brings a position back the third time, the game ends there, and the computer's reply
+ *   (the server has played it already) is never shown;
  * - `result` says how the game ended (you win, you lose or a draw, and why), null until then;
  * - `retry()` sends the last request again after it failed (the engine was busy or down, the
  *   server unreachable), whether that was starting the game or a move;
@@ -43,10 +47,19 @@ export function useComputerGame(level: DifficultyId) {
   const [history, setHistory] = useState<string[]>([]);
   const [moves, setMoves] = useState<string[]>([]);
   const [pending, setPending] = useState<string | null>(null);
-  const [seen, setSeen] = useState<Record<string, number>>({});
+  // How many times each position has come up (positionKey), and whether one has come up thrice.
+  const seen = useRef(new Map<string, number>());
+  const [repeated, setRepeated] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   // Every new game is a new round: a late answer to an earlier game is dropped.
   const round = useRef(0);
+  /** Counts one more occurrence of a position; true at the third. */
+  const thirdTime = (fen: string) => {
+    const key = positionKey(fen);
+    const times = (seen.current.get(key) ?? 0) + 1;
+    seen.current.set(key, times);
+    return times >= 3;
+  };
   const mutation = useMutation({
     mutationFn: async (request: MoveRequest) => {
       const [state] = await Promise.all([
@@ -57,13 +70,39 @@ export function useComputerGame(level: DifficultyId) {
     },
     onSuccess: (state, request) => {
       if (request.round !== round.current) return;
+      setPending(null);
+      // The position after the player's move (Black to move) counts too. Its FEN is built here,
+      // so its en passant field can differ from python-chess's: only right after a double pawn
+      // step, a position that cannot come up again, so the counts are not affected.
+      const yours = state.playerMove;
+      if (request.fen && request.move && yours) {
+        const afterYours = applyUci(parseFen(request.fen), request.move);
+        const fen = toFen(afterYours);
+        if (thirdTime(fen)) {
+          // Drawn by this very move: the game ends here, before the computer's reply.
+          setGame({
+            ...state,
+            fen,
+            placement: fen.split(' ')[0] ?? fen,
+            computerMove: null,
+            turn: 'black',
+            legalMoves: [],
+            check: inCheck(afterYours, 'black'),
+            status: 'playing',
+            winner: null,
+            lastMove: { from: yours.fromSquare, to: yours.toSquare },
+          });
+          setHistory((list) => [...list, yours.san]);
+          setMoves((list) => [...list, yours.uci]);
+          setRepeated(true);
+          return;
+        }
+      }
       setGame(state);
       const played = [state.playerMove, state.computerMove].filter((move) => move !== null);
       setHistory((list) => [...list, ...played.map((move) => move.san)]);
       setMoves((list) => [...list, ...played.map((move) => move.uci)]);
-      setPending(null);
-      const key = positionKey(state.fen);
-      setSeen((counts) => ({ ...counts, [key]: (counts[key] ?? 0) + 1 }));
+      if (thirdTime(state.fen)) setRepeated(true);
     },
     onError: (_error, request) => {
       if (request.round === round.current) setPending(null);
@@ -79,7 +118,7 @@ export function useComputerGame(level: DifficultyId) {
     [history, position, pending, game],
   );
   const check = pending ? (shown && inCheck(shown, shown.turn) ? shown.turn : null) : game?.check ? game.turn : null;
-  const repetition = game !== null && game.status === 'playing' && (seen[positionKey(game.fen)] ?? 0) >= 3;
+  const repetition = repeated && game !== null && game.status === 'playing';
   // The same object for as long as the game stays over, so the view can tell when it ends.
   const result = useMemo(() => readResult(game, repetition), [game, repetition]);
 
@@ -107,7 +146,8 @@ export function useComputerGame(level: DifficultyId) {
       setHistory([]);
       setMoves([]);
       setPending(null);
-      setSeen({});
+      seen.current = new Map();
+      setRepeated(false);
       setStartedAt(Date.now());
       mutation.reset();
       mutation.mutate({ level, round: round.current });
