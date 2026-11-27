@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Request
 
 from src.api.v1.common import COMMON_RESPONSES
+from src.caching import ttl_cached_response
 from src.dependencies import PlayersServiceDep
 from src.rate_limiting import limiter
 from src.schemas.common import ErrorResponse
@@ -37,7 +38,8 @@ router = APIRouter(
         422: {"description": "`search` is not a valid username or profile URL"},
     },
 )
-@limiter.limit("1/second")
+@limiter.limit("3/second")
+@ttl_cached_response()
 async def search_player(
     request: Request,
     query: Annotated[PlayerSearchQuery, Query()],
@@ -66,7 +68,8 @@ async def search_player(
         },
     },
 )
-@limiter.limit("1/second")
+@limiter.limit("3/second")
+@ttl_cached_response()
 async def compare_players(
     request: Request,
     query: Annotated[PlayerComparisonQuery, Query()],
@@ -84,7 +87,8 @@ async def compare_players(
         404: {"model": ErrorResponse, "description": "Player does not exist"},
     },
 )
-@limiter.limit("1/second")
+@limiter.limit("3/second")
+@ttl_cached_response()
 async def get_player_profile(
     request: Request, username: str, service: PlayersServiceDep
 ) -> PlayerProfileResponse:
@@ -107,7 +111,8 @@ async def get_player_profile(
         404: {"model": ErrorResponse, "description": "Player does not exist"},
     },
 )
-@limiter.limit("1/second")
+@limiter.limit("3/second")
+@ttl_cached_response()
 async def get_player_summary(
     request: Request,
     username: str,

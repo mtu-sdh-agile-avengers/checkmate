@@ -25,7 +25,7 @@ from src.chesscom.parser.parser import (
     parse_player_profile,
     parse_player_stats,
 )
-from src.enums import SummaryPeriod
+from src.enums import SummaryPeriod, TimeClass
 from src.schemas.players import (
     PlayerComparisonQuery,
     PlayerComparisonResponse,
@@ -48,6 +48,15 @@ from src.services.protocols import PlayersService
 
 def _utc_now() -> datetime:
     return datetime.now(UTC)
+
+
+def _may_count_for_rating(time_class: TimeClass) -> Callable[[dict], bool]:
+    """Pre-filter of raw games, never stricter than `select_games` (defaults match the model)."""
+    return lambda game: (
+        game.get("time_class") == time_class
+        and game.get("rated", True)
+        and game.get("rules", "chess") == "chess"
+    )
 
 
 class ChessComPlayersService(PlayersService):
@@ -142,7 +151,7 @@ class ChessComPlayersService(PlayersService):
             # recent period: count games from the monthly archives
             raw_stats, games = await asyncio.gather(
                 self._client.get_player_stats(username),
-                self._load_games(username, since, now),
+                self._load_games(username, since, now, query.time_class),
             )
             time_class_stats = parse_player_stats(raw_stats).for_time_class(
                 query.time_class
@@ -168,9 +177,9 @@ class ChessComPlayersService(PlayersService):
         )
 
     async def _load_games(
-        self, username: str, since: datetime, until: datetime
+        self, username: str, since: datetime, until: datetime, time_class: TimeClass
     ) -> list[ChessComGame]:
-        """Loads the player's games of every archive month between since and until."""
+        """Loads the player's games of the time class from every archive month between since and until."""
         archives = parse_games_archives(
             await self._client.get_player_games_archives(username)
         )
@@ -185,7 +194,10 @@ class ChessComPlayersService(PlayersService):
                 for month in months
             )
         )
-        return [game for raw in monthly_responses for game in parse_monthly_games(raw)]
+        keep = _may_count_for_rating(time_class)
+        return [
+            game for raw in monthly_responses for game in parse_monthly_games(raw, keep)
+        ]
 
 
 def _rating_summary(

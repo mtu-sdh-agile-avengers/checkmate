@@ -4,12 +4,19 @@ The `GamesService` protocol it implements lives in `src/services/protocols.py`;
 the DEV-mode mock lives in `src/services/mocks/games.py`.
 """
 
+from collections.abc import Callable
+
 from src.chesscom.client.client import ExternalChessComAPIClient
 from src.chesscom.client.exceptions import (
     ChessAPIParseError,
     ChessComGameNotFoundError,
 )
-from src.chesscom.parser.models import STANDARD_START_FEN, ArchiveMonth, ChessComGame
+from src.chesscom.parser.models import (
+    STANDARD_START_FEN,
+    ArchiveMonth,
+    ChessComGame,
+    last_url_segment,
+)
 from src.chesscom.parser.parser import parse_games_archives, parse_monthly_games
 from src.schemas.games import (
     GameAnalysisResponse,
@@ -58,9 +65,12 @@ class ChessComGamesService(GamesService):
         """Finds the game in the requested (or latest) monthly archive of the player."""
         month = await self._archive_month(username, query)
         if month is not None:  # if None, then player has never finished a game
-            for game in await self._month_games(username, month):
-                if game.game_id == query.game_id:
-                    return game
+            # validate only the game we look for, not the whole month
+            same_id = lambda game: (
+                last_url_segment(str(game.get("url", ""))) == query.game_id
+            )
+            for game in await self._month_games(username, month, keep=same_id):
+                return game
 
         raise ChessComGameNotFoundError(
             username,
@@ -85,12 +95,13 @@ class ChessComGamesService(GamesService):
         self,
         username: str,
         month: ArchiveMonth,
+        keep: Callable[[dict], bool] | None = None,
     ) -> list[ChessComGame]:
-        """Returns (parsed) requested (list of) monthly games; empty list if there are none."""
+        """Returns (parsed) games of the month that `keep` accepts (all by default)."""
         raw_games = await self._client.get_player_monthly_games(
             username, str(month.year), f"{month.month:02d}"
         )
-        return parse_monthly_games(raw_games)
+        return parse_monthly_games(raw_games, keep)
 
 
 # Mappings of Chess.com games to Response schemas ----------------------------------------------

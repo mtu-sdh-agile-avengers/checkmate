@@ -5,6 +5,7 @@ description = "..."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "cachetools>=8.0.3",
     "chess>=1.11.2",
     "fastapi[standard]==0.165.0",
     "httpx[brotli,http2,zstd]>=0.28.1",
@@ -22,6 +23,7 @@ dev = [
     "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
     "ruff==0.17.5",
+    "types-cachetools>=7.0.0.20260713",
 ]
 
 

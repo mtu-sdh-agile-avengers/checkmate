@@ -1,7 +1,8 @@
 import asyncio
+from collections import OrderedDict
 from collections.abc import Awaitable, Callable
 from enum import Enum
-from typing import ClassVar, TypeVar
+from typing import ClassVar
 
 import httpx
 from fastapi import status
@@ -27,6 +28,12 @@ class ExternalTimeout(float, Enum):
 class ChessComClient(ExternalChessComAPIClient):
     DEFAULT_CONCURRENT_REQUESTS_LIMIT: ClassVar[int] = 2
 
+    # max number of cached responses
+    CACHE_MAX_ENTRIES: ClassVar[int] = 512
+
+    # max total size of cached bodies (64 MiB)
+    CACHE_MAX_BYTES: ClassVar[int] = 64 * 1024 * 1024
+
     def __init__(
         self,
         base_url: str,
@@ -44,6 +51,14 @@ class ChessComClient(ExternalChessComAPIClient):
                 "pass httpx.AsyncHTTPTransport(http2=True) instead"
             )
 
+        # ETag cache (LRU): request path -> (ETag, response); used for conditional requests (If-None-Match -> 304)
+        # OrderedDict keeps insertion order: the first item is the Least Recently Used one, so it is evicted (pop out) first
+        self._etag_cache: OrderedDict[str, tuple[str, httpx.Response]] = OrderedDict()
+        self._etag_cache_bytes = 0
+
+        # single-flight: path -> the request in progress; concurrent callers of the same path await it
+        self._in_flight: dict[str, asyncio.Task[httpx.Response]] = {}
+
         self.api_client = httpx.AsyncClient(
             base_url=base_url,  # base url (prepended) for all outgoing requests
             headers={
@@ -54,7 +69,7 @@ class ChessComClient(ExternalChessComAPIClient):
             follow_redirects=follow_redirects,  # allows to automatically follow redirect response (i.e., useful when change in API contacts appears)
             http2=use_http2,  # use of HTTP/2 may slightly improve performance (header compression, binary transfer, multiplexed responses)
         )
-        self._allow_retry = allow_retry  # if True, then if request had exceeds timeout limit server will try N times to send it again
+        self._allow_retry = allow_retry  # if True, then "transient errors" (429, 5xx, timeouts, network errors) are retried
         self._semaphore = asyncio.Semaphore(
             concurrent_requests_limit
         )  # semaphore is required due to limited parallel access (which may lead to 429)
@@ -73,36 +88,113 @@ class ChessComClient(ExternalChessComAPIClient):
         async with self._semaphore:
             r = await request_func(self.api_client)
 
-        r.raise_for_status()
+        if (
+            r.status_code != status.HTTP_304_NOT_MODIFIED
+        ):  # 304 is a valid answer to a conditional request (If-None-Match): it means the cached response is still up to date
+            r.raise_for_status()
 
         return r
 
     async def aclose(self) -> None:
         await self.api_client.aclose()
 
-    # TODO: impl. proper retry func., after it will be possible to test client.
-    T = TypeVar("T")
-
-    async def retry(
+    async def retry[T](
         self,
         coro: Callable[[], Awaitable[T]],
-        max_retries: int,
-        timeout: float,
-        retry_interval: float,
+        *,
+        max_retries: int = 3,
+        retry_interval: float = 1.0,
     ) -> T:
-        for retry_num in range(max_retries):
+        """Calls `coro` (coroutine) until it succeeds or retries limit exceeded.
+
+        Only `ChessAPIUnavailableError` and `ChessAPIRateLimitError` are retried.
+
+        Args:
+            coro (Callable[[], Awaitable[T]]): Zero-arg factory returning a fresh awaitable per attempt.
+            max_retries (int): Limit to the amount of the attempts (>=1).
+            retry_interval (float): Delay in seconds between attempts.
+
+        Raises:
+            ValueError: If `max_retries` < 1.
+            ChessAPITooManyRetriesError: If retries limit (every attempt failed) exceeded.
+
+        Returns:
+            T: Result of the first successful attempt.
+        """
+        if max_retries < 1:
+            raise ValueError("max_retries must be >=1")
+
+        for retry_num in range(1, max_retries + 1):
             try:
-                return await asyncio.wait_for(coro(), timeout=timeout)
-            except Exception as e:  # noqa: BLE001 - any failure is retried
+                return await coro()
+            except (ChessAPIUnavailableError, ChessAPIRateLimitError) as e:
+                if retry_num == max_retries:
+                    raise ChessAPITooManyRetriesError() from e
                 logger.warning(
-                    f"Exception while waiting (tried {retry_num} times, retrying.",
-                    exc_info=e,
+                    f"Attempt {retry_num}/{max_retries} failed ({e}), retrying in {retry_interval:.2f}s."
                 )
                 await asyncio.sleep(retry_interval)
+
         raise ChessAPITooManyRetriesError()
 
+    def _remember(self, key: str, etag: str, r: httpx.Response) -> None:
+        """Caches the response (ETag); evicts least recently used ones over the count or size limit."""
+        self._forget(key)
+        self._etag_cache[key] = (etag, r)
+        self._etag_cache_bytes += len(r.content)
+
+        while self._etag_cache and (
+            len(self._etag_cache) > self.CACHE_MAX_ENTRIES
+            or self._etag_cache_bytes > self.CACHE_MAX_BYTES
+        ):
+            _, (_, evicted) = self._etag_cache.popitem(last=False)
+            self._etag_cache_bytes -= len(evicted.content)
+
+    def _forget(self, key: str) -> None:
+        if (old := self._etag_cache.pop(key, None)) is not None:
+            self._etag_cache_bytes -= len(old[1].content)
+
     async def _get(self, path: str, timeout: float) -> httpx.Response:
-        """Executes GET HTTP Request.
+        """Executes GET HTTP Request; concurrent requests of the same path share one request.
+
+        Without it, two simultaneous requests of e.g. `/player/hikaru/stats` both go to
+        Chess.com: the ETag cache cannot help, the first response has not arrived yet.
+        """
+        key = path.lower()
+
+        task = self._in_flight.get(key)
+        if task is None:
+            task = asyncio.create_task(self._get_with_retry(path, timeout))
+            self._in_flight[key] = task
+            task.add_done_callback(lambda done: self._forget_in_flight(key, done))
+
+        # shield: a disconnected client cancels only its own wait, not the shared request
+        return await asyncio.shield(task)
+
+    def _forget_in_flight(self, key: str, task: asyncio.Task[httpx.Response]) -> None:
+        """Removes a finished request, so the next request of the path goes to Chess.com again."""
+        if self._in_flight.get(key) is task:
+            del self._in_flight[key]
+
+        if not task.cancelled():
+            task.exception()  # marks a failure as seen, in case every caller has gone
+
+    async def _get_with_retry(self, path: str, timeout: float) -> httpx.Response:
+        """Executes GET HTTP Request, retrying transient errors if `allow_retry` is set.
+
+        Each attempt is a separate conditional request (see `_get_once`).
+        """
+        if not self._allow_retry:
+            return await self._get_once(path, timeout)
+
+        return await self.retry(lambda: self._get_once(path, timeout))
+
+    async def _get_once(self, path: str, timeout: float) -> httpx.Response:
+        """Executes single GET HTTP Request, revalidating the cached response with its ETag.
+
+        If a response for `path` was cached before, its ETag is sent in `If-None-Match`:
+        `304 Not Modified` -> the cached response is returned (Chess.com sends no body);
+        `200 OK` -> the new response is returned and replaces the cached one.
 
         Args:
             path (str): HTTP request path.
@@ -117,8 +209,18 @@ class ChessComClient(ExternalChessComAPIClient):
         Returns:
             httpx.Response: HTTP Response object if successful.
         """
+        cache_key = path.lower()  # chess.com usernames are case-insensitive
+        cached = self._etag_cache.get(
+            cache_key
+        )  # cached response of the previous 200, or None
+        headers = (
+            {"If-None-Match": cached[0]} if cached else {}
+        )  # conditional request: the header is sent only if there is something cached to revalidate
+
         try:
-            return await self._request(lambda client: client.get(path, timeout=timeout))
+            r = await self._request(
+                lambda client: client.get(path, timeout=timeout, headers=headers)
+            )
         except httpx.HTTPStatusError as e:
             r_status_code = e.response.status_code
 
@@ -137,6 +239,25 @@ class ChessComClient(ExternalChessComAPIClient):
             raise ChessAPIUnavailableError(f"Timeout on {path}") from e
         except httpx.RequestError as e:
             raise ChessAPIUnavailableError(f"Network error occurred on {path}") from e
+
+        # 304 Not Modified: data have not changed since the cached response, and the body is empty
+        if r.status_code == status.HTTP_304_NOT_MODIFIED:
+            if cached is None:
+                raise ChessAPIError(f"Unexpected 304 Not Modified on {path}")
+
+            logger.debug(f"Etag cache hit (304): {path}")
+            self._etag_cache.move_to_end(
+                cache_key
+            )  # mark entry as the most recently used
+            return cached[1]
+
+        # 200 OK: remember the response and its ETag for the next conditional request
+        if etag := r.headers.get("ETag"):
+            self._remember(cache_key, etag, r)
+        else:
+            self._forget(cache_key)  # no validator -> nothing to revalidate later
+
+        return r
 
     async def get_player_profile(self, username: str) -> dict:
         r = await self._get(

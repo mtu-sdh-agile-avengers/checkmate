@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 
 import pytest
+from fakes import make_raw_game
 
 from src.chesscom.client.exceptions import ChessAPIError, ChessAPIParseError
 from src.chesscom.parser.models import ArchiveMonth, result_code_to_game_result
@@ -226,6 +227,27 @@ def test_parse_monthly_games_invalid_response_raises_parse_error(data):
 
 def test_parse_monthly_games_empty_month():
     assert parse_monthly_games({"games": []}) == []
+
+
+def test_parse_monthly_games_keep_validates_only_accepted_games():
+    wanted = make_raw_game(
+        username="hikaru", end_time=datetime(2026, 10, 1, tzinfo=UTC), game_id=1
+    )
+    broken = {
+        "url": "https://www.chess.com/game/live/2"
+    }  # would fail validation (and log a warning)
+
+    games = parse_monthly_games(
+        {"games": [wanted, broken]}, keep=lambda game: game["url"].endswith("/1")
+    )
+
+    assert [game.game_id for game in games] == ["1"]
+
+
+def test_parse_monthly_games_keep_none_validates_all(chesscom_fixture):
+    data = chesscom_fixture("monthly_games.json")
+
+    assert parse_monthly_games(data, keep=None) == parse_monthly_games(data)
 
 
 @pytest.mark.parametrize(

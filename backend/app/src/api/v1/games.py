@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Request
 
 from src.api.v1.common import COMMON_RESPONSES
+from src.caching import ttl_cached_response
 from src.dependencies import GamesServiceDep
 from src.rate_limiting import limiter
 from src.schemas.common import ErrorResponse
@@ -42,7 +43,8 @@ router = APIRouter(
         },
     },
 )
-@limiter.limit("1/second")
+@limiter.limit("3/second")
+@ttl_cached_response()
 async def get_player_game_history_list(
     request: Request,
     username: str,
@@ -72,7 +74,8 @@ async def get_player_game_history_list(
         422: {"description": "Invalid `search`, or only one of `year` / `month`"},
     },
 )
-@limiter.limit("1/second")
+@limiter.limit("3/second")
+@ttl_cached_response()
 async def get_game_board_details(
     request: Request,
     username: str,
@@ -106,7 +109,8 @@ async def get_game_board_details(
         },
     },
 )
-@limiter.limit("1/second")
+@limiter.limit("3/second")
+@ttl_cached_response(ttl=60 * 30)
 async def analyze_game_board(
     request: Request,
     username: str,

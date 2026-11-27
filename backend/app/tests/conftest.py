@@ -49,6 +49,14 @@ def fresh_rate_limits() -> None:
     limiter.reset()
 
 
+@pytest.fixture(autouse=True)
+def fresh_response_caches() -> None:
+    """Every test starts with empty response caches (they live in the process)."""
+    from src.caching import clear_caches  # imported here, after the env defaults above
+
+    clear_caches()
+
+
 @pytest.fixture
 def chesscom_fixture() -> Callable[[str], object]:
     """Loads a sample Chess.com response from `tests/fixtures/chesscom`.

@@ -13,6 +13,7 @@ logged, so one odd game does not break a whole statistics page or game list.
 
 import io
 import re
+from collections.abc import Callable
 
 import chess.pgn
 from loguru import logger
@@ -105,15 +106,27 @@ def parse_games_archives(data: object) -> ChessComGamesArchives:
     return _validate(ChessComGamesArchives, data, "games archives")
 
 
-def parse_monthly_games(data: object) -> list[ChessComGame]:
-    """Parses GET /pub/player/{username}/games/{YYYY}/{MM} (finished games of a month)."""
+def parse_monthly_games(
+    data: object, keep: Callable[[dict], bool] | None = None
+) -> list[ChessComGame]:
+    """Parses GET /pub/player/{username}/games/{YYYY}/{MM} (finished games of a month).
+
+    Args:
+        data: Raw response.
+        keep: Optional cheap pre-filter of raw games: only accepted games are validated. Validating a busy month (thousands of nested models)
+        blocks the event loop, comparing a couple of dict keys costs almost nothing.
+    """
     source = "monthly games"
-    return _validate_each(ChessComGame, _games_list(data, source), source)
+    items = _games_list(data, source)
+    if keep is not None:
+        items = [item for item in items if isinstance(item, dict) and keep(item)]
+    return _validate_each(ChessComGame, items, source)
 
 
 def parse_daily_games(data: object) -> list[ChessComDailyGame]:
     """Parses GET /pub/player/{username}/games (ongoing daily games)."""
     source = "daily games"
+
     return _validate_each(ChessComDailyGame, _games_list(data, source), source)
 
 
