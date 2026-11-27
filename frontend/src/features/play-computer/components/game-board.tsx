@@ -3,6 +3,7 @@ import type { BoardPiece } from '@/components/chess/board-pieces';
 import { readPlacement } from '@/components/chess/placement';
 import { PieceArt } from '@/components/chess/stage-art';
 import { targetsFrom } from '@/features/play-computer/utils/moves';
+import { MARKS, type Mark } from '@/features/play-computer/utils/review';
 import '@/components/chess/top-down-board.css';
 import './game-board.css';
 
@@ -14,6 +15,28 @@ const DRAG_START_PX = 6;
 
 /** A press on one of the player's pieces, which becomes a drag once the pointer moves. */
 type Press = { pointerId: number; from: string; id: string; x: number; y: number; dragging: boolean };
+
+/** Where a square is on the board: its file (0 = a) and row from the top (0 = rank 8). */
+const placeOf = (square: string) => ({ file: FILES.indexOf(square.charAt(0)), row: 8 - Number(square.charAt(1)) });
+
+/** An arrow from the middle of one square to the next, in squares (the board is 8 by 8):
+ *  the shaft starts a little off the first square's centre and stops at the head. */
+function arrowShape(from: string, to: string): { shaft: string; head: string } {
+  const a = placeOf(from);
+  const b = placeOf(to);
+  const [x1, y1, x2, y2] = [a.file + 0.5, a.row + 0.5, b.file + 0.5, b.row + 0.5];
+  const length = Math.hypot(x2 - x1, y2 - y1) || 1;
+  const [ux, uy] = [(x2 - x1) / length, (y2 - y1) / length];
+  const [headLength, halfWidth] = [0.42, 0.24];
+  const [bx, by] = [x2 - ux * headLength, y2 - uy * headLength];
+  const round = (value: number) => Math.round(value * 1000) / 1000;
+  return {
+    shaft: `M${round(x1 + ux * 0.2)} ${round(y1 + uy * 0.2)}L${round(bx)} ${round(by)}`,
+    head: [[x2, y2], [bx - uy * halfWidth, by + ux * halfWidth], [bx + uy * halfWidth, by - ux * halfWidth]]
+      .map(([x, y]) => `${round(x ?? 0)},${round(y ?? 0)}`)
+      .join(' '),
+  };
+}
 
 /**
  * The board of a game against the computer: the same table-top board as TopDownBoard (squares,
@@ -29,20 +52,26 @@ type Press = { pointerId: number; from: string; id: string; x: number; y: number
  *   for the player's moves and the computer's, the castling rook included; a piece taken in
  *   the last two moves (`takenAt`) shrinks and fades. The layer takes no clicks, so nothing
  *   waits for an animation (game-board.css).
+ * - `readOnly` (the review): a picture of the position, nothing to press; `marker` flags the
+ *   move that led to it on its square (?? blunder, ? mistake, ?! inaccuracy) and `arrow` draws
+ *   the engine's better move, from its square to its target.
  */
-export function GameBoard({ pieces, takenAt, plies, label, legalMoves, playable, selected, lastMove, checkSquare, onSquare, onPick, onDrop }: {
+export function GameBoard({ pieces, takenAt, plies, label, legalMoves = [], playable, selected = null, lastMove, checkSquare, onSquare, onPick, onDrop, readOnly = false, marker = null, arrow = null }: {
   pieces: readonly BoardPiece[];
   takenAt: ReadonlyMap<string, number>;
   plies: number; // moves played, to tell which captures are recent
   label: string;
-  legalMoves: readonly string[];
+  legalMoves?: readonly string[];
   playable: boolean;
-  selected: string | null;
+  selected?: string | null;
   lastMove: { from: string; to: string } | null;
   checkSquare: string | null;
-  onSquare: (square: string) => void;
-  onPick: (square: string) => void;
-  onDrop: (from: string, to: string | null) => void;
+  onSquare?: (square: string) => void;
+  onPick?: (square: string) => void;
+  onDrop?: (from: string, to: string | null) => void;
+  readOnly?: boolean;
+  marker?: { square: string; mark: Mark } | null;
+  arrow?: { from: string; to: string } | null;
 }) {
   const board = useRef<HTMLDivElement>(null);
   const press = useRef<Press | null>(null);
@@ -92,7 +121,7 @@ export function GameBoard({ pieces, takenAt, plies, label, legalMoves, playable,
     released.current = current.id;
     setDragged(null);
     setOver(null);
-    onDrop(current.from, to);
+    onDrop?.(current.from, to);
   };
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -125,7 +154,7 @@ export function GameBoard({ pieces, takenAt, plies, label, legalMoves, playable,
       if (Math.hypot(dx, dy) < DRAG_START_PX) return;
       current.dragging = true;
       setDragged(current.id);
-      onPick(current.from);
+      onPick?.(current.from);
       // Now it is a drag: keep the pointer's events coming here, even off the board.
       const element = board.current;
       try {
@@ -145,6 +174,48 @@ export function GameBoard({ pieces, takenAt, plies, label, legalMoves, playable,
     if (press.current?.pointerId !== event.pointerId) return;
     endPress(event.clientX, event.clientY, cancelled);
   };
+
+  const shape = arrow ? arrowShape(arrow.from, arrow.to) : null;
+  const markerAt = marker ? placeOf(marker.square) : null;
+
+  if (readOnly) {
+    return (
+      <div className="td-board game-board" role="img" aria-label={label} data-interactive data-read-only>
+        {SQUARES.map(({ square, light }) => (
+          <span
+            key={square}
+            className="td-board__square"
+            data-square={square}
+            data-light={light}
+            data-last={lastMove?.from === square || lastMove?.to === square || undefined}
+            data-check={checkSquare === square || undefined}
+          >
+            {square[1] === '1' && <span className="td-board__file" aria-hidden="true">{square[0]}</span>}
+            {square[0] === 'a' && <span className="td-board__rank" aria-hidden="true">{square[1]}</span>}
+          </span>
+        ))}
+        {renderPieces(pieces, takenAt, plies, lastId, null)}
+        {shape && (
+          <svg className="game-board__arrow" viewBox="0 0 8 8" aria-hidden="true" focusable="false">
+            <path className="game-board__arrow-halo" d={shape.shaft} />
+            <polygon className="game-board__arrow-halo" points={shape.head} />
+            <path className="game-board__arrow-line" d={shape.shaft} />
+            <polygon className="game-board__arrow-head" points={shape.head} />
+          </svg>
+        )}
+        {marker && markerAt && (
+          <span
+            className="game-board__marker"
+            data-mark={marker.mark}
+            style={{ '--file': markerAt.file, '--row': markerAt.row } as CSSProperties}
+            aria-hidden="true"
+          >
+            <b>{MARKS[marker.mark].symbol}</b>
+          </span>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -179,7 +250,7 @@ export function GameBoard({ pieces, takenAt, plies, label, legalMoves, playable,
             aria-pressed={selected === square}
             aria-label={`${square}${piece ? `, ${NAMES[piece.side]} ${piece.kind}` : ''}${target ? ', move here' : ''}${checkSquare === square ? ', in check' : ''}`}
             onClick={() => {
-              if (!skipClick.current) onSquare(square);
+              if (!skipClick.current) onSquare?.(square);
             }}
           >
             {square[1] === '1' && <span className="td-board__file" aria-hidden="true">{square[0]}</span>}
@@ -187,10 +258,26 @@ export function GameBoard({ pieces, takenAt, plies, label, legalMoves, playable,
           </button>
         );
       })}
-      <div className="game-board__pieces" aria-hidden="true">
-        {pieces
-          .filter((piece) => !piece.taken || (takenAt.get(piece.id) ?? -1) >= plies - 2)
-          .map((piece) => (
+      {renderPieces(pieces, takenAt, plies, lastId, dragged)}
+    </div>
+  );
+}
+
+/** The pieces' layer: every piece still on the board, and those taken in the last two moves. */
+function renderPieces(
+  pieces: readonly BoardPiece[],
+  takenAt: ReadonlyMap<string, number>,
+  plies: number,
+  lastId: string | undefined,
+  dragged: string | null,
+) {
+  return (
+    <div className="game-board__pieces" aria-hidden="true">
+      {pieces
+        .filter((piece) => !piece.taken || (takenAt.get(piece.id) ?? -1) >= plies - 2)
+        .map((piece) => {
+          const { file, row } = placeOf(piece.square);
+          return (
             <span
               key={piece.id}
               className="game-board__piece"
@@ -199,13 +286,13 @@ export function GameBoard({ pieces, takenAt, plies, label, legalMoves, playable,
               data-taken={piece.taken || undefined}
               data-moving={piece.id === lastId || undefined}
               data-dragging={piece.id === dragged || undefined}
-              style={{ '--file': FILES.indexOf(piece.square.charAt(0)), '--row': 8 - Number(piece.square.charAt(1)) } as CSSProperties}
+              style={{ '--file': file, '--row': row } as CSSProperties}
             >
               <i className="game-board__shadow" />
               <span className="game-board__art"><PieceArt kind={piece.kind} tone={piece.side === 'white' ? 'ivory' : 'ebony'} /></span>
             </span>
-          ))}
-      </div>
+          );
+        })}
     </div>
   );
 }

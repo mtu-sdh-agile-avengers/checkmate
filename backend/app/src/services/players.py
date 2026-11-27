@@ -9,11 +9,15 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import cast
 
+from loguru import logger
+
 from src.chesscom.client.exceptions import (
+    ChessAPIError,
     ChessAPINotFoundError,
     ChessComPlayersNotFoundError,
 )
 from src.chesscom.client.protocols import ExternalChessComAPIClient
+from src.chesscom.parser.links import USERNAME_RE
 from src.chesscom.parser.models import (
     ChessComGame,
     ChessComRecord,
@@ -32,6 +36,7 @@ from src.schemas.players import (
     PlayerProfileResponse,
     PlayerSearchProfileResponse,
     PlayerStatisticSummaryResponse,
+    PlayerSuggestionsResponse,
     PlayerSummaryQuery,
     RatingPointResponse,
     RatingSummaryResponse,
@@ -43,7 +48,9 @@ from src.services.processing.statistics import (
     select_games,
     summarize_period,
 )
+from src.services.processing.suggestions import SUGGESTIONS_LIMIT, merge_suggestions
 from src.services.protocols import PlayersService
+from src.services.titled_players import TitledPlayers
 
 
 def _utc_now() -> datetime:
@@ -55,9 +62,12 @@ class ChessComPlayersService(PlayersService):
         self,
         chess_client: ExternalChessComAPIClient,
         now: Callable[[], datetime] = _utc_now,  # replaceable clock for tests
+        titled: TitledPlayers | None = None,
     ) -> None:
         self._client = chess_client
         self._now = now
+        # The app shares one, loaded once a day (app.state); otherwise a new one.
+        self._titled = titled if titled is not None else TitledPlayers(chess_client)
 
     async def search(self, username: str) -> PlayerSearchProfileResponse:
         # One request: the profile proves the player exists (404 otherwise).
@@ -69,6 +79,27 @@ class ChessComPlayersService(PlayersService):
             avatar=profile.avatar,
             title=profile.title,
         )
+
+    async def suggest(self, prefix: str) -> PlayerSuggestionsResponse:
+        # Both at once: the account with exactly this username, and the titled players.
+        exact, titled = await asyncio.gather(
+            self._exact_account(prefix),
+            self._titled.starting_with(prefix, SUGGESTIONS_LIMIT),
+        )
+        return merge_suggestions(prefix, exact, titled)
+
+    async def _exact_account(self, username: str) -> PlayerSearchProfileResponse | None:
+        """The account with exactly this username, if there is one."""
+        if not USERNAME_RE.match(username):
+            return None  # 2 characters: shorter than any username
+        try:
+            return await self.search(username)
+        except ChessAPINotFoundError:
+            return None
+        except ChessAPIError as e:
+            # Suggestions only help: without Chess.com they show the titled players.
+            logger.warning(f"Suggestions for {username!r} without the account: {e}")
+            return None
 
     async def compare(self, query: PlayerComparisonQuery) -> PlayerComparisonResponse:
         # Both all-time summaries at once: one /stats request per player.

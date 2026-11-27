@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from typing import Self
 
@@ -36,6 +37,30 @@ class PlayerSearchQuery(QuerySchema):
     def username(self) -> str:
         """Username parsed from `search` (lowercase)."""
         return self.search
+
+
+# The start of a username: 2 characters at least (a username has 3), at most 25
+USERNAME_PREFIX_RE = re.compile(r"^[A-Za-z0-9_-]{2,25}$")
+
+
+class PlayerSuggestionsQuery(QuerySchema):
+    """What the user has typed so far: GET /players/suggestions?q=."""
+
+    q: str = Field(
+        examples=["hik"],
+        description="The start of a Chess.com username (2-25 characters)",
+    )
+
+    @field_validator("q")
+    @classmethod
+    def _to_prefix(cls, value: str) -> str:
+        value = value.strip()
+        if not USERNAME_PREFIX_RE.match(value):
+            raise PydanticCustomError(
+                "invalid_username_prefix",
+                "Type 2-25 characters of a username: letters, numbers, _ or -.",
+            )
+        return value.lower()
 
 
 class PlayerSummaryQuery(QuerySchema):
@@ -90,6 +115,26 @@ class PlayerSearchProfileResponse(BaseSchema):
     url: str = Field(examples=["https://www.chess.com/member/Hikaru"])
     avatar: str | None = None
     title: str | None = None
+
+
+class PlayerSuggestionResponse(PlayerSearchProfileResponse):
+    """One account suggested while typing (titled players have no picture here)."""
+
+    exact: bool = Field(
+        default=False,
+        description="True for the account with exactly the username typed (it comes first)",
+    )
+
+
+class PlayerSuggestionsResponse(BaseSchema):
+    query: str = Field(examples=["hik"], description="What was typed, lowercase")
+    players: list[PlayerSuggestionResponse] = Field(
+        default_factory=list,
+        description=(
+            "At most 8: the account with exactly this username first, if it exists, "
+            "then titled players (GM, IM, FM...) whose username starts with it"
+        ),
+    )
 
 
 class PlayerProfileResponse(BaseSchema):

@@ -29,7 +29,7 @@ describe('app start (main.tsx)', () => {
     await import('@/main');
 
     expect(
-      await screen.findByRole('searchbox', undefined, { timeout: 15_000 }),
+      await screen.findByRole('combobox', undefined, { timeout: 15_000 }),
     ).toBeInTheDocument();
   }, 30_000);
 

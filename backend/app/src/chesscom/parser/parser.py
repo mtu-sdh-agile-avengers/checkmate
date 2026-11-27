@@ -28,6 +28,7 @@ from src.chesscom.parser.models import (
     ChessComPgnGame,
     ChessComPlayerProfile,
     ChessComPlayerStats,
+    ChessComTitledPlayers,
 )
 
 # How many validation errors to include in an exception / log message.
@@ -103,6 +104,11 @@ def parse_player_stats(data: object) -> ChessComPlayerStats:
 def parse_games_archives(data: object) -> ChessComGamesArchives:
     """Parses GET /pub/player/{username}/games/archives."""
     return _validate(ChessComGamesArchives, data, "games archives")
+
+
+def parse_titled_players(data: object) -> ChessComTitledPlayers:
+    """Parses GET /pub/titled/{title}."""
+    return _validate(ChessComTitledPlayers, data, "titled players")
 
 
 def parse_monthly_games(data: object) -> list[ChessComGame]:

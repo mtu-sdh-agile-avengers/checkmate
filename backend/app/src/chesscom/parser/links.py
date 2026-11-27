@@ -14,6 +14,11 @@ GAME_ID_RE = re.compile(r"^\d{1,20}$")
 CHESSCOM_HOSTS = frozenset({"chess.com", "www.chess.com", "m.chess.com"})
 
 
+def member_url(username: str) -> str:
+    """The player's profile page on Chess.com, e.g. https://www.chess.com/member/Hikaru."""
+    return f"https://www.chess.com/member/{username}"
+
+
 class InvalidChessComInputError(ValueError):
     """Raised when the input is not a valid username / game id or Chess.com link.
 

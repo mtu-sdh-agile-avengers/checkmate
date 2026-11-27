@@ -9,11 +9,13 @@ from src.dependencies import (
     get_external_api_chess_client,
     get_games_service,
     get_players_service,
+    get_titled_players,
 )
 from src.services.games import ChessComGamesService
 from src.services.mocks.games import MockGamesService
 from src.services.mocks.players import MockPlayersService
 from src.services.players import ChessComPlayersService
+from src.services.titled_players import TitledPlayers
 from tests.fakes import FakeChessComClient
 
 
@@ -31,6 +33,15 @@ def test_the_chess_client_is_shared_through_the_app_state():
     assert get_external_api_chess_client(request) is client
 
 
+def test_the_titled_players_are_shared_through_the_app_state():
+    titled = TitledPlayers(FakeChessComClient())
+    request = SimpleNamespace(
+        app=SimpleNamespace(state=SimpleNamespace(titled_players=titled))
+    )
+
+    assert get_titled_players(request) is titled
+
+
 @pytest.mark.parametrize(
     ("run_mode", "players", "games"),
     [
@@ -42,5 +53,5 @@ def test_services_per_run_mode(monkeypatch, run_mode, players, games):
     use_mode(monkeypatch, run_mode)
     client = FakeChessComClient()
 
-    assert isinstance(get_players_service(client), players)
+    assert isinstance(get_players_service(client, TitledPlayers(client)), players)
     assert isinstance(get_games_service(client), games)

@@ -1,9 +1,11 @@
 import { configure, screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { FOOLS_MATE_ANALYSIS, FOOLS_MATE_GAME } from '@/features/play-computer/api/analyse-game.fixtures';
 import type { ComputerMoveDto } from '@/features/play-computer/api/play-move';
 import { AFTER_E4_E5, GAME_START } from '@/features/play-computer/api/play-move.fixtures';
 import { PlayComputerView } from '@/features/play-computer/components/play-computer-view';
+import { loadFinishedGame, saveFinishedGame } from '@/features/play-computer/utils/saved-game';
 import { dragPiece } from '@/testing/pointer';
 import { renderWithProviders } from '@/testing/render-with-providers';
 
@@ -302,7 +304,7 @@ describe('play-computer view', { timeout: GAME_TIMEOUT }, () => {
     expect(screen.getByRole('button', { name: 'e8, black king' })).not.toHaveAttribute('data-check');
   });
 
-  it('brings the game-over set down at checkmate; Play Again starts a new game', async () => {
+  it('brings the game-over set down at checkmate, Review Game first; Play Again starts a new game', async () => {
     vi.stubEnv('VITE_API_MODE', 'live');
     const fetchMock = mockGameResponses(GAME_START, AFTER_F3_E5, FOOLS_MATE, GAME_START);
     const user = userEvent.setup();
@@ -310,7 +312,7 @@ describe('play-computer view', { timeout: GAME_TIMEOUT }, () => {
 
     const dialog = await walkIntoFoolsMate(user);
     expect(dialog).toHaveAccessibleDescription('by checkmate');
-    await waitFor(() => expect(screen.getByRole('button', { name: /^Play Again/ })).toHaveFocus());
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Review Game/ })).toHaveFocus());
     expect(screen.getByRole('button', { name: 'e1, white king, in check' })).toBeInTheDocument();
     expect(moveRows()).toEqual(['1.f3e5', '2.g4Qh4#']);
 
@@ -322,7 +324,7 @@ describe('play-computer view', { timeout: GAME_TIMEOUT }, () => {
     expect(JSON.parse(fetchMock.mock.calls[3]?.[1]?.body as string)).toMatchObject({ move: null });
   });
 
-  it('puts the game-over set away with Escape, and Go Back leaves for the menu', async () => {
+  it('puts the game-over set away with Escape, leaving Review game in the panel; Main menu leaves', async () => {
     vi.stubEnv('VITE_API_MODE', 'live');
     mockGameResponses(GAME_START, AFTER_F3_E5, FOOLS_MATE);
     const user = userEvent.setup();
@@ -332,13 +334,88 @@ describe('play-computer view', { timeout: GAME_TIMEOUT }, () => {
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByText('Checkmate — the computer wins.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Review game' })).toBeInTheDocument();
     first.unmount();
 
     mockGameResponses(GAME_START, AFTER_F3_E5, FOOLS_MATE);
     renderGame();
     await walkIntoFoolsMate(user);
-    await user.click(screen.getByRole('button', { name: /^Go Back/ }));
+    await user.click(screen.getByRole('button', { name: /^Main menu/ }));
     await waitFor(() => expect(screen.queryByRole('group', { name: /Board for your game/ })).not.toBeInTheDocument());
+  });
+
+  it('keeps the finished game and reviews it: every move, its flags, the turning point, then Play again', async () => {
+    vi.stubEnv('VITE_API_MODE', 'live');
+    const fetchMock = mockGameResponses(GAME_START, AFTER_F3_E5, FOOLS_MATE, FOOLS_MATE_ANALYSIS, GAME_START);
+    const user = userEvent.setup();
+    renderWithProviders(<PlayComputerView />, { route: '/play', path: '/play/*' });
+
+    await walkIntoFoolsMate(user);
+    expect(loadFinishedGame()).toMatchObject({
+      level: 'intermediate',
+      moves: ['f2f3', 'e7e5', 'g2g4', 'd8h4'],
+      history: ['f3', 'e5', 'g4', 'Qh4#'],
+      result: { outcome: 'loss', title: 'You Lose', reason: 'by checkmate' },
+    });
+
+    await user.click(screen.getByRole('button', { name: /^Review Game/ }));
+
+    const panel = await screen.findByRole('complementary', { name: 'Game review' });
+    expect(within(panel).getByText('You Lose')).toBeInTheDocument();
+    expect(JSON.parse(fetchMock.mock.calls[3]?.[1]?.body as string)).toEqual({ moves: ['f2f3', 'e7e5', 'g2g4', 'd8h4'] });
+    // It opens at the final position, with the engine's verdict on the TV.
+    const tv = await screen.findByRole('complementary', { name: 'Evaluation' });
+    expect(within(tv).getByText('0-1')).toBeInTheDocument();
+    expect(within(tv).getByText('Checkmate: the computer won')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Board: the position after move 2… Qh4#' })).toBeInTheDocument();
+    const turningPoint = within(panel).getByRole('button', { name: /Move 2 g4 allowed a forced mate in 1; best was Nc3/ });
+
+    // The turning point: the blunder, flagged on its square, the better move drawn.
+    await user.click(turningPoint);
+    expect(screen.getByRole('img', { name: 'Board: the position after move 2 g4' })).toBeInTheDocument();
+    expect(within(panel).getByText(/^Best was/)).toHaveTextContent('Best was Nc3 (the arrow on the board)');
+    expect(document.querySelector('.game-board__marker')).toHaveAttribute('data-mark', 'blunder');
+    expect(document.querySelector('.game-board__arrow')).toBeInTheDocument();
+    expect(within(panel).getByRole('button', { name: 'g4, Blunder' })).toHaveAttribute('aria-current', 'step');
+
+    // Step back with the keyboard and the buttons.
+    await user.keyboard('{ArrowLeft}');
+    expect(screen.getByRole('img', { name: 'Board: the position after move 1… e5' })).toBeInTheDocument();
+    await user.click(within(panel).getByRole('button', { name: 'First position' }));
+    expect(screen.getByRole('img', { name: 'Board: the starting position of the game reviewed' })).toBeInTheDocument();
+    expect(within(panel).getByText('The starting position. Step forward with → or the buttons.')).toBeInTheDocument();
+
+    await user.click(within(panel).getByRole('button', { name: 'Play again' }));
+    expect(await screen.findByText('Your move.')).toBeInTheDocument();
+    expect(JSON.parse(fetchMock.mock.calls[4]?.[1]?.body as string)).toMatchObject({ move: null, level: 'intermediate' });
+  });
+
+  it('reviews the last game kept in the browser after a reload, without asking the engine again', async () => {
+    vi.stubEnv('VITE_API_MODE', 'live');
+    saveFinishedGame({ ...FOOLS_MATE_GAME, analysis: FOOLS_MATE_ANALYSIS });
+    const fetchMock = mockGameResponses();
+    const user = userEvent.setup();
+    renderWithProviders(<PlayComputerView />, { route: '/play/review', path: '/play/*' });
+
+    const panel = await screen.findByRole('complementary', { name: 'Game review' });
+    expect(within(panel).getByText('You Lose')).toBeInTheDocument();
+    expect(await screen.findByRole('complementary', { name: 'Evaluation' })).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await user.click(within(panel).getByRole('button', { name: 'Main menu' }));
+    await waitFor(() => expect(screen.queryByRole('complementary', { name: 'Game review' })).not.toBeInTheDocument());
+  });
+
+  it('says when there is no game to review yet, and offers one', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<PlayComputerView />, { route: '/play/review', path: '/play/*' });
+
+    const panel = await screen.findByRole('complementary', { name: 'Game review' });
+    expect(within(panel).getByText(/No finished game to review yet/)).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Evaluation' })).not.toBeInTheDocument();
+
+    await user.click(within(panel).getByRole('button', { name: 'Play a game' }));
+    expect(await screen.findByRole('button', { name: 'Start game' })).toBeInTheDocument();
   });
 
   it('calls a draw when the same position comes up a third time', async () => {

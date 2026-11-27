@@ -1,5 +1,6 @@
 import { Suspense, lazy } from 'react';
 import { Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom';
+import { ScrollMemory } from '@/app/scroll-memory';
 import { AppHeader } from '@/components/ui/app-header';
 import { getApiMode } from '@/config/api';
 import { ROUTES } from '@/config/routes';
@@ -10,6 +11,7 @@ const StageLayout = lazy(() => import('@/app/stage-layout').then((m) => ({ defau
 function AppLayout() {
   return (
     <div className="site-frame">
+      <ScrollMemory />
       <a className="skip-link" href="#main-content">Skip to main content</a>
       <AppHeader />
       <main id="main-content" className="main-content"><Outlet /></main>
@@ -35,6 +37,7 @@ export function AppRouter() {
             <Route index element={null} />
             <Route path="players/:username" element={null} />
             <Route path="play" element={null} />
+            <Route path="play/review" element={null} />
             <Route path="deliberation" element={null} />
           </Route>
           <Route path="players/:username/summary" element={<ToPlayerView />} />

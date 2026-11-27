@@ -1,13 +1,14 @@
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import './move-list.css';
 
 /**
  * The moves so far in standard algebraic notation, numbered in pairs as a score sheet writes
  * them (1. e4 e5 2. Nf3 Nc6). It scrolls by itself to the newest move whenever one is added,
  * and with the keyboard (it takes focus when there is more than fits). `pending` marks the last
- * move as still waiting for the server, which confirms it with the computer's reply.
+ * move as still waiting for the server, which confirms it with the computer's reply. `tools`
+ * go beside the heading (the sound switch).
  */
-export function MoveList({ moves, pending = false }: { moves: readonly string[]; pending?: boolean }) {
+export function MoveList({ moves, pending = false, tools }: { moves: readonly string[]; pending?: boolean; tools?: ReactNode }) {
   const titleId = useId();
   const list = useRef<HTMLOListElement>(null);
 
@@ -23,7 +24,10 @@ export function MoveList({ moves, pending = false }: { moves: readonly string[];
 
   return (
     <section className="score-sheet" aria-labelledby={titleId}>
-      <h2 id={titleId} className="score-sheet__title">Moves</h2>
+      <div className="score-sheet__head">
+        <h2 id={titleId} className="score-sheet__title">Moves</h2>
+        {tools}
+      </div>
       {moves.length === 0 ? (
         <p className="score-sheet__empty">No moves yet. You play White: your move first.</p>
       ) : (

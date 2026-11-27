@@ -53,7 +53,32 @@
 }
 @keyframes check-glow { from { box-shadow: inset 0 0 0 0 rgb(255 240 236 / 0); } to { box-shadow: inset 0 0 calc(var(--sq) * .28) 0 rgb(255 240 236 / .45); } }
 
+/* The review (read-only board): the engine's better move as an ink arrow with a paper halo,
+   so it reads on light and dark squares; the move's flag in a round tag at the top right of
+   its square: ink for a blunder (??), stone for a mistake (?), paper for an inaccuracy (?!). */
+.game-board[data-read-only] { cursor: default; }
+.game-board__arrow { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.game-board__arrow-halo { fill: none; stroke: rgb(255 254 250 / .78); stroke-width: .24; stroke-linecap: round; stroke-linejoin: round; }
+polygon.game-board__arrow-halo { fill: rgb(255 254 250 / .78); stroke-width: .12; }
+.game-board__arrow-line { fill: none; stroke: rgb(27 28 29 / .82); stroke-width: .14; stroke-linecap: round; }
+.game-board__arrow-head { fill: rgb(27 28 29 / .82); }
+.game-board__marker {
+  position: absolute; left: 0; top: 0; z-index: 5; width: var(--sq); height: var(--sq); pointer-events: none;
+  translate: calc(var(--file) * var(--sq)) calc(var(--row) * var(--sq));
+}
+.game-board__marker b {
+  position: absolute; top: -12%; right: -12%; display: grid; place-items: center;
+  min-width: calc(var(--sq) * .42); height: calc(var(--sq) * .42); padding: 0 calc(var(--sq) * .05);
+  border: 2px solid #0b0b0c; border-radius: 999px; background: #1b1c1d; color: #fffefa;
+  font-size: calc(var(--sq) * .2); font-weight: 900; letter-spacing: -.5px; line-height: 1;
+  box-shadow: 2px 2px 0 #80796d; animation: marker-in .28s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+.game-board__marker[data-mark='mistake'] b { background: #80796d; color: #fffefa; box-shadow: 2px 2px 0 #1b1c1d; }
+.game-board__marker[data-mark='inaccuracy'] b { background: #fffefa; color: #1b1c1d; }
+@keyframes marker-in { from { opacity: 0; scale: .4; } to { opacity: 1; scale: 1; } }
+
 @media (prefers-reduced-motion: reduce) {
+  .game-board__marker b { animation: none; }
   .game-board__piece, .game-board__art { transition: none; }
   .game-board__piece[data-taken] { display: none; }
   .game-board .td-board__square[data-check] { animation: none; }

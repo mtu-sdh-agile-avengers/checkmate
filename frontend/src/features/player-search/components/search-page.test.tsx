@@ -18,13 +18,13 @@ describe('player-search', () => {
   it('keeps the heading and a labelled search on the stage', () => {
     renderWithProviders(<SearchPage />);
     expect(screen.getByRole('heading', { level: 1, name: /find your\s*player/i })).toBeInTheDocument();
-    expect(screen.getByLabelText('Chess.com username or member profile URL')).toBe(screen.getByRole('searchbox'));
+    expect(screen.getByLabelText('Chess.com username or member profile URL')).toBe(screen.getByRole('combobox'));
   });
 
   it('shows an accessible error for an invalid search', async () => {
     const user = userEvent.setup();
     renderWithProviders(<SearchPage />);
-    await user.type(screen.getByRole('searchbox'), 'https://example.com/member/hikaru');
+    await user.type(screen.getByRole('combobox'), 'https://example.com/member/hikaru');
     await user.click(screen.getByRole('button', { name: /search player/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Chess.com');
   });
@@ -50,7 +50,7 @@ describe('player-search', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    await user.type(screen.getByRole('searchbox'), 'hikaru');
+    await user.type(screen.getByRole('combobox'), 'hikaru');
     await user.click(screen.getByRole('button', { name: /search player/i }));
     expect(await screen.findByText('Profile route')).toBeInTheDocument();
     expect(screen.queryByText('Summary route')).not.toBeInTheDocument();

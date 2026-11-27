@@ -15,6 +15,7 @@ from src.chesscom.parser.parser import (
     parse_pgn_moves,
     parse_player_profile,
     parse_player_stats,
+    parse_titled_players,
 )
 from src.enums import GameResult, PlayerColor, TimeClass
 
@@ -155,6 +156,20 @@ def test_parse_games_archives_months_are_sorted():
 
 def test_parse_games_archives_no_games():
     assert parse_games_archives({"archives": []}).months == []
+
+
+# Titled players ---------------------------------------------------------------------
+
+
+def test_parse_titled_players():
+    titled = parse_titled_players({"players": ["Hikaru", "MagnusCarlsen"]})
+
+    assert titled.usernames == ["Hikaru", "MagnusCarlsen"]
+
+
+def test_parse_titled_players_not_a_list_raises_parse_error():
+    with pytest.raises(ChessAPIParseError):
+        parse_titled_players({"players": "Hikaru"})
 
 
 # Monthly games ----------------------------------------------------------------------

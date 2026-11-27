@@ -8,6 +8,7 @@ import type {
   OverallStats,
   Player,
   PlayerComparison,
+  PlayerSuggestion,
   RatingPoint,
   SummaryStats,
   TimeClass,
@@ -67,6 +68,44 @@ export async function mockFindPlayer(username: string): Promise<Player> {
     twitchUrl: username === 'hikaru' ? 'https://www.twitch.tv/gmhikaru' : null,
     fide: username === 'hikaru' ? 2780 : null,
   };
+}
+
+// Demo titled players for the search suggestions (the backend's DEV mock has the same).
+const DEMO_TITLED: readonly { username: string; title: string }[] = [
+  { username: 'hikaru', title: 'GM' },
+  { username: 'magnuscarlsen', title: 'GM' },
+  { username: 'fabianocaruana', title: 'GM' },
+  { username: 'danielnaroditsky', title: 'GM' },
+  { username: 'firouzja2003', title: 'GM' },
+  { username: 'lyonbeast', title: 'GM' },
+  { username: 'gothamchess', title: 'IM' },
+  { username: 'annacramling', title: 'WFM' },
+  { username: 'alexandrabotez', title: 'WFM' },
+];
+
+/**
+ * Demo suggestions while typing: the account typed (every username exists in the demo, as for
+ * the search, except "notfound"), then the demo titled players starting with it. "error"
+ * fails like an unavailable service.
+ */
+export async function mockSuggestPlayers(prefix: string): Promise<PlayerSuggestion[]> {
+  await mockDelay();
+  const query = prefix.toLowerCase();
+  if (query === 'error') throw new Error('Demo service unavailable. Please retry.');
+  const exact: PlayerSuggestion[] =
+    query.length >= 3 && query !== 'notfound'
+      ? [{
+          username: query,
+          url: `https://www.chess.com/member/${encodeURIComponent(query)}`,
+          avatar: query === 'hikaru' ? DEMO_AVATAR : null,
+          title: query === 'hikaru' ? 'GM' : null,
+          exact: true,
+        }]
+      : [];
+  const titled = DEMO_TITLED.filter((player) => player.username.startsWith(query) && player.username !== query).map(
+    (player): PlayerSuggestion => ({ ...player, url: `https://www.chess.com/member/${player.username}`, avatar: null, exact: false }),
+  );
+  return [...exact, ...titled].slice(0, 8);
 }
 
 export async function mockGetSummary(

@@ -58,6 +58,15 @@ describe('the way back to the menu', () => {
     await waitFor(() => expect(stage).not.toHaveAttribute('data-return'), { timeout: 10_000 });
   }, 60_000);
 
+  it('opens the review of the last game on the same table as In-Game Chess', async () => {
+    stubMotion(false);
+    const { container } = renderStage('/play/review');
+
+    expect(await screen.findByText('Game review', { selector: 'h1' }, { timeout: 40_000 })).toBeInTheDocument();
+    await waitFor(() => expect(container.querySelector('.stage-screen')).toHaveAttribute('data-view', 'computer'));
+    expect(container.querySelector('.topdown-view')).toBeInTheDocument();
+  }, 60_000);
+
   it('is a short fade with reduced motion', async () => {
     stubMotion(true);
     const setTimer = vi.spyOn(window, 'setTimeout');
@@ -86,7 +95,7 @@ describe('stage layout outside tests', () => {
     vi.stubGlobal('cancelIdleCallback', cancel);
 
     const { unmount } = renderStage();
-    await screen.findByRole('searchbox', undefined, { timeout: 15_000 });
+    await screen.findByRole('combobox', undefined, { timeout: 15_000 });
     unmount();
 
     expect(idle).toHaveBeenCalledWith(expect.any(Function), { timeout: 4000 });
@@ -100,7 +109,7 @@ describe('stage layout outside tests', () => {
     const clearTimer = vi.spyOn(window, 'clearTimeout');
 
     const { unmount } = renderStage();
-    await screen.findByRole('searchbox', undefined, { timeout: 15_000 });
+    await screen.findByRole('combobox', undefined, { timeout: 15_000 });
     unmount();
 
     expect(setTimer).toHaveBeenCalledWith(expect.any(Function), 1500);

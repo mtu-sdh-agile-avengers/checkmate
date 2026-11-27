@@ -72,12 +72,14 @@ class FakeChessComClient:
         archive_months: list[tuple[int, int]] | None = None,
         monthly_games: dict[tuple[int, int], list[dict]] | None = None,
         not_found: bool = False,
+        titled: dict[str, list[str]] | None = None,
     ) -> None:
         self.stats = stats or {}
         self.profile = profile or {}
         self.archive_months = archive_months or []
         self.monthly_games = monthly_games or {}
         self.not_found = not_found  # simulate a player that does not exist
+        self.titled = titled or {}  # usernames per title, e.g. {"GM": ["Hikaru"]}
         self.calls: list[str] = []
 
     def _request(self, path: str) -> None:
@@ -112,3 +114,7 @@ class FakeChessComClient:
 
     async def get_player_current_games(self, username: str) -> dict:
         raise NotImplementedError
+
+    async def get_titled_players(self, title: str) -> dict:
+        self.calls.append(f"/titled/{title}")  # every list exists, even for a ghost
+        return {"players": self.titled.get(title, [])}

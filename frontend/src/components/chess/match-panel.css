@@ -15,3 +15,6 @@
   margin: 0; padding: 10px 12px; border-left: 3px solid #80796d; background: #ece9e2;
   color: #4a4844; font-size: 13px; line-height: 1.45;
 }
+/* Four ways on (the game is over, or a move failed): two rows of two. */
+.match-panel .panel-actions:has(> :nth-child(4)) { flex-wrap: wrap; }
+.match-panel .panel-actions:has(> :nth-child(4)) > * { flex-basis: calc(50% - 5px); }

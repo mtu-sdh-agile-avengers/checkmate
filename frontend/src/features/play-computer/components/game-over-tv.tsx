@@ -7,37 +7,39 @@ import './game-over-tv.css';
 /**
  * The end of a game: a television of the same make as the statistics set, lowered on its
  * cables over the dimmed table, with the result ("You Win", "You Lose" or "Draw"), how
- * ("by checkmate", "by stalemate", ...) and two ways on: Play Again (a new game at the same
- * level) and Go Back (to the main menu).
+ * ("by checkmate", "by stalemate", ...) and three ways on: Review Game (step through it with
+ * the engine's evaluation, at /play/review), Play Again (a new game at the same level) and
+ * Main menu.
  *
- * A modal dialog: focus goes to Play Again when it arrives and stays inside (Tab and
- * Shift+Tab go round its two buttons, and focus that strays outside is brought back);
- * Escape dismisses it to look at the final position (`onClose`), handing focus back to where
- * it was. The view behind it is inert meanwhile (play-computer-view.tsx).
+ * A modal dialog: focus goes to Review Game when it arrives and stays inside (Tab and
+ * Shift+Tab go round its buttons, and focus that strays outside is brought back); Escape
+ * dismisses it to look at the final position (`onClose`), handing focus back to where it was.
+ * The view behind it is inert meanwhile (play-computer-view.tsx).
  */
-export function GameOverTv({ result, level, onPlayAgain, onGoBack, onClose, leaving = false }: {
+export function GameOverTv({ result, level, onReview, onPlayAgain, onMenu, onClose, leaving = false }: {
   result: GameResult;
   level: string;
+  onReview: () => void;
   onPlayAgain: () => void;
-  onGoBack: () => void;
+  onMenu: () => void;
   onClose: () => void;
   leaving?: boolean;
 }) {
   const titleId = useId();
   const reasonId = useId();
   const dialog = useRef<HTMLDivElement>(null);
-  const playAgain = useRef<HTMLButtonElement>(null);
+  const first = useRef<HTMLButtonElement>(null);
   // Where focus was before the set came down (read on the first render, before it takes focus),
   // to hand it back when the set goes away.
   const [returnTo] = useState(() => (document.activeElement instanceof HTMLElement ? document.activeElement : null));
   useEffect(() => () => returnTo?.focus({ preventScroll: true }), [returnTo]);
-  useFocusOnArrival(playAgain, !leaving);
+  useFocusOnArrival(first, !leaving);
 
   // Focus that leaves the set (a click elsewhere, a screen reader) is brought back.
   useEffect(() => {
     if (leaving) return;
     const keepInside = (event: FocusEvent) => {
-      if (event.target instanceof Node && !dialog.current?.contains(event.target)) playAgain.current?.focus({ preventScroll: true });
+      if (event.target instanceof Node && !dialog.current?.contains(event.target)) first.current?.focus({ preventScroll: true });
     };
     document.addEventListener('focusin', keepInside);
     return () => document.removeEventListener('focusin', keepInside);
@@ -84,16 +86,24 @@ export function GameOverTv({ result, level, onPlayAgain, onGoBack, onClose, leav
               <p id={reasonId} className="game-over__reason">{result.reason}</p>
               <div className="game-over__actions">
                 <button
-                  ref={playAgain}
+                  ref={first}
                   type="button"
-                  className="panel-button"
+                  className="panel-button game-over__review"
+                  onClick={onReview}
+                  aria-label="Review Game: step through it with the engine's evaluation"
+                >
+                  Review Game
+                </button>
+                <button
+                  type="button"
+                  className="panel-button panel-button--ghost"
                   onClick={onPlayAgain}
                   aria-label={`Play Again: a new game against the computer (${level})`}
                 >
                   Play Again
                 </button>
-                <button type="button" className="panel-button panel-button--ghost" onClick={onGoBack} aria-label="Go Back to the main menu">
-                  Go Back
+                <button type="button" className="panel-button panel-button--ghost" onClick={onMenu} aria-label="Main menu: back to the start">
+                  Main menu
                 </button>
               </div>
             </div>
