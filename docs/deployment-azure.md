@@ -31,9 +31,10 @@ bash azure-setup.sh setup     # 5-10 minutes
 `setup` creates, in resource group `checkmate-rg`:
 
 - **Container Apps environment** `checkmate-env` (with a Log Analytics workspace for the logs);
-- **managed identity** `checkmate-github` with a federated credential that trusts only the
-  `production` environment of `mtu-sdh-agile-avengers/checkmate`, and the **Contributor**
-  role on `checkmate-rg`, so GitHub deploys without a stored password.
+- **managed identity** `checkmate-github` with federated credentials that trust only the
+  `production` environment of `mtu-sdh-agile-avengers/checkmate` (by name, and by the IDs our
+  organisation puts in GitHub's token), and the **Contributor** role on `checkmate-rg`, so
+  GitHub deploys without a stored password.
 
 It prints three values. Add them in GitHub → repository **Settings** → **Secrets and
 variables** → **Actions** → **Secrets** → **New repository secret**:
@@ -116,7 +117,7 @@ deployment regions*); `bash azure-setup.sh regions` lists them.
 | Symptom | Where to look / fix |
 | --- | --- |
 | `RequestDisallowedByAzure` | the region is not allowed for the subscription: `bash azure-setup.sh regions` |
-| Deploy job: `AADSTS70021` / no matching federated identity | the federated credential must name environment `production` and the repository exactly |
+| Deploy job: `AADSTS700213` / no matching federated identity record | the subject in the error must match a federated credential exactly. Our organisation puts IDs in it (`repo:mtu-sdh-agile-avengers@329470617/checkmate@1391446843:environment:production`); `setup` adds that form too, or add it in the portal with *Other issuer* |
 | Deploy job: `AuthorizationFailed` | the Contributor role on `checkmate-rg` |
 | Container App does not start, image pull error | the package is private: make it public or use the token (step 2) |
 | `/health` works but players are not found (403 in the logs) | `API_CHESSCOM_USER_AGENT` must contain a contact email |
