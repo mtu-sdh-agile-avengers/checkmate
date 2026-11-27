@@ -12,6 +12,7 @@ from src.config import get_config
 from src.exception_handlers import register_exception_handlers
 from src.frontend import add_frontend
 from src.rate_limiting import limiter
+from src.services.titled_players import TitledPlayers
 
 
 @asynccontextmanager
@@ -22,6 +23,8 @@ async def lifespan(app: FastAPI):
         get_config().api_chesscom_user_agent,
     )
     app.state.external_chess_api_client = external_chess_api_client
+    # for the search suggestions: loaded from Chess.com on first use, kept for a day
+    app.state.titled_players = TitledPlayers(external_chess_api_client)
     try:
         yield
         logger.debug("Server shutdown")

@@ -13,6 +13,8 @@ from src.schemas.players import (
     PlayerSearchProfileResponse,
     PlayerSearchQuery,
     PlayerStatisticSummaryResponse,
+    PlayerSuggestionsQuery,
+    PlayerSuggestionsResponse,
     PlayerSummaryQuery,
 )
 
@@ -44,6 +46,30 @@ async def search_player(
     service: PlayersServiceDep,
 ) -> PlayerSearchProfileResponse:
     return await service.search(query.username)
+
+
+# GET /api/v1/players/suggestions?q={start of a username}
+@router.get(
+    "/suggestions",
+    summary="Suggest players",
+    description=(
+        "Accounts for the search box's suggestions while typing, at most 8: the account "
+        "with exactly the username `q`, if it exists (with its picture), then Chess.com's "
+        "titled players (GM, IM, FM...) whose username starts with `q`, highest title "
+        "first. The titled players are loaded from Chess.com once a day. If Chess.com "
+        "cannot be reached, the suggestions are only those already known (maybe none)."
+    ),
+    responses={
+        422: {"description": "`q` is not 2-25 letters, numbers, _ or -"},
+    },
+)
+@limiter.limit("5/second")  # while typing, after a short pause (debounced)
+async def suggest_players(
+    request: Request,
+    query: Annotated[PlayerSuggestionsQuery, Query()],
+    service: PlayersServiceDep,
+) -> PlayerSuggestionsResponse:
+    return await service.suggest(query.q)
 
 
 # GET /api/v1/players/compare?p1={username|url}&p2={username|url}&timeClass={bullet|blitz|rapid|daily}

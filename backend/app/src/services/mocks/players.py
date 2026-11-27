@@ -4,21 +4,26 @@ Returns realistic, deterministic sample data without calling Chess.com, so the f
 can be built and tested independently of the real implementation.
 
 Special usernames for testing frontend states:
-- "notfound": the player does not exist -> 404
+- "notfound": the player does not exist -> 404 (and no suggestions: the empty state)
 - "nogames": the player exists but has no games in the selected period
 - comparison: every username starting with "notfound" (e.g. "notfound2") does not
   exist, so both players can be missing at once
 
 Comparison: player 1 gets the sample all-time statistics; player 2 the same sample
 with a lower rating, fewer wins and fewer losses, so both players have better fields.
+
+Suggestions: the account typed (every username exists, except "notfound"), then the
+sample titled players below whose username starts with what was typed.
 """
 
+import contextlib
 from datetime import UTC, datetime, timedelta
 
 from src.chesscom.client.exceptions import (
     ChessAPINotFoundError,
     ChessComPlayersNotFoundError,
 )
+from src.chesscom.parser.links import USERNAME_RE
 from src.enums import SummaryPeriod, TimeClass
 from src.schemas.players import (
     PlayerComparisonQuery,
@@ -26,15 +31,31 @@ from src.schemas.players import (
     PlayerProfileResponse,
     PlayerSearchProfileResponse,
     PlayerStatisticSummaryResponse,
+    PlayerSuggestionsResponse,
     PlayerSummaryQuery,
     RatingPointResponse,
     RatingSummaryResponse,
 )
 from src.services.processing.comparison import compare_summaries
+from src.services.processing.suggestions import SUGGESTIONS_LIMIT, merge_suggestions
 from src.services.protocols import PlayersService
+from src.services.titled_players import TitledPlayer, ranked
 
 MOCK_NOT_FOUND_USERNAME = "notfound"
 MOCK_NO_GAMES_USERNAME = "nogames"
+
+# Sample titled players for the suggestions, as Chess.com's lists write them
+MOCK_TITLED_PLAYERS = (
+    TitledPlayer("Hikaru", "GM"),
+    TitledPlayer("MagnusCarlsen", "GM"),
+    TitledPlayer("FabianoCaruana", "GM"),
+    TitledPlayer("DanielNaroditsky", "GM"),
+    TitledPlayer("Firouzja2003", "GM"),
+    TitledPlayer("LyonBeast", "GM"),
+    TitledPlayer("GothamChess", "IM"),
+    TitledPlayer("AnnaCramling", "WFM"),
+    TitledPlayer("AlexandraBotez", "WFM"),
+)
 
 # (current, highest) rating per time class
 _MOCK_RATINGS: dict[TimeClass, tuple[int, int]] = {
@@ -137,6 +158,17 @@ class MockPlayersService(PlayersService):
             avatar=_MOCK_PROFILE.avatar,
             title=_MOCK_PROFILE.title,
         )
+
+    async def suggest(self, prefix: str) -> PlayerSuggestionsResponse:
+        exact = None
+        if USERNAME_RE.match(prefix):  # 2 characters are not a username yet
+            with contextlib.suppress(ChessAPINotFoundError):
+                exact = await self.search(prefix)
+        titled = ranked(
+            (p for p in MOCK_TITLED_PLAYERS if p.username.lower().startswith(prefix)),
+            SUGGESTIONS_LIMIT,
+        )
+        return merge_suggestions(prefix, exact, titled)
 
     async def compare(self, query: PlayerComparisonQuery) -> PlayerComparisonResponse:
         missing = [

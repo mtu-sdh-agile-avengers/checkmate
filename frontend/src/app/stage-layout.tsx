@@ -62,7 +62,8 @@ function useLingering<T>(value: T | null, ms: number, fadeMs = 0): T | null {
  * - `/players/:username` is the same stage with the camera panned to the opponent's seat,
  *   where the television shows that player's profile and statistics.
  * - `/play` (In-Game Chess) and `/deliberation` crane the camera up and tip it down onto the
- *   table; the stage rises out of view, fades and sleeps meanwhile.
+ *   table; the stage rises out of view, fades and sleeps meanwhile. `/play/review` (the review
+ *   of a finished game) is In-Game Chess too: between the two only the panels change.
  * The view is a data attribute; the stylesheets turn it into the camera moves. A view that
  * closes stays mounted for the length of the move, so it is seen leaving rather than cut.
  *
@@ -73,7 +74,9 @@ function useLingering<T>(value: T | null, ms: number, fadeMs = 0): T | null {
 export function StageLayout() {
   const { username } = useParams<{ username: string }>();
   const { pathname } = useLocation();
-  const topDown: TopDownView | null = pathname === ROUTES.play ? 'computer' : pathname === ROUTES.deliberation ? 'deliberation' : null;
+  // In-Game Chess and its review are one view: the camera stays on the table between them.
+  const topDown: TopDownView | null =
+    pathname === ROUTES.play || pathname === ROUTES.review ? 'computer' : pathname === ROUTES.deliberation ? 'deliberation' : null;
   const scene = useLingering(topDown, TOP_DOWN_LEAVE_MS, RETURN_FADE_MS);
   // The way back to the menu (data-return below). With reduced motion, on narrow screens the
   // view fades out, then the menu fades in: two fades, and room so the second is not cut short.

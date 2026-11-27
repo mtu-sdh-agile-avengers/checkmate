@@ -178,3 +178,8 @@ class ChessComClient(ExternalChessComAPIClient):
             f"/player/{username}/games", ExternalTimeout.LONG_TIMEOUT_SECONDS
         )
         return r.json()
+
+    async def get_titled_players(self, title: str) -> dict:
+        # one list per title (GM, IM, ...), a few thousand usernames: a longer timeout
+        r = await self._get(f"/titled/{title}", ExternalTimeout.LONG_TIMEOUT_SECONDS)
+        return r.json()

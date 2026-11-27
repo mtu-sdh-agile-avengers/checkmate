@@ -28,7 +28,9 @@
 .game-over__picture { display: grid; justify-items: center; gap: 8px; padding: 22px 20px 20px; text-align: center; }
 .game-over__title { margin: 2px 0 0; font-size: clamp(36px, 7vw, 48px); line-height: 1; letter-spacing: -1.5px; font-weight: 900; }
 .game-over__reason { margin: 0; color: #45423c; font-size: 16px; font-weight: 750; }
-.game-over__actions { display: flex; gap: 10px; width: 100%; margin-top: 10px; }
+.game-over__actions { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; margin-top: 10px; }
+/* Review Game first, across the set; Play Again and Main menu side by side under it. */
+.game-over__actions .game-over__review { flex-basis: 100%; }
 /* Won: the title stamped like the VS badge, slightly askew. */
 .game-over[data-outcome='win'] .game-over__title { rotate: -2deg; text-shadow: .05em .05em 0 #a7a5a0; }
 

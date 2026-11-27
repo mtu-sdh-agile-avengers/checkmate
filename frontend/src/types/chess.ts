@@ -17,6 +17,15 @@ export type Player = {
   fide: number | null;
 };
 
+/** An account suggested while typing in the search (GET /players/suggestions). */
+export type PlayerSuggestion = {
+  username: string; // lowercase, as the player page's address writes it
+  url: string;
+  avatar: string | null; // only the exact account has one
+  title: string | null; // "GM", "IM", ...
+  exact: boolean; // the account with exactly the username typed
+};
+
 export type RatingPoint = { date: string; rating: number };
 
 export type SummaryStats = {

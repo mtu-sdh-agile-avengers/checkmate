@@ -51,6 +51,7 @@ def respond_with(status: int, **kwargs):
             "/pub/player/hikaru/games/2026/11",
         ),
         (lambda c: c.get_player_current_games("hikaru"), "/pub/player/hikaru/games"),
+        (lambda c: c.get_titled_players("GM"), "/pub/titled/GM"),
     ],
 )
 async def test_json_endpoints_call_the_right_path(call, path):

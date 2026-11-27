@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMatch, useNavigate } from 'react-router-dom';
 import { MatchPanel } from '@/components/chess/match-panel';
 import { Tabletop } from '@/components/chess/tabletop';
 import { TopDownBoard } from '@/components/chess/top-down-board';
 import { TopDownFigure } from '@/components/chess/top-down-figure';
+import { SoundToggle } from '@/components/ui/sound-toggle';
 import { ToastStack } from '@/components/ui/toast-stack';
 import { ROUTES } from '@/config/routes';
 import { DifficultyPanel } from '@/features/play-computer/components/difficulty-panel';
@@ -11,15 +12,21 @@ import { GameBoard } from '@/features/play-computer/components/game-board';
 import { GameOverTv } from '@/features/play-computer/components/game-over-tv';
 import { GameTv } from '@/features/play-computer/components/game-tv';
 import { MoveList } from '@/features/play-computer/components/move-list';
+import { ReviewPanel } from '@/features/play-computer/components/review-panel';
+import { ReviewTv } from '@/features/play-computer/components/review-tv';
 import { DEFAULT_DIFFICULTY, difficultyName, type DifficultyId } from '@/features/play-computer/config/difficulty-levels';
 import { useArrival } from '@/features/play-computer/hooks/use-arrival';
 import { useComputerGame } from '@/features/play-computer/hooks/use-computer-game';
+import { useGameReview } from '@/features/play-computer/hooks/use-game-review';
 import { replayMoves } from '@/features/play-computer/utils/board-replay';
-import { explainIllegal } from '@/features/play-computer/utils/chess-rules';
+import { applyUci, explainIllegal, inCheck, kingSquare, parseFen } from '@/features/play-computer/utils/chess-rules';
 import type { GameResult } from '@/features/play-computer/utils/game-result';
 import { gameNote } from '@/features/play-computer/utils/game-note';
+import { START_FEN } from '@/features/play-computer/utils/game-stats';
 import { moveBetween, targetsFrom } from '@/features/play-computer/utils/moves';
+import { loadFinishedGame, saveFinishedGame, type SavedGame } from '@/features/play-computer/utils/saved-game';
 import { useIntro } from '@/hooks/use-intro';
+import { useMoveSounds } from '@/hooks/use-move-sounds';
 import { useToasts } from '@/hooks/use-toasts';
 import { afterMotion } from '@/utils/motion';
 import './play-computer.css';
@@ -41,10 +48,16 @@ const RESULT_DELAY_MS = 700;
  * computer (Stockfish), see use-computer-game.
  *
  * Playing: drag one of your pieces to its square, or click it, then where it goes (the board
- * is keyboard-playable the same way). Every move slides, the computer's too; the move list in
- * the panel follows the game. A refused move says why in a notification, and so does a king
- * coming into check (its square turns red while it lasts). When the game ends, the game-over
- * set comes down with the result: Play Again or Go Back.
+ * is keyboard-playable the same way). Every move slides, the computer's too, with a click of
+ * the piece set down (the switch above the move list mutes it); the move list in the panel
+ * follows the game. A refused move says why in a notification, and so does a king coming into
+ * check (its square turns red while it lasts). When the game ends, the game-over set comes
+ * down with the result: Review Game, Play Again or Main menu. The finished game stays on the
+ * board (with Review game in the panel) and is kept in the browser.
+ *
+ * The review, at /play/review, is the same table: the board shows any position of the game,
+ * the panel steps through it (review-panel.tsx) and the TV shows the engine's evaluation
+ * (review-tv.tsx). After a reload it reviews the last finished game kept in the browser.
  */
 export function PlayComputerView({ leaving = false }: { leaving?: boolean }) {
   const navigate = useNavigate();
@@ -62,6 +75,20 @@ export function PlayComputerView({ leaving = false }: { leaving?: boolean }) {
   const toMenu = () => navigate(ROUTES.search);
   const game = computer.game;
   const playable = started && game !== null && game.status === 'playing' && !computer.repetition && !computer.thinking;
+  useMoveSounds(computer.history);
+
+  // The review is this same view at /play/review. Leaving for the menu, the address changes
+  // first: the view keeps what it shows until it has gone.
+  const atReview = useMatch(ROUTES.review) !== null;
+  const [reviewing, setReviewing] = useState(atReview);
+  if (!leaving && atReview !== reviewing) setReviewing(atReview);
+  // The game to review: the one just finished, or the last one kept in the browser.
+  const [finished, setFinished] = useState<SavedGame | null>(null);
+  const [kept] = useState(loadFinishedGame);
+  const reviewed = finished ?? kept;
+  const review = useGameReview(reviewing ? reviewed : null, reviewing);
+  // Arriving with the camera (a reload at /play/review), the review waits for it like any panel.
+  const [reviewDelay] = useState(() => (reviewing && !intro.done ? undefined : '.12s'));
 
   // The pieces, each with its own id, after every move so far: the board slides them.
   const replay = useMemo(() => {
@@ -111,9 +138,25 @@ export function PlayComputerView({ leaving = false }: { leaving?: boolean }) {
     if (!tryMove(from, to)) setSelected(null);
   };
 
-  const newGame = () => {
+  const newGame = (at: DifficultyId = level) => {
     setSelected(null);
-    computer.start();
+    computer.start(at);
+  };
+  const toReview = () => {
+    setDismissed(true);
+    navigate(ROUTES.review);
+  };
+  // From the review: a new game at the reviewed game's level, or the choice of level.
+  const playAgainFromReview = () => {
+    const at = reviewed?.level ?? level;
+    setLevel(at);
+    setStarted(true);
+    newGame(at);
+    navigate(ROUTES.play);
+  };
+  const chooseLevel = () => {
+    setStarted(false);
+    navigate(ROUTES.play);
   };
   // A click or a key press skips whatever entrance is playing; it still does what it does.
   const skip = () => {
@@ -139,25 +182,55 @@ export function PlayComputerView({ leaving = false }: { leaving?: boolean }) {
     setLastResult(result);
     setShownResult(null);
     setDismissed(false);
+    // A game that has just ended is kept for its review (the effect below stores it).
+    if (result && computer.startedAt !== null) {
+      setFinished({ id: String(computer.startedAt), level, moves: [...computer.moves], history: [...computer.history], result });
+    }
   }
+  useEffect(() => {
+    if (finished) saveFinishedGame(finished);
+  }, [finished]);
   useEffect(() => {
     if (!result) return;
     const timer = setTimeout(() => setShownResult(result), afterMotion(RESULT_DELAY_MS));
     return () => clearTimeout(timer);
   }, [result]);
-  const gameOver = started && shownResult !== null && !dismissed;
+  const gameOver = started && !reviewing && shownResult !== null && !dismissed;
 
   // Keyboard users land on the selected level once the panel is in.
   useEffect(() => {
-    if (!intro.done || started) return;
+    if (!intro.done || started || reviewing) return;
     const timer = setTimeout(() => {
       levels.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus({ preventScroll: true });
     }, returned ? afterMotion(160) : 0);
     return () => clearTimeout(timer);
-  }, [intro.done, started, returned]);
+  }, [intro.done, started, returned, reviewing]);
+
+  // The position the review shows, for its board: the move that led to it, its flag on its
+  // square, the engine's better move as an arrow, and a king in check.
+  const reviewPosition = useMemo(() => {
+    if (!reviewing || !reviewed) return null;
+    try {
+      return reviewed.moves.slice(0, review.ply).reduce(applyUci, parseFen(START_FEN));
+    } catch {
+      return null;
+    }
+  }, [reviewing, reviewed, review.ply]);
+  const reviewUci = reviewed && review.ply > 0 ? reviewed.moves[review.ply - 1] : undefined;
+  const reviewMark = review.summary?.marks[review.ply - 1] ?? null;
+  const better = review.current?.bestMoveUci;
+  const reviewCheck = reviewPosition && inCheck(reviewPosition, reviewPosition.turn) ? kingSquare(reviewPosition.board, reviewPosition.turn) : null;
 
   const name = difficultyName(level);
-  const boardLabel = started ? `Board for your game against the computer (${name})` : 'Chess board, starting position';
+  const reviewedName = difficultyName(reviewed?.level ?? level);
+  const boardLabel = reviewing
+    ? review.ply === 0
+      ? 'Board: the starting position of the game reviewed'
+      : `Board: the position after move ${Math.ceil(review.ply / 2)}${review.ply % 2 === 1 ? '' : '…'} ${reviewed?.history[review.ply - 1] ?? ''}`
+    : started
+      ? `Board for your game against the computer (${name})`
+      : 'Chess board, starting position';
+  const seated = started || reviewing;
   return (
     <div
       ref={root}
@@ -174,10 +247,27 @@ export function PlayComputerView({ leaving = false }: { leaving?: boolean }) {
         <Tabletop
           mode="computer"
           leaving={leaving}
-          near={started ? <span className="seat-walk"><TopDownFigure tone="ivory" hat /></span> : undefined}
-          far={started ? <span className="seat-walk"><TopDownFigure tone="ink" face="AI" /></span> : undefined}
+          near={seated ? <span className="seat-walk"><TopDownFigure tone="ivory" hat /></span> : undefined}
+          far={seated ? <span className="seat-walk"><TopDownFigure tone="ink" face="AI" /></span> : undefined}
         >
-          {started && game && replay ? (
+          {reviewing ? (
+            review.replay && reviewed ? (
+              <GameBoard
+                readOnly
+                pieces={review.replay.pieces}
+                takenAt={review.replay.takenAt}
+                plies={review.ply}
+                label={boardLabel}
+                playable={false}
+                lastMove={reviewUci ? { from: reviewUci.slice(0, 2), to: reviewUci.slice(2, 4) } : null}
+                checkSquare={reviewCheck}
+                marker={reviewUci && reviewMark ? { square: reviewUci.slice(2, 4), mark: reviewMark } : null}
+                arrow={reviewMark && better && better !== reviewUci ? { from: better.slice(0, 2), to: better.slice(2, 4) } : null}
+              />
+            ) : (
+              <TopDownBoard label={boardLabel} />
+            )
+          ) : started && game && replay ? (
             <GameBoard
               pieces={replay.pieces}
               takenAt={replay.takenAt}
@@ -196,7 +286,21 @@ export function PlayComputerView({ leaving = false }: { leaving?: boolean }) {
             <TopDownBoard placement={started && game ? game.placement : undefined} label={boardLabel} />
           )}
         </Tabletop>
-        {started ? (
+        {reviewing ? (
+          <>
+            <ReviewPanel
+              game={reviewed}
+              review={review}
+              levelName={reviewedName}
+              onPlayAgain={playAgainFromReview}
+              onPlay={chooseLevel}
+              onMenu={toMenu}
+              leaving={leaving}
+              delay={reviewDelay}
+            />
+            {reviewed && <ReviewTv review={review} leaving={leaving} delayed={reviewDelay === undefined} />}
+          </>
+        ) : started ? (
           <>
             <MatchPanel
               eyebrow={`02 / In-Game Chess · ${name}`}
@@ -215,17 +319,20 @@ export function PlayComputerView({ leaving = false }: { leaving?: boolean }) {
                     // The engine was busy or down, or the server out of reach: send the same request again.
                     <button type="button" className="panel-button" onClick={computer.retry}>Try again</button>
                   )}
-                  <button type="button" className="panel-button panel-button--ghost" onClick={newGame}>
+                  {computer.over && finished && (
+                    <button type="button" className="panel-button" onClick={toReview}>Review game</button>
+                  )}
+                  <button type="button" className="panel-button panel-button--ghost" onClick={() => newGame()}>
                     New game
                   </button>
                   <button type="button" className="panel-button panel-button--ghost" onClick={() => { setStarted(false); setReturned(true); setSelected(null); }}>
                     Change difficulty
                   </button>
-                  <button type="button" className="panel-button" onClick={toMenu}>Back to menu</button>
+                  <button type="button" className={`panel-button${computer.over ? ' panel-button--ghost' : ''}`} onClick={toMenu}>Back to menu</button>
                 </>
               }
             >
-              <MoveList moves={computer.history} pending={computer.pending !== null} />
+              <MoveList moves={computer.history} pending={computer.pending !== null} tools={<SoundToggle />} />
             </MatchPanel>
             <GameTv fen={computer.fen} history={computer.history} startedAt={computer.startedAt} over={computer.over} leaving={leaving} />
           </>
@@ -245,8 +352,9 @@ export function PlayComputerView({ leaving = false }: { leaving?: boolean }) {
         <GameOverTv
           result={shownResult}
           level={name}
-          onPlayAgain={newGame}
-          onGoBack={toMenu}
+          onReview={toReview}
+          onPlayAgain={() => newGame()}
+          onMenu={toMenu}
           onClose={() => setDismissed(true)}
           leaving={leaving}
         />

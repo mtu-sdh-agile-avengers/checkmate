@@ -8,7 +8,7 @@
 .game-tv {
   position: absolute; z-index: 8; top: 76px; bottom: clamp(24px, 4vh, 44px); left: clamp(14px, 2.2vw, 30px);
   width: var(--panel-w, 340px); height: fit-content; max-height: calc(100% - 76px - clamp(24px, 4vh, 44px)); margin-block: auto;
-  animation: game-tv-in .5s cubic-bezier(.2, .8, .2, 1) .1s both;
+  animation: game-tv-in .5s cubic-bezier(.2, .8, .2, 1) var(--tv-delay, .1s) both;
 }
 /* Leaving, it goes with the panel: fades and shrinks a little towards its edge, on the
    stage's ease (stage-layout.css has the whole sequence back to the menu). */

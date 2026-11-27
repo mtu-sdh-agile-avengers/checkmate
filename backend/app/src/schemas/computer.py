@@ -10,8 +10,12 @@ from pydantic_core import PydanticCustomError
 from src.chesscom.parser.models import STANDARD_START_FEN
 from src.enums import ComputerLevel, GameStatus, PlayerColor
 from src.schemas.common import BaseSchema
+from src.schemas.games import MoveEvaluationResponse
 
 _UCI_MOVE_RE = re.compile(r"^[a-h][1-8][a-h][1-8][qrbn]?$")
+
+# Half-moves of one game the analysis takes: a long game has about 200.
+MAX_ANALYSED_MOVES = 600
 
 
 class ComputerMoveRequest(BaseSchema):
@@ -118,4 +122,87 @@ class ComputerMoveResponse(BaseSchema):
     status: GameStatus
     winner: PlayerColor | None = Field(
         description="Who won by checkmate; null while playing or after a draw"
+    )
+
+
+class ComputerGameAnalysisRequest(BaseSchema):
+    """A whole game against the computer, to analyse for its review page."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    moves: list[str] = Field(
+        max_length=MAX_ANALYSED_MOVES,
+        examples=[["e2e4", "e7e5", "g1f3"]],
+        description=(
+            "Every move of the game in UCI (`e2e4`, promotion `e7e8q`), in order, from "
+            "the starting position"
+        ),
+    )
+
+    @field_validator("moves")
+    @classmethod
+    def _uci_format(cls, moves: list[str]) -> list[str]:
+        written = [move.strip().lower() for move in moves]
+        for number, move in enumerate(written, start=1):
+            if not _UCI_MOVE_RE.match(move):
+                raise PydanticCustomError(
+                    "invalid_move",
+                    "Move {number} ({move}) is not written like e2e4 (or e7e8q to promote).",
+                    {"number": number, "move": move},
+                )
+        return written
+
+    @model_validator(mode="after")
+    def _legal_game(self) -> Self:
+        board = chess.Board()
+        for number, uci in enumerate(self.moves, start=1):
+            move = chess.Move.from_uci(uci)
+            if move not in board.legal_moves:
+                raise PydanticCustomError(
+                    "illegal_move",
+                    "Move {number} ({move}) is not allowed in its position.",
+                    {"number": number, "move": uci},
+                )
+            board.push(move)
+        return self
+
+
+class ComputerMoveEvaluationResponse(MoveEvaluationResponse):
+    """One half-move of a game against the computer with the engine's verdict."""
+
+    best_move_uci: str | None = Field(
+        default=None,
+        examples=["g1f3"],
+        description=(
+            "`bestMoveSan` in UCI, for an arrow on the board from its square to its "
+            "target; null if unknown"
+        ),
+    )
+
+
+class ComputerGameAnalysisResponse(BaseSchema):
+    """Engine analysis of every move of a game against the computer (review page)."""
+
+    engine: str = Field(
+        examples=["Stockfish 17"],
+        description=(
+            'The engine that analysed the game; "Built-in evaluator (approximate)" in dev '
+            "mode without Stockfish"
+        ),
+    )
+    depth: int = Field(
+        ge=1,
+        examples=[15],
+        description="How many half-moves (plies) ahead the engine looked",
+    )
+    initial_fen: str = Field(
+        examples=[STANDARD_START_FEN],
+        description="Position before the first move (FEN)",
+    )
+    moves: list[ComputerMoveEvaluationResponse] = Field(
+        description=(
+            "Every half-move in order: the position after it, its evaluation (centipawns, "
+            "White's view), a forced mate if there is one, the engine's best move in the "
+            "position before it and a category (best / good / inaccuracy / miss / blunder)"
+        )
     )

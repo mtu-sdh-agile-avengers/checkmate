@@ -38,6 +38,7 @@ const pause = (ms: number) =>
  *   that brings a position back the third time, the game ends there, and the computer's reply
  *   (the server has played it already) is never shown;
  * - `result` says how the game ended (you win, you lose or a draw, and why), null until then;
+ * - `start(level?)` sets up a new game (at another level than the hook's, if given);
  * - `retry()` sends the last request again after it failed (the engine was busy or down, the
  *   server unreachable), whether that was starting the game or a move;
  * - `startedAt`, for the clock on the statistics TV.
@@ -140,7 +141,8 @@ export function useComputerGame(level: DifficultyId) {
     /** The game has ended: checkmate, stalemate, a draw, or a draw by repetition. */
     over: result !== null,
     startedAt,
-    start: () => {
+    /** A new game, at `at` when the level is changing in the same click (state not set yet). */
+    start: (at: DifficultyId = level) => {
       round.current += 1;
       setGame(null);
       setHistory([]);
@@ -150,7 +152,7 @@ export function useComputerGame(level: DifficultyId) {
       setRepeated(false);
       setStartedAt(Date.now());
       mutation.reset();
-      mutation.mutate({ level, round: round.current });
+      mutation.mutate({ level: at, round: round.current });
     },
     play: (move: string) => {
       if (!game || mutation.isPending || repetition) return;

@@ -64,7 +64,11 @@
   .stage-screen[data-view='player'] { --cam-shift: -30cqw; justify-content: flex-start; padding: 70px 0 104px; }
   .stage-screen[data-view='player'] > .table-set { display: none; }
   .player-set { position: relative; z-index: 3; inset: auto; width: min(680px, 100% - 28px); }
-  .player-view[data-leaving] .player-set { position: absolute; top: 70px; left: 14px; }
+  /* Leaving, it is out of the flow, held where it was on screen as it pans away, however the
+     page's scroll changes (player-view.tsx sets the place it had in the column). */
+  .player-view[data-leaving] .player-set {
+    position: absolute; top: var(--leave-top, 70px); left: var(--leave-left, 14px); width: var(--leave-width, min(680px, 100% - 28px));
+  }
   .player-set .stats-tv { max-height: none; }
 }
 @media (max-width: 700px) {

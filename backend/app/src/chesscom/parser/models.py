@@ -175,6 +175,15 @@ class ChessComGamesArchives(ChessComModel):
         return sorted(months)
 
 
+# Titled players: GET /pub/titled/{title} --------------------------------------------
+
+
+class ChessComTitledPlayers(ChessComModel):
+    """The usernames of every player with one title (GM, IM, FM...)."""
+
+    usernames: list[str] = Field(default_factory=list, alias="players")
+
+
 # Finished games: GET /pub/player/{username}/games/{YYYY}/{MM} ----------------------
 
 

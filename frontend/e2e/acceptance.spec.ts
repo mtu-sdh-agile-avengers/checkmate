@@ -36,7 +36,7 @@ function collectErrors(page: Page): string[] {
 }
 
 async function searchPlayer(page: Page, name: string) {
-  const search = page.getByRole('searchbox');
+  const search = page.getByRole('combobox');
   await search.fill(name);
   await search.press('Enter');
 }
@@ -44,7 +44,7 @@ async function searchPlayer(page: Page, name: string) {
 test('the search page loads within the budget', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/');
-  await expect(page.getByRole('searchbox')).toBeVisible();
+  await expect(page.getByRole('combobox')).toBeVisible();
 
   const timing = await page.evaluate(() => {
     const [navigation] = performance.getEntriesByType(
@@ -93,6 +93,61 @@ test("a player's statistics appear quickly after the search", async ({ page }) =
   expect(errors).toEqual([]);
 });
 
+test('accounts are suggested while typing, and one opens with the keyboard', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/');
+  const search = page.getByRole('combobox');
+
+  await search.fill('mag');
+  const started = Date.now();
+  const suggestion = page.getByRole('option', { name: /magnuscarlsen/ });
+  await expect(suggestion).toBeVisible({ timeout: ANSWER_BUDGET_MS });
+  measured('suggestions shown', Date.now() - started, 'ms', ANSWER_BUDGET_MS);
+
+  await search.press('ArrowDown');
+  await search.press('ArrowDown');
+  await expect(suggestion).toHaveAttribute('aria-selected', 'true');
+  await search.press('Enter');
+  await expect(page.getByRole('heading', { level: 1, name: 'Player magnuscarlsen' })).toBeVisible({
+    timeout: ANSWER_BUDGET_MS,
+  });
+  expect(errors).toEqual([]);
+});
+
+test('a finished game is reviewed by the engine, move by move', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/');
+  // The last finished game, as the page keeps it: 1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6?? 4. Qxf7#
+  await page.evaluate(() =>
+    localStorage.setItem(
+      'checkmate:last-game',
+      JSON.stringify({
+        id: 'e2e',
+        level: 'intermediate',
+        moves: ['e2e4', 'e7e5', 'f1c4', 'b8c6', 'd1h5', 'g8f6', 'h5f7'],
+        history: ['e4', 'e5', 'Bc4', 'Nc6', 'Qh5', 'Nf6', 'Qxf7#'],
+        result: { outcome: 'win', title: 'You Win', reason: 'by checkmate' },
+      }),
+    ),
+  );
+
+  await page.goto('/play/review');
+  const panel = page.getByRole('complementary', { name: 'Game review' });
+  await expect(panel.getByRole('button', { name: /Nf6 allowed a forced mate/ })).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(panel.getByRole('button', { name: 'Nf6, Blunder' })).toBeVisible();
+  await page.keyboard.press('Home');
+  await expect(
+    page.getByRole('img', { name: 'Board: the starting position of the game reviewed' }),
+  ).toBeVisible();
+  await page.keyboard.press('ArrowRight');
+  await expect(
+    page.getByRole('img', { name: 'Board: the position after move 1 e4' }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('the computer answers a move quickly', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/play');
@@ -121,7 +176,7 @@ test('moving between the views does not leak memory', async ({ page }) => {
     await searchPlayer(page, 'hikaru');
     await expect(page.getByRole('heading', { level: 1, name: 'Player hikaru' })).toBeVisible();
     await page.goBack();
-    await expect(page.getByRole('searchbox')).toBeVisible();
+    await expect(page.getByRole('combobox')).toBeVisible();
     await page.waitForTimeout(1_100); // the search API allows one request a second
   };
 

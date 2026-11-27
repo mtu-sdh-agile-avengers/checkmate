@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { StatsTv, type TvChannel } from '@/components/chess/stats-tv';
@@ -48,6 +48,38 @@ export function PlayerView({ username, leaving = false }: { username: string; le
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { heading.current?.focus({ preventScroll: true }); }, []);
 
+  // Narrow screens: the set is a column the page scrolls. Leaving, it is taken out of the flow
+  // (stage-layout.css) and the page goes back to the top (app/scroll-memory.tsx). It is held
+  // where it was on screen meanwhile (--leave-top/left/width: its place in the column, read
+  // while it was there, moved by the change of scroll), so it pans away from there instead of
+  // jumping to the top of the page.
+  const root = useRef<HTMLDivElement>(null);
+  const place = useRef<{ top: number; left: number; width: number; scroll: number } | null>(null);
+  const measure = useCallback(() => {
+    const set = root.current?.querySelector<HTMLElement>('.player-set');
+    if (set) place.current = { top: set.offsetTop, left: set.offsetLeft, width: set.offsetWidth, scroll: window.scrollY };
+  }, []);
+  useLayoutEffect(() => {
+    if (!leaving) measure();
+  });
+  useEffect(() => {
+    if (leaving) return;
+    window.addEventListener('scroll', measure, { passive: true });
+    window.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('scroll', measure);
+      window.removeEventListener('resize', measure);
+    };
+  }, [leaving, measure]);
+  useLayoutEffect(() => {
+    const style = root.current?.style;
+    if (!leaving || !style || !place.current) return;
+    const { top, left, width, scroll } = place.current;
+    style.setProperty('--leave-top', `${top + window.scrollY - scroll}px`);
+    style.setProperty('--leave-left', `${left}px`);
+    style.setProperty('--leave-width', `${width}px`);
+  }, [leaving]);
+
   // Back from a game to the list: focus returns to that game's row (or the list's heading).
   const list = useRef<HTMLDivElement>(null);
   const returnTo = useRef<string | null>(null);
@@ -68,7 +100,7 @@ export function PlayerView({ username, leaving = false }: { username: string; le
   };
 
   return (
-    <div className="player-view" data-leaving={leaving || undefined} inert={leaving} aria-hidden={leaving || undefined}>
+    <div ref={root} className="player-view" data-leaving={leaving || undefined} inert={leaving} aria-hidden={leaving || undefined}>
       <Link className="stage-back" to={ROUTES.search}><ArrowLeft size={18} aria-hidden="true" /> Back to search</Link>
       <section className="player-set" aria-labelledby="player-view-title">
         <h1 id="player-view-title" className="sr-only" tabIndex={-1} ref={heading}>Player {username}</h1>

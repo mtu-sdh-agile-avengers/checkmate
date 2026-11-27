@@ -13,6 +13,7 @@ from src.schemas.players import (
     PlayerProfileResponse,
     PlayerSearchProfileResponse,
     PlayerStatisticSummaryResponse,
+    PlayerSuggestionsResponse,
     PlayerSummaryQuery,
 )
 
@@ -31,6 +32,7 @@ class GamesService(Protocol):
 
 class PlayersService(Protocol):
     async def search(self, username: str) -> PlayerSearchProfileResponse: ...
+    async def suggest(self, prefix: str) -> PlayerSuggestionsResponse: ...
     async def compare(
         self, query: PlayerComparisonQuery
     ) -> PlayerComparisonResponse: ...
